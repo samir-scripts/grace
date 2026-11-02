@@ -6,6 +6,13 @@
   import { isMac } from '$lib/utils/platform';
   import Tooltip from './Tooltip.svelte';
   import * as m from '$paraglide/messages.js';
+  import SessionSelector from './SessionSelector.svelte';
+
+  interface Props {
+    onEmergencyClick?: () => void;
+  }
+
+  let { onEmergencyClick }: Props = $props();
 
   let maximized = $state(false);
   let suppressTitlebarHover = $state(false);
@@ -186,6 +193,10 @@
     {@render statsBtn()}
   {/if}
 
+  <div class="center-selector" data-tauri-drag-region="false">
+    <SessionSelector {onEmergencyClick} />
+  </div>
+
   <!-- Right: settings + stats buttons on macOS, window controls on Linux/Windows. -->
   <div class="controls">
     {#if isMac}
@@ -292,6 +303,15 @@
     display: flex;
     gap: 4px;
     margin-left: auto;
+  }
+
+  .center-selector {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .btn-icon {

@@ -13,6 +13,7 @@
   import type { UnlistenFn } from '@tauri-apps/api/event';
   import { info, error as logError } from '@tauri-apps/plugin-log';
   import { createLocalShortcutHandler } from '$lib/utils/localShortcuts';
+  import { initFocusStore } from '$lib/stores/focus';
 
   // Local shortcut state — volume and fullscreen tracked separately so the
   // handler can read current values without waiting for settings:changed round-trip.
@@ -92,6 +93,7 @@
         settings.set(s);
         localVolume = s.volume;
 
+        await initFocusStore();
         // Apply the stored locale on mount.
         setLocale(s.language);
         await info(`[main] settings loaded, locale=${s.language}`);
