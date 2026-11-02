@@ -160,10 +160,13 @@
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
-    transition: background var(--transition-snappy), color var(--transition-snappy), border-color var(--transition-snappy);
+    transition: background var(--transition-snappy), color var(--transition-snappy), border-color var(--transition-snappy), transform 100ms ease-out;
     max-width: 140px;
   }
 
+  .session-btn:active:not(.locked) {
+    transform: scale(0.97);
+  }
   .session-btn:hover {
     background: var(--color-hover);
     color: var(--color-foreground);
@@ -284,5 +287,14 @@
     color: var(--color-foreground-darker);
     font-size: 10px;
     opacity: 0.9;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .session-btn,
+    .chevron,
+    .dropdown-item {
+      transition: none !important;
+      transform: none !important;
+    }
   }
 </style>
