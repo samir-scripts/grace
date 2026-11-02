@@ -1,20 +1,20 @@
 # Implementation plans
 
-[Focus Sessions master plan](focus-sessions-master-plan.md) — in progress.
+[Focus Sessions master plan](focus-sessions-master-plan.md) — completed.
 
 ## Progress
 
-- Plan persistence and agent guidance: in progress.
-- [ ] [01-db-and-persistence](subplans/01-db-and-persistence.md)
-- [ ] [02-domain-validation-security](subplans/02-domain-validation-security.md)
-- [ ] [03-state-machine-escape](subplans/03-state-machine-escape.md)
-- [ ] [04-native-enforcers-macos-windows](subplans/04-native-enforcers-macos-windows.md)
-- [ ] [05-timer-controller-interception](subplans/05-timer-controller-interception.md)
-- [ ] [06-ipc-contract-stores](subplans/06-ipc-contract-stores.md)
-- [ ] [07-ui-selector-titlebar](subplans/07-ui-selector-titlebar.md)
-- [ ] [08-ui-settings-sessions](subplans/08-ui-settings-sessions.md)
-- [ ] [09-ui-emergency-exit](subplans/09-ui-emergency-exit.md)
-- [ ] [10-e2e-system-tests](subplans/10-e2e-system-tests.md)
+- Plan persistence and agent guidance: completed.
+- [x] [01-db-and-persistence](subplans/01-db-and-persistence.md)
+- [x] [02-domain-validation-security](subplans/02-domain-validation-security.md)
+- [x] [03-state-machine-escape](subplans/03-state-machine-escape.md)
+- [x] [04-native-enforcers-macos-windows](subplans/04-native-enforcers-macos-windows.md)
+- [x] [05-timer-controller-interception](subplans/05-timer-controller-interception.md)
+- [x] [06-ipc-contract-stores](subplans/06-ipc-contract-stores.md)
+- [x] [07-ui-selector-titlebar](subplans/07-ui-selector-titlebar.md)
+- [x] [08-ui-settings-sessions](subplans/08-ui-settings-sessions.md)
+- [x] [09-ui-emergency-exit](subplans/09-ui-emergency-exit.md)
+- [x] [10-e2e-system-tests](subplans/10-e2e-system-tests.md)
 
 ## Execution decisions
 
