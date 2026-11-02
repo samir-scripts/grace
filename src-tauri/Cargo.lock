@@ -3293,6 +3293,7 @@ dependencies = [
  "log",
  "notify",
  "objc2",
+ "rand_core 0.6.4",
  "raw-window-handle",
  "rodio",
  "rusqlite",
