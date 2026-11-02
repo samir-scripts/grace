@@ -15,6 +15,7 @@ use crate::shortcuts;
 use crate::themes::{self, Theme};
 use crate::timer::{TimerController, TimerSnapshot};
 use crate::tray::{self, TrayState};
+use crate::focus::controller::{FocusController, TimerAction};
 use crate::websocket::{self, WsState};
 
 // ---------------------------------------------------------------------------
@@ -30,16 +31,18 @@ pub fn timer_toggle(timer: State<'_, TimerController>) {
 
 /// Reset the current round's timer without advancing the sequence.
 #[tauri::command]
-pub fn timer_reset(timer: State<'_, TimerController>) {
+pub fn timer_reset(timer: State<'_, TimerController>, focus: State<'_, Arc<FocusController>>) -> Result<(), String> {
+    focus.check_timer_command(TimerAction::Reset)?;
     timer.reset();
+    Ok(())
 }
-
 /// Skip the current round: fires Complete immediately and advances to the next.
 #[tauri::command]
-pub fn timer_skip(timer: State<'_, TimerController>) {
+pub fn timer_skip(timer: State<'_, TimerController>, focus: State<'_, Arc<FocusController>>) -> Result<(), String> {
+    focus.check_timer_command(TimerAction::Skip)?;
     timer.skip();
+    Ok(())
 }
-
 /// Restart the current round from zero without advancing the sequence.
 /// Round type and round number are preserved; only elapsed time is reset.
 #[tauri::command]

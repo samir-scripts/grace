@@ -1,3 +1,4 @@
+pub mod controller;
 pub mod enforcer;
 pub mod escape;
 pub mod model;

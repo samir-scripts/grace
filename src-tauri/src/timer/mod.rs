@@ -13,6 +13,7 @@ use crate::settings::Settings;
 use crate::tray::{self, TrayState};
 use crate::websocket::{self, WsState};
 
+use crate::focus::controller::{FocusController, TimerAction};
 use engine::{EngineHandle, TimerCommand, TimerEvent};
 use sequence::{RoundType, SequenceState};
 
@@ -61,6 +62,7 @@ pub struct TimerController {
     /// Kept alive so TrayState is not dropped if lib.rs forgets its copy.
     #[allow(dead_code)]
     tray: Arc<TrayState>,
+    focus: Arc<FocusController>,
 }
 
 impl TimerController {
@@ -71,6 +73,7 @@ impl TimerController {
         settings: Settings,
         tray: Arc<TrayState>,
         db: DbState,
+        focus: Arc<FocusController>,
     ) -> Self {
         let seq = SequenceState::new(settings.long_break_interval);
         let duration = seq.current_duration_secs(&settings);
@@ -90,6 +93,7 @@ impl TimerController {
         let shared_thread = Arc::clone(&shared);
         let engine_thread = engine.clone();
         let tray_thread = Arc::clone(&tray);
+        let focus_thread = Arc::clone(&focus);
 
         std::thread::Builder::new()
             .name("timer-events".to_string())
@@ -104,6 +108,7 @@ impl TimerController {
                         engine: engine_thread,
                         tray: tray_thread,
                         db,
+                        focus: focus_thread,
                     },
                 );
             })
@@ -115,6 +120,7 @@ impl TimerController {
             settings: settings_arc,
             shared,
             tray,
+            focus,
         }
     }
 
@@ -131,16 +137,30 @@ impl TimerController {
             self.engine.send(TimerCommand::Resume);
         } else {
             log::info!("[timer] start");
+            let snap = self.focus.get_snapshot();
+            if let Some(prof) = snap.active_profile {
+                let mut seq = self.sequence.lock().unwrap();
+                seq.work_rounds_total = prof.work_rounds;
+                drop(seq);
+                let mut settings = self.settings.lock().unwrap();
+                settings.time_work_secs = prof.work_secs;
+                settings.time_short_break_secs = prof.short_break_secs;
+                settings.time_long_break_secs = prof.long_break_secs;
+                settings.long_break_interval = prof.work_rounds;
+                drop(settings);
+                self.reconfigure();
+            }
             self.engine.send(TimerCommand::Start);
         }
     }
 
     pub fn reset(&self) {
+        if let Err(e) = self.focus.check_timer_command(TimerAction::Reset) {
+            log::warn!("[timer] {e}");
+            return;
+        }
         log::info!("[timer] reset");
         self.sequence.lock().unwrap().reset();
-        // Send only Reset — the event listener's Reset handler will follow up
-        // with Prime once the engine is confirmed Idle. Sending a duration
-        // update here first would race the Reset and can leave the UI stale.
         self.engine.send(TimerCommand::Reset);
     }
 
@@ -153,6 +173,10 @@ impl TimerController {
     }
 
     pub fn skip(&self) {
+        if let Err(e) = self.focus.check_timer_command(TimerAction::Skip) {
+            log::warn!("[timer] {e}");
+            return;
+        }
         log::info!("[timer] skip");
         self.engine.send(TimerCommand::Skip);
     }
@@ -229,6 +253,7 @@ struct ListenContext {
     engine: EngineHandle,
     tray: Arc<TrayState>,
     db: DbState,
+    focus: Arc<FocusController>,
 }
 
 fn listen_events(
@@ -236,7 +261,7 @@ fn listen_events(
     event_rx: std::sync::mpsc::Receiver<TimerEvent>,
     ctx: ListenContext,
 ) {
-    let ListenContext { sequence, settings, shared, engine, tray, db } = ctx;
+    let ListenContext { sequence, settings, shared, engine, tray, db, focus } = ctx;
     // Track last tray progress to throttle redraws to ≥ 1% delta.
     let mut last_tray_progress: f32 = -1.0;
     // Active session row ID for recording (None = not started yet).
@@ -252,6 +277,8 @@ fn listen_events(
                     websocket::broadcast_started(&ws, total_secs);
                 }
                 tray::update_menu_items(&tray, true, false);
+                let rt = sequence.lock().unwrap().current_round.as_str().to_string();
+                focus.on_timer_started(&rt);
             }
 
             TimerEvent::Tick { elapsed_secs, total_secs } => {
@@ -299,6 +326,7 @@ fn listen_events(
                     tray::update_icon(&tray, &rt, false, progress);
                     last_tray_progress = progress;
                 }
+                focus.on_timer_tick();
             }
 
             TimerEvent::Complete { skipped: was_skipped } => {
@@ -339,6 +367,11 @@ fn listen_events(
                 let snapshot = build_snapshot(&sequence, &settings, &shared);
                 let _ = app.emit("timer:round-change", snapshot);
 
+                let is_last_round = {
+                    let seq = sequence.lock().unwrap();
+                    seq.work_round_number >= seq.work_rounds_total
+                };
+                focus.on_round_completed(&completed_round, next_round.as_str(), is_last_round);
                 // Desktop notifications are dispatched by the frontend via the
                 // notification_show command after receiving the timer:round-change
                 // event, so translated strings can be used.

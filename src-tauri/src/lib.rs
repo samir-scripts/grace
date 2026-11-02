@@ -130,12 +130,18 @@ pub fn run() {
                 app.manage(audio);
             }
 
-            // --- Timer controller (needs settings + AppHandle + TrayState + DB) ---
+            // --- Focus controller ---
+            let focus = Arc::new(focus::controller::FocusController::new(db.clone(), None));
+            focus.set_app_handle(app.handle().clone());
+            app.manage(Arc::clone(&focus));
+
+            // --- Timer controller (needs settings + AppHandle + TrayState + DB + Focus) ---
             let timer = timer::TimerController::new(
                 app.handle().clone(),
                 initial_settings.clone(),
                 Arc::clone(&tray_state),
                 db.clone(),
+                Arc::clone(&focus),
             );
             app.manage(timer);
 
