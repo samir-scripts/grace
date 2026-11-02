@@ -10,28 +10,38 @@ impl MacOSEnforcer {
     }
 
     pub fn terminate_matching_apps(&self, targets: &[AppTarget]) -> Result<usize, EnforcerError> {
-        let mut terminated_count = 0;
-        for target in targets {
-            let identifier = target.identifier.trim();
-            if identifier.is_empty() {
-                continue;
-            }
+        #[cfg(target_os = "macos")]
+        {
+            use objc2::rc::autoreleasepool;
+            use objc2_app_kit::NSRunningApplication;
+            use objc2_foundation::NSString;
 
-            // On macOS: target by bundle id or process name using pkill / killall
-            // Safe termination: first SIGTERM, then pkill
-            let output = Command::new("pkill")
-                .arg("-f")
-                .arg(identifier)
-                .output();
-
-            if let Ok(out) = output {
-                if out.status.success() {
-                    terminated_count += 1;
-                    log::info!("[macos-enforcer] terminated app matching: {identifier}");
+            // Bundle identifiers are not process command-line substrings. Resolve running
+            // applications natively so catalog selections target the actual application.
+            autoreleasepool(|_| {
+                let mut terminated_count = 0;
+                for target in targets {
+                    if target.identifier.trim().is_empty() || target.platform == "windows" {
+                        continue;
+                    }
+                    let running = NSRunningApplication::runningApplicationsWithBundleIdentifier(
+                        &NSString::from_str(target.identifier.trim()),
+                    );
+                    for application in running.iter() {
+                        if application.terminate() {
+                            terminated_count += 1;
+                            log::info!("[macos-enforcer] requested termination: {}", target.identifier);
+                        }
+                    }
                 }
-            }
+                Ok(terminated_count)
+            })
         }
-        Ok(terminated_count)
+        #[cfg(not(target_os = "macos"))]
+        {
+            let _ = targets;
+            Err(EnforcerError::PlatformUnsupported)
+        }
     }
 
     pub fn flush_dns(&self) -> Result<(), EnforcerError> {

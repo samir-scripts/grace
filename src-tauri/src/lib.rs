@@ -32,6 +32,8 @@ use commands::{
     themes_list,
     timer_get_state, timer_reset, timer_restart_round, timer_skip, timer_toggle,
     window_set_visibility,
+    focus_apps_list,
+    focus_app_icon,
     focus_snapshot_get,
     focus_profiles_get,
     focus_profile_save,
@@ -423,6 +425,8 @@ pub fn run() {
             check_update,
             install_update,
             // Focus Sessions
+            focus_apps_list,
+            focus_app_icon,
             focus_snapshot_get,
             focus_profiles_get,
             focus_profile_save,

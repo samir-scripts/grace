@@ -117,6 +117,19 @@ export interface HeatmapStats {
 }
 
 /** Focus Session Distraction Blocking types */
+export interface InstalledApplication {
+  id: string;
+  name: string;
+  identifier: string;
+  platform: string;
+  path: string;
+}
+
+export interface ApplicationCatalog {
+  applications: InstalledApplication[];
+  warnings: string[];
+}
+
 export interface AppTarget {
   id: string;
   name: string;

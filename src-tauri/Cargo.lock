@@ -3288,11 +3288,14 @@ version = "1.7.1"
 dependencies = [
  "argon2",
  "axum",
+ "base64 0.22.1",
  "futures-util",
  "idna",
  "log",
  "notify",
  "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
  "rand_core 0.6.4",
  "raw-window-handle",
  "rodio",
@@ -3312,6 +3315,7 @@ dependencies = [
  "tokio",
  "tokio-tungstenite",
  "uuid",
+ "windows 0.62.2",
 ]
 
 [[package]]

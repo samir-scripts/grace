@@ -14,6 +14,7 @@ import type {
   UpdateInfo,
   FocusProfile,
   FocusSnapshot,
+  ApplicationCatalog,
 } from '$lib/types';
 
 // --- Timer commands ---
@@ -147,6 +148,11 @@ export const onSettingsNavigate = (
 ): Promise<UnlistenFn> =>
   listen<SettingsNavigatePayload>('settings:navigate', (e) => cb(e.payload));
 // --- Focus Session commands ---
+
+export const getInstalledApplications = () =>
+  invoke<ApplicationCatalog>('focus_apps_list');
+export const getInstalledApplicationIcon = (id: string) =>
+  invoke<string | null>('focus_app_icon', { id });
 
 export const getFocusSnapshot = () => invoke<FocusSnapshot>('focus_snapshot_get');
 export const getFocusProfiles = () => invoke<FocusProfile[]>('focus_profiles_get');

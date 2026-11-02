@@ -755,6 +755,18 @@ pub struct HeatmapStats {
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
+pub async fn focus_apps_list() -> Result<crate::focus::app_catalog::ApplicationCatalog, String> {
+    tauri::async_runtime::spawn_blocking(crate::focus::app_catalog::list)
+        .await.map_err(|error| format!("Application discovery failed: {error}"))?
+}
+
+#[tauri::command]
+pub async fn focus_app_icon(id: String) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || crate::focus::app_catalog::icon(&id))
+        .await.map_err(|error| format!("Application icon lookup failed: {error}"))?
+}
+
+#[tauri::command]
 pub fn focus_snapshot_get(focus: State<'_, Arc<FocusController>>) -> crate::focus::state::FocusSnapshot {
     focus.get_snapshot()
 }
