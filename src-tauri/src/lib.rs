@@ -2,6 +2,7 @@ pub mod audio;
 pub mod commands;
 pub mod db;
 pub mod notifications;
+pub mod focus;
 pub mod settings;
 pub mod shortcuts;
 pub mod themes;

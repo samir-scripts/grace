@@ -89,6 +89,38 @@ const MIGRATION_6: &str = "
     INSERT OR IGNORE INTO settings (key, value) VALUES ('local_shortcut_fullscreen', 'F11');
     INSERT INTO schema_version VALUES (6);
 ";
+/// Adds tables for Focus Profiles, Focus Preferences, and Focus Run Journal.
+const MIGRATION_7: &str = "
+    CREATE TABLE IF NOT EXISTS focus_profiles (
+        id                   TEXT PRIMARY KEY NOT NULL,
+        name                 TEXT NOT NULL,
+        work_secs            INTEGER NOT NULL,
+        short_break_secs     INTEGER NOT NULL,
+        long_break_secs      INTEGER NOT NULL,
+        work_rounds          INTEGER NOT NULL,
+        blocked_apps_json    TEXT NOT NULL,
+        blocked_domains_json TEXT NOT NULL,
+        revision             INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS focus_preferences (
+        id                        INTEGER PRIMARY KEY CHECK (id = 1),
+        selected_profile_id       TEXT,
+        unblock_during_breaks     INTEGER NOT NULL DEFAULT 0,
+        emergency_passphrase_hash TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS focus_run_journal (
+        run_id                TEXT PRIMARY KEY NOT NULL,
+        profile_snapshot_json TEXT NOT NULL,
+        phase                 TEXT NOT NULL,
+        current_round         INTEGER NOT NULL,
+        started_at            INTEGER NOT NULL,
+        lease_expires_at      INTEGER NOT NULL
+    );
+
+    INSERT INTO schema_version VALUES (7);
+";
 
 /// Apply any pending migrations. Each migration is wrapped in a transaction
 /// so a partial failure leaves the database unchanged.
@@ -131,6 +163,12 @@ pub fn run(conn: &Connection) -> Result<()> {
         log::info!("[db/migrations] MIGRATION_6 complete");
     }
 
+    if version < 7 {
+        log::info!("[db/migrations] applying MIGRATION_7: focus profiles, preferences, and journal");
+        conn.execute_batch(&format!("BEGIN; {MIGRATION_7} COMMIT;"))?;
+        log::info!("[db/migrations] MIGRATION_7 complete");
+    }
+
     Ok(())
 }
 
@@ -166,14 +204,14 @@ mod tests {
         let v: i64 = conn
             .query_row("SELECT MAX(version) FROM schema_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 6);
+        assert_eq!(v, 7);
     }
 
     #[test]
     fn all_tables_created() {
         let conn = Connection::open_in_memory().unwrap();
         run(&conn).unwrap();
-        for table in &["settings", "sessions", "custom_themes", "schema_version"] {
+        for table in &["settings", "sessions", "custom_themes", "schema_version", "focus_profiles", "focus_preferences", "focus_run_journal"] {
             let count: i64 = conn
                 .query_row(
                     "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",

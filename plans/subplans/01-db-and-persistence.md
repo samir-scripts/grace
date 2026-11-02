@@ -1,4 +1,10 @@
-Status: pending
+Status: completed
+
+Verification Evidence:
+- Tests passed: `test focus::repository::tests::test_migration_7_and_profile_crud ... ok`
+- Tests passed: `test focus::repository::tests::test_preferences_and_journal_persistence ... ok`
+- Tests passed: `test db::migrations::tests::migration_is_idempotent ... ok`
+- Tests passed: `test db::migrations::tests::all_tables_created ... ok`
 
 Context: Implement named finite Pomodoro sessions in Tauri 2/Rust and Svelte 5. Read [master plan](../focus-sessions-master-plan.md) for global constraints and shared contracts. Durations use seconds; Rust owns enforcement and session locks.
 
