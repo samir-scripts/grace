@@ -768,26 +768,44 @@ pub fn focus_profiles_get(focus: State<'_, Arc<FocusController>>) -> Result<Vec<
 pub fn focus_profile_save(
     profile: crate::focus::model::FocusProfile,
     focus: State<'_, Arc<FocusController>>,
+    timer: State<'_, TimerController>,
 ) -> Result<crate::focus::model::FocusProfile, String> {
-    focus.save_profile(profile)
+    let saved = focus.save_profile(profile)?;
+    let snap = focus.get_snapshot();
+    if let Some(active) = snap.active_profile {
+        if active.id == saved.id {
+            timer.sync_profile(&saved);
+        }
+    }
+    Ok(saved)
 }
 
 #[tauri::command]
 pub fn focus_profile_delete(
     id: String,
     focus: State<'_, Arc<FocusController>>,
+    timer: State<'_, TimerController>,
 ) -> Result<bool, String> {
-    focus.delete_profile(&id)
+    let deleted = focus.delete_profile(&id)?;
+    if deleted {
+        let snap = focus.get_snapshot();
+        if let Some(active) = snap.active_profile {
+            timer.sync_profile(&active);
+        }
+    }
+    Ok(deleted)
 }
 
 #[tauri::command]
 pub fn focus_profile_select(
-    id: Option<String>,
+    id: String,
     focus: State<'_, Arc<FocusController>>,
+    timer: State<'_, TimerController>,
 ) -> Result<(), String> {
-    focus.select_profile(id)
+    let profile = focus.select_profile(&id)?;
+    timer.sync_profile(&profile);
+    Ok(())
 }
-
 #[tauri::command]
 pub fn focus_preferences_set_unblock_breaks(
     unblock: bool,

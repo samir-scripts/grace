@@ -55,6 +55,7 @@ struct TimerShared {
 // ---------------------------------------------------------------------------
 
 pub struct TimerController {
+    app: AppHandle,
     engine: EngineHandle,
     sequence: Arc<Mutex<SequenceState>>,
     settings: Arc<Mutex<Settings>>,
@@ -75,9 +76,13 @@ impl TimerController {
         db: DbState,
         focus: Arc<FocusController>,
     ) -> Self {
-        let seq = SequenceState::new(settings.long_break_interval);
-        let duration = seq.current_duration_secs(&settings);
-
+        let (rounds, work, short_b, long_b) = {
+            let snap = focus.get_snapshot();
+            let p = snap.active_profile.unwrap_or_default();
+            (p.work_rounds, p.work_secs, p.short_break_secs, p.long_break_secs)
+        };
+        let seq = SequenceState::new(rounds, work, short_b, long_b);
+        let duration = seq.current_duration_secs();
         let (engine, event_rx) = engine::spawn(duration, Duration::from_secs(1));
 
         let sequence = Arc::new(Mutex::new(seq));
@@ -94,12 +99,12 @@ impl TimerController {
         let engine_thread = engine.clone();
         let tray_thread = Arc::clone(&tray);
         let focus_thread = Arc::clone(&focus);
-
+        let app_thread = app.clone();
         std::thread::Builder::new()
             .name("timer-events".to_string())
             .spawn(move || {
                 listen_events(
-                    app,
+                    app_thread,
                     event_rx,
                     ListenContext {
                         sequence: seq_thread,
@@ -115,6 +120,7 @@ impl TimerController {
             .expect("failed to spawn timer event listener");
 
         Self {
+            app,
             engine,
             sequence,
             settings: settings_arc,
@@ -137,19 +143,6 @@ impl TimerController {
             self.engine.send(TimerCommand::Resume);
         } else {
             log::info!("[timer] start");
-            let snap = self.focus.get_snapshot();
-            if let Some(prof) = snap.active_profile {
-                let mut seq = self.sequence.lock().unwrap();
-                seq.work_rounds_total = prof.work_rounds;
-                drop(seq);
-                let mut settings = self.settings.lock().unwrap();
-                settings.time_work_secs = prof.work_secs;
-                settings.time_short_break_secs = prof.short_break_secs;
-                settings.time_long_break_secs = prof.long_break_secs;
-                settings.long_break_interval = prof.work_rounds;
-                drop(settings);
-                self.reconfigure();
-            }
             self.engine.send(TimerCommand::Start);
         }
     }
@@ -161,6 +154,7 @@ impl TimerController {
         }
         log::info!("[timer] reset");
         self.sequence.lock().unwrap().reset();
+        self.focus.on_timer_reset();
         self.engine.send(TimerCommand::Reset);
     }
 
@@ -188,15 +182,30 @@ impl TimerController {
     pub fn wake_resume(&self) {
         self.engine.send(TimerCommand::WakeResume);
     }
+    pub fn sync_profile(&self, profile: &crate::focus::model::FocusProfile) {
+        let mut seq = self.sequence.lock().unwrap();
+        seq.work_rounds_total = profile.work_rounds;
+        seq.work_secs = profile.work_secs;
+        seq.short_break_secs = profile.short_break_secs;
+        seq.long_break_secs = profile.long_break_secs;
+        let duration = seq.current_duration_secs();
+        drop(seq);
+
+        let s = self.shared.lock().unwrap();
+        let is_idle = !s.is_running && s.elapsed_secs == 0;
+        drop(s);
+
+        if is_idle {
+            self.engine.send(TimerCommand::Reconfigure { duration_secs: duration });
+            let _ = self.app.emit("timer:reset", self.get_snapshot());
+        }
+    }
+
 
     /// Update the duration for the current round when settings change.
     /// Only takes effect after the next Start/Resume (current countdown is not interrupted).
     pub fn reconfigure(&self) {
-        let duration = {
-            let seq = self.sequence.lock().unwrap();
-            let settings = self.settings.lock().unwrap();
-            seq.current_duration_secs(&settings)
-        };
+        let duration = self.sequence.lock().unwrap().current_duration_secs();
         self.engine.send(TimerCommand::Reconfigure { duration_secs: duration });
     }
 
@@ -204,14 +213,14 @@ impl TimerController {
 
     pub fn get_snapshot(&self) -> TimerSnapshot {
         let seq = self.sequence.lock().unwrap();
-        let settings = self.settings.lock().unwrap();
+
         let shared = self.shared.lock().unwrap();
 
         TimerSnapshot {
             round_type: seq.current_round.as_str().to_string(),
             previous_round_type: seq.previous_round.map(|r| r.as_str().to_string()).unwrap_or_default(),
             elapsed_secs: shared.elapsed_secs,
-            total_secs: seq.current_duration_secs(&settings),
+            total_secs: seq.current_duration_secs(),
             is_running: shared.is_running,
             is_paused: !shared.is_running && shared.elapsed_secs > 0,
             work_round_number: seq.work_round_number,
@@ -229,16 +238,7 @@ impl TimerController {
     /// round or after a manual reset.  Sending Reconfigure to a running
     /// engine transitions it to Idle, which would freeze the timer.
     pub fn apply_settings(&self, new: Settings) {
-        // Sync work_rounds_total so the round counter and advance() logic both
-        // reflect the new long_break_interval immediately.
-        self.sequence.lock().unwrap().work_rounds_total = new.long_break_interval;
         *self.settings.lock().unwrap() = new;
-        let s = self.shared.lock().unwrap();
-        let is_idle = !s.is_running && s.elapsed_secs == 0;
-        drop(s);
-        if is_idle {
-            self.reconfigure();
-        }
     }
 }
 
@@ -295,11 +295,7 @@ fn listen_events(
                 // --- Session recording: start on first tick of a new round ---
                 if elapsed_secs == 1 && current_session_id.is_none() {
                     let rt = sequence.lock().unwrap().current_round.as_str().to_string();
-                    let total = {
-                        let seq = sequence.lock().unwrap();
-                        let s = settings.lock().unwrap();
-                        seq.current_duration_secs(&s)
-                    };
+                    let total = sequence.lock().unwrap().current_duration_secs();
                     if let Ok(conn) = db.lock() {
                         match queries::insert_session(&conn, &rt, total) {
                             Ok(id) => current_session_id = Some(id),
@@ -346,7 +342,7 @@ fn listen_events(
                 let (next_round, next_duration, auto_start_work, auto_start_break) = {
                     let mut seq = sequence.lock().unwrap();
                     let s = settings.lock().unwrap();
-                    let (rt, dur) = seq.advance(&s);
+                    let (rt, dur) = seq.advance(s.short_breaks_enabled, s.long_breaks_enabled);
                     (rt, dur, s.auto_start_work, s.auto_start_break)
                 };
 
@@ -441,11 +437,7 @@ fn listen_events(
 
                 // Show pause bars in tray.
                 let rt = sequence.lock().unwrap().current_round.as_str().to_string();
-                let total = {
-                    let seq = sequence.lock().unwrap();
-                    let s = settings.lock().unwrap();
-                    seq.current_duration_secs(&s)
-                };
+                let total = sequence.lock().unwrap().current_duration_secs();
                 let progress = if total > 0 { elapsed_secs as f32 / total as f32 } else { 0.0 };
                 tray::update_icon(&tray, &rt, true, progress);
                 tray::update_menu_items(&tray, false, true);
@@ -461,11 +453,7 @@ fn listen_events(
 
                 // Restore arc in tray.
                 let rt = sequence.lock().unwrap().current_round.as_str().to_string();
-                let total = {
-                    let seq = sequence.lock().unwrap();
-                    let s = settings.lock().unwrap();
-                    seq.current_duration_secs(&s)
-                };
+                let total = sequence.lock().unwrap().current_duration_secs();
                 let progress = if total > 0 { elapsed_secs as f32 / total as f32 } else { 0.0 };
                 tray::update_icon(&tray, &rt, false, progress);
                 last_tray_progress = progress;
@@ -493,11 +481,8 @@ fn listen_events(
                 // total. Using the lighter-weight command here avoids a race
                 // where a fast user click on Start is immediately clobbered by
                 // a late follow-up duration update.
-                let duration = {
-                    let seq = sequence.lock().unwrap();
-                    let s = settings.lock().unwrap();
-                    seq.current_duration_secs(&s)
-                };
+                focus.on_timer_reset();
+                let duration = sequence.lock().unwrap().current_duration_secs();
                 engine.send(TimerCommand::Prime { duration_secs: duration });
 
                 // Reset tray to idle (empty arc).
@@ -517,11 +502,7 @@ fn listen_events(
 
                 // Show pause bars while suspended.
                 let rt = sequence.lock().unwrap().current_round.as_str().to_string();
-                let total = {
-                    let seq = sequence.lock().unwrap();
-                    let s = settings.lock().unwrap();
-                    seq.current_duration_secs(&s)
-                };
+                let total = sequence.lock().unwrap().current_duration_secs();
                 let progress = if total > 0 { elapsed_secs as f32 / total as f32 } else { 0.0 };
                 tray::update_icon(&tray, &rt, true, progress);
             }
@@ -531,18 +512,18 @@ fn listen_events(
 
 fn build_snapshot(
     sequence: &Arc<Mutex<SequenceState>>,
-    settings: &Arc<Mutex<Settings>>,
+    _settings: &Arc<Mutex<Settings>>,
     shared: &Arc<Mutex<TimerShared>>,
 ) -> TimerSnapshot {
     let seq = sequence.lock().unwrap();
-    let s = settings.lock().unwrap();
+
     let sh = shared.lock().unwrap();
 
     TimerSnapshot {
         round_type: seq.current_round.as_str().to_string(),
         previous_round_type: seq.previous_round.map(|r| r.as_str().to_string()).unwrap_or_default(),
         elapsed_secs: sh.elapsed_secs,
-        total_secs: seq.current_duration_secs(&s),
+        total_secs: seq.current_duration_secs(),
         is_running: sh.is_running,
         is_paused: !sh.is_running && sh.elapsed_secs > 0,
         work_round_number: seq.work_round_number,

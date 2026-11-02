@@ -18,7 +18,7 @@
   import { createLocalShortcutHandler } from '$lib/utils/localShortcuts';
 
   import SettingsTitlebar from '$lib/components/settings/SettingsTitlebar.svelte';
-  import TimerSessionsSection from '$lib/components/settings/sections/TimerSessionsSection.svelte';
+  import SessionsSection from '$lib/components/settings/sections/SessionsSection.svelte';
   import AppearanceSection from '$lib/components/settings/sections/AppearanceSection.svelte';
   import NotificationsSection from '$lib/components/settings/sections/NotificationsSection.svelte';
   import ShortcutsSection from '$lib/components/settings/sections/ShortcutsSection.svelte';
@@ -40,7 +40,6 @@
   ];
 
   let active = $state<Section>('timer');
-  let activeTimerTab = $state<'defaults' | 'sessions'>('defaults');
 
   // Local shortcut state for the settings window.
   let localVolume = $state(1.0);
@@ -72,7 +71,6 @@
     // Parse query params for initial section / tab selection.
     const urlParams = new URLSearchParams(window.location.search);
     const querySection = urlParams.get('section');
-    const queryTab = urlParams.get('tab');
     if (querySection === 'timer' || querySection === 'sessions') {
       active = 'timer';
     } else if (
@@ -80,12 +78,6 @@
       ['appearance', 'notifications', 'shortcuts', 'system', 'about'].includes(querySection)
     ) {
       active = querySection as Section;
-    }
-    if (queryTab === 'sessions' || querySection === 'sessions') {
-      active = 'timer';
-      activeTimerTab = 'sessions';
-    } else if (queryTab === 'defaults') {
-      activeTimerTab = 'defaults';
     }
     // Register navigation listener immediately so early cross-window messages are not lost.
     onSettingsNavigate((payload) => {
@@ -100,9 +92,7 @@
           active = payload.section as Section;
         }
       }
-      if (payload.tab) {
-        activeTimerTab = payload.tab;
-      }
+
     }).then((unlisten) => {
       cleanups.push(unlisten);
     });
@@ -204,7 +194,7 @@
     <!-- Right content area -->
     <main class="content" class:no-scroll={active === 'timer'}>
       {#if active === 'timer'}
-        <TimerSessionsSection bind:activeTab={activeTimerTab} />
+        <SessionsSection />
       {:else if active === 'appearance'}
         <AppearanceSection />
       {:else if active === 'notifications'}

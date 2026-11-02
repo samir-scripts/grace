@@ -108,7 +108,7 @@ impl FocusRepository {
         if count > 0 {
             // If the deleted profile was selected in preferences, clear it
             conn.execute(
-                "UPDATE focus_preferences SET selected_profile_id = NULL WHERE selected_profile_id = ?1",
+                "UPDATE focus_preferences SET selected_profile_id = COALESCE((SELECT id FROM focus_profiles LIMIT 1), 'default') WHERE selected_profile_id = ?1",
                 params![id],
             )?;
         }
@@ -122,8 +122,9 @@ impl FocusRepository {
 
         let mut rows = stmt.query_map([], |row| {
             let unblock_num: i64 = row.get(1)?;
+            let selected_id: Option<String> = row.get(0)?;
             Ok(FocusPreferences {
-                selected_profile_id: row.get(0)?,
+                selected_profile_id: selected_id.unwrap_or_else(|| "default".to_string()),
                 unblock_during_breaks: unblock_num != 0,
                 emergency_passphrase_hash: row.get(2)?,
             })
@@ -252,18 +253,18 @@ mod tests {
 
         // Default preferences
         let prefs = repo.get_preferences(&conn).unwrap();
-        assert_eq!(prefs.selected_profile_id, None);
+        assert_eq!(prefs.selected_profile_id, "default");
         assert!(!prefs.unblock_during_breaks);
 
         // Save preferences
         let updated_prefs = FocusPreferences {
-            selected_profile_id: Some("prof-123".to_string()),
+            selected_profile_id: "prof-123".to_string(),
             unblock_during_breaks: true,
             emergency_passphrase_hash: Some("argon2id-hash-string".to_string()),
         };
         repo.save_preferences(&conn, &updated_prefs).unwrap();
         let loaded_prefs = repo.get_preferences(&conn).unwrap();
-        assert_eq!(loaded_prefs.selected_profile_id, Some("prof-123".to_string()));
+        assert_eq!(loaded_prefs.selected_profile_id, "prof-123");
         assert!(loaded_prefs.unblock_during_breaks);
         assert_eq!(loaded_prefs.emergency_passphrase_hash, Some("argon2id-hash-string".to_string()));
 

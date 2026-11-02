@@ -137,11 +137,10 @@ export const onSessionsCleared = (cb: () => void): Promise<UnlistenFn> =>
 
 export interface SettingsNavigatePayload {
   section?: string;
-  tab?: 'defaults' | 'sessions';
 }
 
-export const navigateSettings = (section: string, tab?: 'defaults' | 'sessions') =>
-  emitTo('settings', 'settings:navigate', { section, tab } satisfies SettingsNavigatePayload);
+export const navigateSettings = (section: string) =>
+  emitTo('settings', 'settings:navigate', { section } satisfies SettingsNavigatePayload);
 
 export const onSettingsNavigate = (
   cb: (payload: SettingsNavigatePayload) => void
@@ -155,7 +154,7 @@ export const saveFocusProfile = (profile: FocusProfile) =>
   invoke<FocusProfile>('focus_profile_save', { profile });
 export const deleteFocusProfile = (id: string) =>
   invoke<boolean>('focus_profile_delete', { id });
-export const selectFocusProfile = (id: string | null) =>
+export const selectFocusProfile = (id: string) =>
   invoke<void>('focus_profile_select', { id });
 export const setFocusUnblockBreaks = (unblock: boolean) =>
   invoke<void>('focus_preferences_set_unblock_breaks', { unblock });

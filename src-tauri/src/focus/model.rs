@@ -21,6 +21,13 @@ pub struct FocusProfile {
     pub revision: u64,
 }
 
+impl FocusProfile {
+    pub fn has_blocking_rules(&self) -> bool {
+        !self.blocked_apps.is_empty() || !self.blocked_domains.is_empty()
+    }
+}
+
+
 impl Default for FocusProfile {
     fn default() -> Self {
         Self {
@@ -39,7 +46,7 @@ impl Default for FocusProfile {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FocusPreferences {
-    pub selected_profile_id: Option<String>,
+    pub selected_profile_id: String,
     pub unblock_during_breaks: bool,
     #[serde(skip_serializing)]
     pub emergency_passphrase_hash: Option<String>,
@@ -48,7 +55,7 @@ pub struct FocusPreferences {
 impl Default for FocusPreferences {
     fn default() -> Self {
         Self {
-            selected_profile_id: None,
+            selected_profile_id: "default".to_string(),
             unblock_during_breaks: false,
             emergency_passphrase_hash: None,
         }

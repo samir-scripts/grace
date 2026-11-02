@@ -11,6 +11,8 @@
     getFocusProfiles,
   } from '$lib/ipc';
   import type { FocusProfile, AppTarget } from '$lib/types';
+  import { settings } from '$lib/stores/settings';
+  import { setSetting } from '$lib/ipc';
   import SettingsToggle from '$lib/components/settings/SettingsToggle.svelte';
   import * as m from '$paraglide/messages.js';
 
@@ -47,8 +49,6 @@
   $effect(() => {
     if (profiles.length > 0 && !selectedId) {
       loadProfileForEdit(profiles[0]);
-    } else if (profiles.length === 0 && !selectedId) {
-      createNewProfile();
     }
   });
 
@@ -60,7 +60,7 @@
   }
 
   function createNewProfile() {
-    selectedId = '';
+    selectedId = 'new';
     editingProfile = {
       id: '',
       name: 'New Focus Session',
@@ -69,7 +69,7 @@
       long_break_secs: 900,
       work_rounds: 4,
       blocked_apps: [],
-      blocked_domains: ['reddit.com', 'youtube.com'],
+      blocked_domains: [],
       revision: 1,
     };
     errorMessage = null;
@@ -97,12 +97,15 @@
   }
 
   async function handleDelete(id: string) {
+    if (profiles.length <= 1) {
+      errorMessage = 'At least one session is required';
+      return;
+    }
     if (isLocked && activeProfile?.id === id) {
       errorMessage = 'Cannot delete active locked session';
       return;
     }
     if (!confirm('Are you sure you want to delete this focus session?')) return;
-
     try {
       await deleteFocusProfile(id);
       const all = await getFocusProfiles();
@@ -116,9 +119,18 @@
     }
   }
 
-  async function handleMakeActive(id: string | null) {
+  async function handleMakeActive(id: string) {
     try {
       await selectFocusProfile(id);
+    } catch (err: any) {
+      errorMessage = String(err);
+    }
+  }
+
+  async function toggleSetting(key: string, current: boolean) {
+    try {
+      const updated = await setSetting(key, current ? 'false' : 'true');
+      settings.set(updated);
     } catch (err: any) {
       errorMessage = String(err);
     }
@@ -271,7 +283,8 @@
           </button>
           <button
             class="btn-danger"
-            disabled={isLocked && activeProfile?.id === editingProfile.id}
+            disabled={profiles.length <= 1 || (isLocked && activeProfile?.id === editingProfile.id)}
+            title={profiles.length <= 1 ? 'At least one session is required' : m.session_delete()}
             onclick={() => handleDelete(editingProfile.id)}
           >
             {m.session_delete()}
@@ -412,6 +425,41 @@
           <span class="empty-hint">No applications blocked yet.</span>
         {/if}
       </div>
+    </div>
+
+    <!-- Timer Execution Preferences -->
+    <div class="section-group">
+      <h3 class="group-title">Timer Preferences</h3>
+      <SettingsToggle
+        label={m.timer_toggle_short_breaks()}
+        description={m.timer_toggle_short_breaks_desc()}
+        checked={!$settings.short_breaks_enabled}
+        onclick={() => toggleSetting('short_breaks_enabled', $settings.short_breaks_enabled)}
+      />
+      <SettingsToggle
+        label={m.timer_toggle_long_breaks()}
+        description={m.timer_toggle_long_breaks_desc()}
+        checked={!$settings.long_breaks_enabled}
+        onclick={() => toggleSetting('long_breaks_enabled', $settings.long_breaks_enabled)}
+      />
+      <SettingsToggle
+        label={m.timer_toggle_auto_start_work()}
+        description={m.timer_toggle_auto_start_work_desc()}
+        checked={$settings.auto_start_work}
+        onclick={() => toggleSetting('auto_start_work', $settings.auto_start_work)}
+      />
+      <SettingsToggle
+        label={m.timer_toggle_auto_start_break()}
+        description={m.timer_toggle_auto_start_break_desc()}
+        checked={$settings.auto_start_break}
+        onclick={() => toggleSetting('auto_start_break', $settings.auto_start_break)}
+      />
+      <SettingsToggle
+        label={m.timer_toggle_countdown()}
+        description={m.timer_toggle_countdown_desc()}
+        checked={$settings.dial_countdown}
+        onclick={() => toggleSetting('dial_countdown', $settings.dial_countdown)}
+      />
     </div>
 
     <!-- Global Preferences -->

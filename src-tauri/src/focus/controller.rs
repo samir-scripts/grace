@@ -33,16 +33,44 @@ impl FocusController {
         let enforcer = enforcer.unwrap_or_else(|| Arc::new(SystemEnforcer::new()));
         let mut sm = FocusStateMachine::new();
 
-        // Load preferences on startup
+        // Load preferences on startup, ensuring valid profile selection
         if let Ok(conn) = db.lock() {
+            let mut active: Option<FocusProfile> = None;
             if let Ok(prefs) = repo.get_preferences(&conn) {
                 sm.set_unblock_during_breaks(prefs.unblock_during_breaks);
-                if let Some(prof_id) = &prefs.selected_profile_id {
-                    if let Ok(Some(profile)) = repo.get_profile(&conn, prof_id) {
-                        let _ = sm.select_profile(Some(profile));
-                    }
+                if let Ok(Some(profile)) = repo.get_profile(&conn, &prefs.selected_profile_id) {
+                    active = Some(profile);
                 }
             }
+
+            let profile = match active {
+                Some(p) => p,
+                None => {
+                    let profiles = repo.get_profiles(&conn).unwrap_or_default();
+                    let fallback = if let Some(p) = profiles.into_iter().next() {
+                        p
+                    } else {
+                        let default_prof = FocusProfile {
+                            id: "default".to_string(),
+                            name: "Pomodoro".to_string(),
+                            work_secs: 1500,
+                            short_break_secs: 300,
+                            long_break_secs: 900,
+                            work_rounds: 4,
+                            blocked_apps: Vec::new(),
+                            blocked_domains: Vec::new(),
+                            revision: 1,
+                        };
+                        let _ = repo.save_profile(&conn, &default_prof);
+                        default_prof
+                    };
+                    let mut prefs = repo.get_preferences(&conn).unwrap_or_default();
+                    prefs.selected_profile_id = fallback.id.clone();
+                    let _ = repo.save_preferences(&conn, &prefs);
+                    fallback
+                }
+            };
+            let _ = sm.select_profile(Some(profile));
 
             // Check if there was an interrupted dirty run in journal
             if let Ok(Some(journal)) = repo.get_run_journal(&conn) {
@@ -90,21 +118,18 @@ impl FocusController {
     }
 
     pub fn check_timer_command(&self, action: TimerAction) -> Result<(), String> {
-        let is_active = self.is_active();
+        if !self.is_locked() {
+            return Ok(());
+        }
         match action {
             TimerAction::Reset => {
-                if is_active {
-                    return Err("Timer reset is disabled while a focus session is active. Use emergency exit if needed.".to_string());
-                }
+                Err("Timer reset is disabled while a focus session is active. Use emergency exit if needed.".to_string())
             }
             TimerAction::Skip => {
-                if is_active {
-                    return Err("Timer skip is disabled while a focus session is active.".to_string());
-                }
+                Err("Timer skip is disabled while a focus session is active.".to_string())
             }
-            TimerAction::Toggle | TimerAction::RestartRound => {}
+            TimerAction::Toggle | TimerAction::RestartRound => Ok(()),
         }
-        Ok(())
     }
 
     // --- Profile Management ---
@@ -167,23 +192,36 @@ impl FocusController {
     }
 
     pub fn delete_profile(&self, id: &str) -> Result<bool, String> {
+        let conn = self.db.lock().map_err(|e| e.to_string())?;
+        let profiles = self.repository.get_profiles(&conn).map_err(|e| e.to_string())?;
+        if profiles.len() <= 1 {
+            return Err("Cannot delete the only remaining session.".to_string());
+        }
+
         if self.is_locked() {
             let snap = self.get_snapshot();
             if let Some(active) = snap.active_profile {
                 if active.id == id {
-                    return Err("Cannot delete the currently active focus session.".to_string());
+                    return Err("Cannot delete the currently active focus session while locked.".to_string());
                 }
             }
         }
 
-        let conn = self.db.lock().map_err(|e| e.to_string())?;
+        let next_profile = profiles.into_iter().find(|p| p.id != id);
         let deleted = self.repository.delete_profile(&conn, id).map_err(|e| e.to_string())?;
         if deleted {
-            let mut sm = self.state_machine.lock().unwrap();
-            let snap = sm.snapshot();
-            if let Some(active) = &snap.active_profile {
-                if active.id == id {
-                    let _ = sm.select_profile(None);
+            let is_selected = {
+                let sm = self.state_machine.lock().unwrap();
+                sm.snapshot().active_profile.as_ref().map(|p| p.id == id).unwrap_or(false)
+            };
+            if is_selected {
+                if let Some(next) = next_profile {
+                    let mut sm = self.state_machine.lock().unwrap();
+                    let _ = sm.select_profile(Some(next.clone()));
+                    drop(sm);
+                    let mut prefs = self.repository.get_preferences(&conn).unwrap_or_default();
+                    prefs.selected_profile_id = next.id;
+                    let _ = self.repository.save_preferences(&conn, &prefs);
                 }
             }
         }
@@ -192,36 +230,34 @@ impl FocusController {
         Ok(deleted)
     }
 
-    pub fn select_profile(&self, id: Option<String>) -> Result<(), String> {
+    pub fn select_profile(&self, id: &str) -> Result<FocusProfile, String> {
         let conn = self.db.lock().map_err(|e| e.to_string())?;
-
-        let profile = if let Some(prof_id) = &id {
-            self.repository.get_profile(&conn, prof_id)
-                .map_err(|e| e.to_string())?
-                .ok_or_else(|| "Profile not found".to_string())?
-        } else {
-            // Deselect
-            let mut sm = self.state_machine.lock().unwrap();
-            sm.select_profile(None).map_err(|e| e.to_string())?;
-            let mut prefs = self.repository.get_preferences(&conn).unwrap_or_default();
-            prefs.selected_profile_id = None;
-            let _ = self.repository.save_preferences(&conn, &prefs);
-            drop(sm);
-            self.emit_changed();
-            return Ok(());
-        };
+        let profile = self.repository.get_profile(&conn, id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "Profile not found".to_string())?;
 
         let mut sm = self.state_machine.lock().unwrap();
-        sm.select_profile(Some(profile)).map_err(|e| e.to_string())?;
+        sm.select_profile(Some(profile.clone())).map_err(|e| e.to_string())?;
 
         let mut prefs = self.repository.get_preferences(&conn).unwrap_or_default();
-        prefs.selected_profile_id = id;
+        prefs.selected_profile_id = id.to_string();
         let _ = self.repository.save_preferences(&conn, &prefs);
 
         drop(sm);
         self.emit_changed();
-        Ok(())
+        Ok(profile)
     }
+
+    pub fn on_timer_reset(&self) {
+        let mut sm = self.state_machine.lock().unwrap();
+        let _ = sm.handle_reset();
+        drop(sm);
+        if let Ok(conn) = self.db.lock() {
+            let _ = self.repository.clear_run_journal(&conn);
+        }
+        self.emit_changed();
+    }
+
 
     pub fn set_unblock_during_breaks(&self, unblock: bool) -> Result<(), String> {
         let conn = self.db.lock().map_err(|e| e.to_string())?;
@@ -309,18 +345,20 @@ impl FocusController {
         if round_type == "work" {
             let _ = sm.handle_work_started();
             if let Some(prof) = &sm.snapshot().active_profile {
-                let _ = self.enforcer.apply_blocking(&prof.blocked_apps, &prof.blocked_domains);
-                // Record run journal
-                if let Ok(conn) = self.db.lock() {
-                    let journal = FocusRunJournal {
-                        run_id: uuid::Uuid::new_v4().to_string(),
-                        profile_snapshot_json: serde_json::to_string(prof).unwrap_or_default(),
-                        phase: "work".to_string(),
-                        current_round: sm.snapshot().current_work_round,
-                        started_at: chrono_now_secs(),
-                        lease_expires_at: chrono_now_secs() + 15,
-                    };
-                    let _ = self.repository.save_run_journal(&conn, &journal);
+                if prof.has_blocking_rules() {
+                    let _ = self.enforcer.apply_blocking(&prof.blocked_apps, &prof.blocked_domains);
+                    // Record run journal
+                    if let Ok(conn) = self.db.lock() {
+                        let journal = FocusRunJournal {
+                            run_id: uuid::Uuid::new_v4().to_string(),
+                            profile_snapshot_json: serde_json::to_string(prof).unwrap_or_default(),
+                            phase: "work".to_string(),
+                            current_round: sm.snapshot().current_work_round,
+                            started_at: chrono_now_secs(),
+                            lease_expires_at: chrono_now_secs() + 15,
+                        };
+                        let _ = self.repository.save_run_journal(&conn, &journal);
+                    }
                 }
             }
         }
@@ -329,7 +367,7 @@ impl FocusController {
     }
 
     pub fn on_timer_tick(&self) {
-        if self.is_active() {
+        if self.is_locked() && self.is_active() {
             self.enforcer.renew_lease();
         }
     }
@@ -407,7 +445,7 @@ mod tests {
         };
 
         controller.save_profile(profile.clone()).unwrap();
-        controller.select_profile(Some("prof-1".to_string())).unwrap();
+        controller.select_profile("prof-1").unwrap();
 
         // Start work
         controller.on_timer_started("work");
@@ -423,12 +461,48 @@ mod tests {
         assert!(controller.check_timer_command(TimerAction::Toggle).is_ok());
 
         // Selecting another profile while active is rejected
-        assert!(controller.select_profile(None).is_err());
+        assert!(controller.select_profile("prof-1").is_err());
 
         // Emergency release unlocks
         controller.execute_emergency_release().unwrap();
         assert!(!controller.is_active());
         assert!(!controller.is_locked());
         assert!(controller.check_timer_command(TimerAction::Reset).is_ok());
+    }
+
+    #[test]
+    fn test_empty_rules_timer_not_blocked() {
+        let controller = setup_test_controller();
+        let profile = FocusProfile {
+            id: "empty-1".to_string(),
+            name: "Ordinary".to_string(),
+            work_secs: 1500,
+            short_break_secs: 300,
+            long_break_secs: 900,
+            work_rounds: 4,
+            blocked_apps: vec![],
+            blocked_domains: vec![],
+            revision: 1,
+        };
+        controller.save_profile(profile).unwrap();
+        controller.select_profile("empty-1").unwrap();
+
+        controller.on_timer_started("work");
+        assert!(controller.is_active());
+        assert!(!controller.is_locked());
+        assert!(controller.check_timer_command(TimerAction::Reset).is_ok());
+        assert!(controller.check_timer_command(TimerAction::Skip).is_ok());
+
+        controller.on_timer_reset();
+        assert!(!controller.is_active());
+    }
+
+    #[test]
+    fn test_cannot_delete_only_profile() {
+        let controller = setup_test_controller();
+        let profiles = controller.get_profiles().unwrap();
+        assert_eq!(profiles.len(), 1);
+        let res = controller.delete_profile(&profiles[0].id);
+        assert!(res.is_err());
     }
 }

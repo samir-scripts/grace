@@ -73,11 +73,6 @@ body {
    Uses foreground color-mix so thumbs and tracks adapt to any light/dark theme.
    --------------------------------------------------------------------------- */
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklch, var(--color-foreground) 25%, transparent) transparent;
-}
-
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -88,14 +83,24 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in oklch, var(--color-foreground) 20%, transparent);
+  background: color-mix(in oklch, var(--color-foreground) 25%, transparent);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in oklch, var(--color-foreground) 35%, transparent);
+  background: color-mix(in oklch, var(--color-foreground) 40%, transparent);
 }
 
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--color-foreground) 25%, transparent) transparent;
+  }
+}
 
 /* ---------------------------------------------------------------------------
    Keyframes (available to all scoped component stylesheets)

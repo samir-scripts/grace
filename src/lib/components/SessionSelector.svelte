@@ -26,7 +26,7 @@
     isOpen = !isOpen;
   }
 
-  async function handleSelect(id: string | null) {
+  async function handleSelect(id: string) {
     try {
       await selectFocusProfile(id);
       isOpen = false;
@@ -39,13 +39,13 @@
     isOpen = false;
     const existing = await WebviewWindow.getByLabel('settings');
     if (existing) {
-      await navigateSettings('timer', 'sessions');
+      await navigateSettings('timer');
       await existing.show();
       await existing.setFocus();
       return;
     }
     new WebviewWindow('settings', {
-      url: '/settings?tab=sessions',
+      url: '/settings?section=timer',
       title: 'Pomotroid — Settings',
       width: 720,
       height: 520,
@@ -97,7 +97,7 @@
       <span class="lock-indicator" aria-hidden="true">🔒</span>
     {/if}
     <span class="session-name">
-      {activeProfile ? activeProfile.name : m.session_none()}
+      {activeProfile ? activeProfile.name : 'Pomodoro'}
     </span>
     {#if !isLocked}
       <span class="chevron" class:rotated={isOpen} aria-hidden="true">▾</span>
@@ -106,21 +106,7 @@
 
   {#if isOpen && !isLocked}
     <div class="dropdown-menu" role="listbox">
-      <button
-        class="dropdown-item"
-        class:selected={!activeProfile}
-        role="option"
-        aria-selected={!activeProfile}
-        onclick={() => handleSelect(null)}
-      >
-        <span class="item-name">{m.session_none()}</span>
-        {#if !activeProfile}
-          <span class="checkmark">✓</span>
-        {/if}
-      </button>
-
       {#if profiles.length > 0}
-        <div class="menu-divider"></div>
         {#each profiles as profile (profile.id)}
           {@const isSelected = activeProfile?.id === profile.id}
           <button

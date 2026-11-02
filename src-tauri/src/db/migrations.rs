@@ -122,6 +122,63 @@ const MIGRATION_7: &str = "
     INSERT INTO schema_version VALUES (7);
 ";
 
+/// Unifies timer duration storage into focus profiles.
+/// If no profile is currently selected, preserves any legacy timer settings into a
+/// new or default profile, ensures focus_preferences has a valid selection,
+/// and removes obsolete duration keys from the settings table.
+const MIGRATION_8: &str = "
+    INSERT INTO focus_profiles (
+        id, name, work_secs, short_break_secs, long_break_secs, work_rounds,
+        blocked_apps_json, blocked_domains_json, revision
+    )
+    SELECT
+        CASE WHEN EXISTS (SELECT 1 FROM focus_profiles WHERE id = 'default') THEN 'timer_default' ELSE 'default' END,
+        'Pomodoro',
+        COALESCE((SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'time_work_secs'), 1500),
+        COALESCE((SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'time_short_break_secs'), 300),
+        COALESCE((SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'time_long_break_secs'), 900),
+        COALESCE((SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'work_rounds'), 4),
+        '[]',
+        '[]',
+        1
+    WHERE NOT EXISTS (
+        SELECT 1 FROM focus_preferences fp
+        JOIN focus_profiles p ON fp.selected_profile_id = p.id
+        WHERE fp.id = 1
+    );
+
+    INSERT INTO focus_preferences (id, selected_profile_id, unblock_during_breaks)
+    VALUES (
+        1,
+        COALESCE(
+            (SELECT selected_profile_id FROM focus_preferences WHERE id = 1 AND selected_profile_id IN (SELECT id FROM focus_profiles)),
+            (SELECT id FROM focus_profiles WHERE id = 'timer_default'),
+            (SELECT id FROM focus_profiles WHERE id = 'default'),
+            (SELECT id FROM focus_profiles LIMIT 1)
+        ),
+        0
+    )
+    ON CONFLICT(id) DO UPDATE SET
+        selected_profile_id = COALESCE(
+            (SELECT selected_profile_id FROM focus_preferences WHERE id = 1 AND selected_profile_id IN (SELECT id FROM focus_profiles)),
+            (SELECT id FROM focus_profiles WHERE id = 'timer_default'),
+            (SELECT id FROM focus_profiles WHERE id = 'default'),
+            (SELECT id FROM focus_profiles LIMIT 1)
+        )
+    WHERE focus_preferences.selected_profile_id IS NULL
+       OR focus_preferences.selected_profile_id NOT IN (SELECT id FROM focus_profiles);
+
+    DELETE FROM settings WHERE key IN (
+        'time_work_secs',
+        'time_short_break_secs',
+        'time_long_break_secs',
+        'work_rounds'
+    );
+
+    INSERT INTO schema_version VALUES (8);
+";
+
+
 /// Apply any pending migrations. Each migration is wrapped in a transaction
 /// so a partial failure leaves the database unchanged.
 pub fn run(conn: &Connection) -> Result<()> {
@@ -169,6 +226,12 @@ pub fn run(conn: &Connection) -> Result<()> {
         log::info!("[db/migrations] MIGRATION_7 complete");
     }
 
+    if version < 8 {
+        log::info!("[db/migrations] applying MIGRATION_8: unify timer into focus profiles");
+        conn.execute_batch(&format!("BEGIN; {MIGRATION_8} COMMIT;"))?;
+        log::info!("[db/migrations] MIGRATION_8 complete");
+    }
+
     Ok(())
 }
 
@@ -195,6 +258,55 @@ fn current_version(conn: &Connection) -> Result<i64> {
 mod tests {
     use super::*;
 
+    fn legacy_database() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        for migration in [MIGRATION_1, MIGRATION_2, MIGRATION_3, MIGRATION_4, MIGRATION_5, MIGRATION_6, MIGRATION_7] {
+            conn.execute_batch(migration).unwrap();
+        }
+        conn
+    }
+
+    #[test]
+    fn upgrade_preserves_unselected_timer_and_existing_profiles() {
+        let conn = legacy_database();
+        conn.execute_batch("
+            INSERT INTO settings VALUES ('time_work_secs', '1801'), ('time_short_break_secs', '450'),
+                ('time_long_break_secs', '3900'), ('work_rounds', '6');
+            INSERT INTO focus_profiles VALUES ('default', 'Existing', 1500, 300, 900, 4, '[]', '[\"example.com\"]', 7);
+            INSERT INTO sessions (started_at, round_type, duration_secs, completed) VALUES (123, 'work', 1500, 1);
+        ").unwrap();
+        run(&conn).unwrap();
+        run(&conn).unwrap();
+        let (id, work, short, long, rounds, apps, domains): (String, u32, u32, u32, u32, String, String) = conn.query_row(
+            "SELECT p.id, work_secs, short_break_secs, long_break_secs, work_rounds, blocked_apps_json, blocked_domains_json
+             FROM focus_profiles p JOIN focus_preferences f ON p.id = f.selected_profile_id",
+            [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?))
+        ).unwrap();
+        assert_ne!(id, "default");
+        assert_eq!((work, short, long, rounds), (1801, 450, 3900, 6));
+        assert_eq!((apps.as_str(), domains.as_str()), ("[]", "[]"));
+        assert_eq!(conn.query_row("SELECT revision FROM focus_profiles WHERE id='default'", [], |r| r.get::<_, u32>(0)).unwrap(), 7);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM focus_profiles", [], |r| r.get::<_, u32>(0)).unwrap(), 2);
+        assert_eq!(conn.query_row("SELECT duration_secs FROM sessions WHERE started_at=123", [], |r| r.get::<_, u32>(0)).unwrap(), 1500);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM settings WHERE key IN ('time_work_secs','time_short_break_secs','time_long_break_secs','work_rounds')", [], |r| r.get::<_, u32>(0)).unwrap(), 0);
+    }
+
+    #[test]
+    fn upgrade_preserves_selected_profile_and_preferences() {
+        let conn = legacy_database();
+        conn.execute_batch("
+            INSERT INTO focus_profiles VALUES ('chosen', 'Chosen', 2000, 400, 1000, 3, '[]', '[]', 9);
+            INSERT INTO focus_preferences VALUES (1, 'chosen', 1, 'stored-hash');
+        ").unwrap();
+        run(&conn).unwrap();
+        let (id, unblock, hash): (String, bool, String) = conn.query_row(
+            "SELECT selected_profile_id, unblock_during_breaks, emergency_passphrase_hash FROM focus_preferences",
+            [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        ).unwrap();
+        assert_eq!((id.as_str(), unblock, hash.as_str()), ("chosen", true, "stored-hash"));
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM focus_profiles", [], |r| r.get::<_, u32>(0)).unwrap(), 1);
+    }
+
     #[test]
     fn migration_is_idempotent() {
         let conn = Connection::open_in_memory().unwrap();
@@ -204,7 +316,7 @@ mod tests {
         let v: i64 = conn
             .query_row("SELECT MAX(version) FROM schema_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 7);
+        assert_eq!(v, 8);
     }
 
     #[test]

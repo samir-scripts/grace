@@ -92,7 +92,7 @@ impl FocusStateMachine {
             active_profile: self.active_profile.clone(),
             current_work_round: self.current_work_round,
             total_work_rounds: self.total_work_rounds,
-            is_locked: self.status == FocusStatus::Active || self.status == FocusStatus::Preparing,
+            is_locked: self.is_locked(),
             blocking_active: self.blocking_active,
             unblock_during_breaks: self.unblock_during_breaks,
         }
@@ -104,14 +104,15 @@ impl FocusStateMachine {
         if self.status == FocusStatus::Active {
             if let Some(phase) = self.current_phase {
                 if phase == FocusPhase::ShortBreak || phase == FocusPhase::LongBreak {
-                    self.blocking_active = !unblock;
+                    let has_rules = self.active_profile.as_ref().map(|p| p.has_blocking_rules()).unwrap_or(false);
+                    self.blocking_active = has_rules && !unblock;
                 }
             }
         }
     }
 
     pub fn select_profile(&mut self, profile: Option<FocusProfile>) -> Result<(), FocusError> {
-        if self.status == FocusStatus::Active || self.status == FocusStatus::Preparing {
+        if self.is_locked() {
             return Err(FocusError::SessionLocked);
         }
         if let Some(p) = &profile {
@@ -124,17 +125,12 @@ impl FocusStateMachine {
     }
 
     pub fn handle_work_started(&mut self) -> Result<(), FocusError> {
-        if self.active_profile.is_none() {
-            // Not a focus session run (standard timer)
-            return Ok(());
-        }
-
         self.status = FocusStatus::Active;
         self.current_phase = Some(FocusPhase::Work);
         if self.current_work_round == 0 {
             self.current_work_round = 1;
         }
-        self.blocking_active = true;
+        self.blocking_active = self.active_profile.as_ref().map(|p| p.has_blocking_rules()).unwrap_or(false);
         Ok(())
     }
 
@@ -147,10 +143,12 @@ impl FocusStateMachine {
         match next_phase {
             FocusPhase::Work => {
                 self.current_work_round += 1;
-                self.blocking_active = true;
+                let has_rules = self.active_profile.as_ref().map(|p| p.has_blocking_rules()).unwrap_or(false);
+                self.blocking_active = has_rules;
             }
             FocusPhase::ShortBreak | FocusPhase::LongBreak => {
-                self.blocking_active = !self.unblock_during_breaks;
+                let has_rules = self.active_profile.as_ref().map(|p| p.has_blocking_rules()).unwrap_or(false);
+                self.blocking_active = has_rules && !self.unblock_during_breaks;
             }
         }
         Ok(())
@@ -163,6 +161,14 @@ impl FocusStateMachine {
         self.blocking_active = false;
         Ok(())
     }
+    pub fn handle_reset(&mut self) -> Result<(), FocusError> {
+        self.status = FocusStatus::Idle;
+        self.current_phase = None;
+        self.current_work_round = 0;
+        self.blocking_active = false;
+        Ok(())
+    }
+
 
     pub fn handle_emergency_released(&mut self) -> Result<(), FocusError> {
         self.status = FocusStatus::Idle;
@@ -177,7 +183,8 @@ impl FocusStateMachine {
     }
 
     pub fn is_locked(&self) -> bool {
-        self.status == FocusStatus::Active || self.status == FocusStatus::Preparing
+        let has_rules = self.active_profile.as_ref().map(|p| p.has_blocking_rules()).unwrap_or(false);
+        has_rules && (self.status == FocusStatus::Active || self.status == FocusStatus::Preparing)
     }
 }
 
@@ -249,5 +256,27 @@ mod tests {
         assert!(!sm.is_locked());
         assert_eq!(sm.snapshot().status, FocusStatus::Idle);
         assert!(!sm.snapshot().blocking_active);
+    }
+
+    #[test]
+    fn test_empty_rules_profile_not_locked() {
+        let profile = FocusProfile {
+            id: "empty".to_string(),
+            name: "Ordinary".to_string(),
+            work_secs: 1500,
+            short_break_secs: 300,
+            long_break_secs: 900,
+            work_rounds: 4,
+            blocked_apps: vec![],
+            blocked_domains: vec![],
+            revision: 1,
+        };
+        let mut sm = FocusStateMachine::new();
+        sm.select_profile(Some(profile)).unwrap();
+        sm.handle_work_started().unwrap();
+        assert!(!sm.is_locked());
+        assert!(!sm.snapshot().blocking_active);
+        sm.handle_reset().unwrap();
+        assert_eq!(sm.snapshot().status, FocusStatus::Idle);
     }
 }

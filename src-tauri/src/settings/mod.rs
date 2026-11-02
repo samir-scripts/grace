@@ -20,8 +20,6 @@ pub struct Settings {
     pub min_to_tray: bool,
     pub min_to_tray_on_close: bool,
     pub notifications_enabled: bool,
-    /// Number of work rounds before a long break.
-    pub long_break_interval: u32,
     pub short_breaks_enabled: bool,
     pub long_breaks_enabled: bool,
     /// When true the dial arc starts full and subtracts; when false it fills from empty.
@@ -31,12 +29,6 @@ pub struct Settings {
     pub theme_dark: String,
     pub tick_sounds_during_work: bool,
     pub tick_sounds_during_break: bool,
-    /// Work round duration in seconds.
-    pub time_work_secs: u32,
-    /// Short break duration in seconds.
-    pub time_short_break_secs: u32,
-    /// Long break duration in seconds.
-    pub time_long_break_secs: u32,
     /// Audio volume in the 0.0–1.0 range.
     pub volume: f32,
     pub shortcut_toggle: String,
@@ -78,7 +70,6 @@ impl Default for Settings {
             min_to_tray: false,
             min_to_tray_on_close: false,
             notifications_enabled: false,
-            long_break_interval: 4,
             short_breaks_enabled: true,
             long_breaks_enabled: true,
             dial_countdown: true,
@@ -87,9 +78,6 @@ impl Default for Settings {
             theme_dark: "Pomotroid".to_string(),
             tick_sounds_during_work: false,
             tick_sounds_during_break: false,
-            time_work_secs: 25 * 60,
-            time_short_break_secs: 5 * 60,
-            time_long_break_secs: 15 * 60,
             volume: 1.0,
             #[cfg(target_os = "macos")]
             shortcut_toggle: "Super+Shift+1".to_string(),
@@ -187,7 +175,6 @@ pub fn load(conn: &Connection) -> Result<Settings> {
         min_to_tray: parse_bool(&map, "min_to_tray", d.min_to_tray),
         min_to_tray_on_close: parse_bool(&map, "min_to_tray_on_close", d.min_to_tray_on_close),
         notifications_enabled: parse_bool(&map, "notifications", d.notifications_enabled),
-        long_break_interval: parse_u32(&map, "work_rounds", d.long_break_interval),
         short_breaks_enabled: parse_bool(&map, "short_breaks_enabled", d.short_breaks_enabled),
         long_breaks_enabled: parse_bool(&map, "long_breaks_enabled", d.long_breaks_enabled),
         dial_countdown: parse_bool(&map, "dial_countdown", d.dial_countdown),
@@ -209,10 +196,6 @@ pub fn load(conn: &Connection) -> Result<Settings> {
             "tick_sounds_break",
             d.tick_sounds_during_break,
         ),
-        // DB stores seconds directly (since MIGRATION_2).
-        time_work_secs: parse_u32(&map, "time_work_secs", d.time_work_secs),
-        time_short_break_secs: parse_u32(&map, "time_short_break_secs", d.time_short_break_secs),
-        time_long_break_secs: parse_u32(&map, "time_long_break_secs", d.time_long_break_secs),
         // DB stores 0–100; convert to 0.0–1.0.
         volume: (parse_u32(&map, "volume", (d.volume * 100.0) as u32) as f32 / 100.0)
             .clamp(0.0, 1.0),
@@ -315,10 +298,6 @@ mod tests {
         seed_defaults(&conn).unwrap();
         let s = load(&conn).unwrap();
 
-        assert_eq!(s.time_work_secs, 25 * 60);
-        assert_eq!(s.time_short_break_secs, 5 * 60);
-        assert_eq!(s.time_long_break_secs, 15 * 60);
-        assert_eq!(s.long_break_interval, 4);
         assert!((s.volume - 1.0).abs() < f32::EPSILON);
         #[cfg(target_os = "macos")]
         {
@@ -374,24 +353,6 @@ mod tests {
     }
 
     #[test]
-    fn save_and_reload_time() {
-        let conn = setup();
-        seed_defaults(&conn).unwrap();
-        save_setting(&conn, "time_work_secs", "1800").unwrap();
-        let s = load(&conn).unwrap();
-        assert_eq!(s.time_work_secs, 1800);
-    }
-
-    #[test]
-    fn save_and_reload_sub_minute_time() {
-        let conn = setup();
-        seed_defaults(&conn).unwrap();
-        save_setting(&conn, "time_work_secs", "339").unwrap();
-        let s = load(&conn).unwrap();
-        assert_eq!(s.time_work_secs, 339);
-    }
-
-    #[test]
     fn missing_keys_fall_back_to_defaults() {
         let conn = setup();
         // No seed — table is empty.
@@ -403,21 +364,16 @@ mod tests {
     fn reset_defaults_restores_all_settings() {
         // Mutate several settings (timer-related and others).
         let conn = setup();
-        seed_defaults(&conn).unwrap();
-        save_setting(&conn, "time_work_secs", "2700").unwrap();
-        save_setting(&conn, "time_short_break_secs", "600").unwrap();
-        save_setting(&conn, "work_rounds", "8").unwrap();
         save_setting(&conn, "always_on_top", "true").unwrap();
+        save_setting(&conn, "dial_countdown", "false").unwrap();
 
         // Simulate the reset_defaults command: wipe all rows then re-seed.
         conn.execute("DELETE FROM settings", []).unwrap();
         seed_defaults(&conn).unwrap();
 
         let s = load(&conn).unwrap();
-        // Timer settings must be restored to defaults.
-        assert_eq!(s.time_work_secs, 25 * 60, "work duration must reset to 25 min");
-        assert_eq!(s.time_short_break_secs, 5 * 60, "short break must reset to 5 min");
-        assert_eq!(s.long_break_interval, 4, "work rounds must reset to 4");
+        assert!(!s.always_on_top, "always_on_top must reset to default false");
+        assert!(s.dial_countdown, "dial_countdown must reset to default true");
         // Non-timer settings are also wiped and reseeded to their defaults.
         assert!(!s.always_on_top, "always_on_top must reset to default false");
     }
@@ -436,16 +392,18 @@ mod tests {
         crate::db::migrations::run(&conn).unwrap();
 
         // New keys must exist with correct second values.
-        let work: String = conn.query_row("SELECT value FROM settings WHERE key = 'time_work_secs'", [], |r| r.get(0)).unwrap();
-        assert_eq!(work, "1800");
-        let short: String = conn.query_row("SELECT value FROM settings WHERE key = 'time_short_break_secs'", [], |r| r.get(0)).unwrap();
-        assert_eq!(short, "420");
-        let long: String = conn.query_row("SELECT value FROM settings WHERE key = 'time_long_break_secs'", [], |r| r.get(0)).unwrap();
-        assert_eq!(long, "1200");
+        let (work, short, long): (u32, u32, u32) = conn.query_row(
+            "SELECT work_secs, short_break_secs, long_break_secs FROM focus_profiles WHERE id = 'default'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        ).unwrap();
+        assert_eq!(work, 1800);
+        assert_eq!(short, 420);
+        assert_eq!(long, 1200);
 
         // Old keys must be gone.
         let old_count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM settings WHERE key LIKE '%_mins'",
+            "SELECT COUNT(*) FROM settings WHERE key LIKE '%_mins' OR key LIKE '%_secs'",
             [], |r| r.get(0),
         ).unwrap();
         assert_eq!(old_count, 0, "old *_mins keys must be absent after MIGRATION_2");

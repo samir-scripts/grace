@@ -37,7 +37,7 @@ fn test_full_focus_session_lifecycle() {
     assert_eq!(saved.name, "Deep Work");
 
     // 2. Select profile
-    controller.select_profile(Some("profile-deep-work".to_string())).unwrap();
+    controller.select_profile("profile-deep-work").unwrap();
     controller.set_unblock_during_breaks(true).unwrap();
 
     let snap = controller.get_snapshot();
@@ -56,7 +56,7 @@ fn test_full_focus_session_lifecycle() {
     assert_eq!(mock_enforcer.blocked_domains.lock().unwrap().len(), 2);
 
     // Verify session switching and reset are strictly blocked
-    assert!(controller.select_profile(None).is_err());
+    assert!(controller.select_profile("profile-deep-work").is_err());
     assert!(controller.check_timer_command(TimerAction::Reset).is_err());
     assert!(controller.check_timer_command(TimerAction::Skip).is_err());
     assert!(controller.check_timer_command(TimerAction::RestartRound).is_ok());
@@ -92,7 +92,7 @@ fn test_full_focus_session_lifecycle() {
 
     // Now reset and switching are allowed again
     assert!(controller.check_timer_command(TimerAction::Reset).is_ok());
-    assert!(controller.select_profile(None).is_ok());
+    assert!(controller.select_profile("profile-deep-work").is_ok());
 }
 
 #[test]
@@ -116,7 +116,7 @@ fn test_emergency_exit_during_active_work() {
         revision: 1,
     };
     controller.save_profile(profile).unwrap();
-    controller.select_profile(Some("prof-escape".to_string())).unwrap();
+    controller.select_profile("prof-escape").unwrap();
 
     // Start work
     controller.on_timer_started("work");
@@ -161,4 +161,61 @@ fn test_dirty_journal_cleanup_on_startup() {
 
     let conn = db.lock().unwrap();
     assert!(repo.get_run_journal(&conn).unwrap().is_none());
+}
+
+#[test]
+fn test_empty_rule_session_allows_ordinary_reset_and_skip() {
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    migrations::run(&conn).unwrap();
+    let db = Arc::new(Mutex::new(conn));
+    let mock_enforcer = Arc::new(MockEnforcer::new());
+    let controller = Arc::new(FocusController::new(db, Some(mock_enforcer.clone())));
+
+    let empty_profile = FocusProfile {
+        id: "profile-empty".to_string(),
+        name: "Standard Pomodoro".to_string(),
+        work_secs: 1500,
+        short_break_secs: 300,
+        long_break_secs: 900,
+        work_rounds: 4,
+        blocked_apps: vec![],
+        blocked_domains: vec![],
+        revision: 1,
+    };
+    controller.save_profile(empty_profile).unwrap();
+    controller.select_profile("profile-empty").unwrap();
+
+    // Start work round
+    controller.on_timer_started("work");
+    let snap = controller.get_snapshot();
+
+    // Must NOT be locked
+    assert!(!snap.is_locked);
+    assert!(!snap.blocking_active);
+    assert!(!mock_enforcer.is_active.load(std::sync::atomic::Ordering::SeqCst));
+
+    // Reset and skip MUST be allowed
+    assert!(controller.check_timer_command(TimerAction::Reset).is_ok());
+    assert!(controller.check_timer_command(TimerAction::Skip).is_ok());
+
+    // Resetting transitions state machine to Idle
+    controller.on_timer_reset();
+    assert_eq!(controller.get_snapshot().status, pomotroid_lib::focus::state::FocusStatus::Idle);
+}
+
+#[test]
+fn test_cannot_delete_last_remaining_profile() {
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    migrations::run(&conn).unwrap();
+    let db = Arc::new(Mutex::new(conn));
+    let mock_enforcer = Arc::new(MockEnforcer::new());
+    let controller = Arc::new(FocusController::new(db, Some(mock_enforcer)));
+
+    let profiles = controller.get_profiles().unwrap();
+    assert_eq!(profiles.len(), 1);
+
+    // Attempting to delete the only profile must fail
+    let res = controller.delete_profile(&profiles[0].id);
+    assert!(res.is_err());
+    assert_eq!(controller.get_profiles().unwrap().len(), 1);
 }
