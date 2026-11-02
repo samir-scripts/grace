@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import Titlebar from '$lib/components/Titlebar.svelte';
   import Timer from '$lib/components/Timer.svelte';
+  import FocusEscapeDialog from '$lib/components/FocusEscapeDialog.svelte';
   import { getSettings, getThemes, onSettingsChanged, onThemesChanged } from '$lib/ipc';
   import { settings } from '$lib/stores/settings';
   import { applyTheme } from '$lib/stores/theme';
@@ -20,6 +21,7 @@
   let localVolume = $state(1.0);
   let preMuteVolume = $state(0.5);
   let isFullscreen = $state(false);
+  let showEscapeDialog = $state(false);
 
   // Base window dimensions (natural/default size).
   const BASE_W = 360;
@@ -182,11 +184,16 @@
 {/if}
 
 <div class="app">
-  <Titlebar />
+  <Titlebar onEmergencyClick={() => (showEscapeDialog = true)} />
   <main class:compact={isCompact}>
     <Timer {isCompact} {uiScale} />
   </main>
 </div>
+
+<FocusEscapeDialog
+  open={showEscapeDialog}
+  onClose={() => (showEscapeDialog = false)}
+/>
 
 <style>
   .app {

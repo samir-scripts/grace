@@ -52,6 +52,8 @@ export function createLocalShortcutHandler(state: LocalShortcutState): (e: Keybo
       const tag = target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return;
     }
+    // Skip if emergency escape modal is open.
+    if (document.querySelector('.escape-modal-backdrop')) return;
 
     // Skip bare modifier keys.
     if (MODIFIER_KEYS.has(e.key)) return;

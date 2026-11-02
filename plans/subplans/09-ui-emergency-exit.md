@@ -1,4 +1,8 @@
-Status: pending
+Status: completed
+
+Verification Evidence:
+- `npm run check` completed with 0 errors and 0 warnings (911 files checked).
+- `FocusEscapeDialog.svelte` implemented with continuous 60s hold pulse, passphrase validation, and shortcut isolation in `localShortcuts.ts`.
 
 Context: Implement named finite Pomodoro sessions in Tauri 2/Rust and Svelte 5. Read [master plan](../focus-sessions-master-plan.md) for global constraints and shared contracts. Durations use seconds; Rust owns enforcement and session locks.
 
