@@ -1,3 +1,4 @@
+pub mod enforcer;
 pub mod escape;
 pub mod model;
 pub mod repository;

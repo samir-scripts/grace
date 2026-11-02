@@ -1,4 +1,9 @@
-Status: pending
+Status: completed
+
+Verification Evidence:
+- Tests passed: `test focus::enforcer::hosts::tests::test_empty_domains_cleans_block ... ok`
+- Tests passed: `test focus::enforcer::hosts::tests::test_hosts_block_injection_and_clean_removal ... ok`
+- Tests passed: `test focus::enforcer::watchdog::tests::test_watchdog_lease_expiration_and_recovery ... ok`
 
 Context: Implement named finite Pomodoro sessions in Tauri 2/Rust and Svelte 5. Read [master plan](../focus-sessions-master-plan.md) for global constraints and shared contracts. Durations use seconds; Rust owns enforcement and session locks.
 
