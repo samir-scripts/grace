@@ -3,7 +3,7 @@
   import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
   import { isMac } from '$lib/utils/platform';
   import { focusSnapshot, focusProfiles } from '$lib/stores/focus';
-  import { selectFocusProfile } from '$lib/ipc';
+  import { selectFocusProfile, navigateSettings } from '$lib/ipc';
   import * as m from '$paraglide/messages.js';
 
   interface Props {
@@ -39,12 +39,13 @@
     isOpen = false;
     const existing = await WebviewWindow.getByLabel('settings');
     if (existing) {
+      await navigateSettings('timer', 'sessions');
       await existing.show();
       await existing.setFocus();
       return;
     }
     new WebviewWindow('settings', {
-      url: '/settings',
+      url: '/settings?tab=sessions',
       title: 'Pomotroid — Settings',
       width: 720,
       height: 520,
@@ -59,7 +60,10 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape' && isOpen) {
+      e.stopPropagation();
       isOpen = false;
+      const btn = document.querySelector('.session-btn') as HTMLElement | null;
+      btn?.focus();
     }
   }
 
@@ -216,12 +220,15 @@
     top: calc(100% + 4px);
     left: 50%;
     transform: translateX(-50%);
-    min-width: 170px;
+    min-width: 180px;
     max-width: 240px;
-    background: var(--color-background);
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--color-background-light);
     border: 1px solid var(--color-separator);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 24px color-mix(in oklch, black 25%, transparent);
     padding: 4px;
     display: flex;
     flex-direction: column;

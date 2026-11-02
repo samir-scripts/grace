@@ -331,7 +331,7 @@
   .mode-tabs {
     display: flex;
     gap: 6px;
-    background: color-mix(in oklch, var(--color-background) 60%, black);
+    background: var(--color-background-light);
     padding: 3px;
     border-radius: 6px;
   }
@@ -443,7 +443,7 @@
   .progress-track {
     flex: 1;
     height: 6px;
-    background: color-mix(in oklch, var(--color-background) 50%, black);
+    background: color-mix(in oklch, var(--color-foreground) 16%, transparent);
     border-radius: 3px;
     overflow: hidden;
   }
@@ -480,8 +480,8 @@
   }
 
   .text-input {
-    background: color-mix(in oklch, var(--color-background) 60%, black);
-    border: 1px solid var(--color-separator);
+    background: var(--color-hover);
+    border: 1px solid color-mix(in oklch, var(--color-foreground) 18%, transparent);
     border-radius: 6px;
     padding: 8px 10px;
     color: var(--color-foreground);

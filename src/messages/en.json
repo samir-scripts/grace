@@ -1,6 +1,9 @@
 {
   "settings_title": "Settings",
   "nav_timer": "Timer",
+  "nav_timer_sessions": "Timer & Sessions",
+  "timer_sessions_tab_defaults": "Default Timer",
+  "timer_sessions_tab_saved": "Saved Sessions",
   "nav_appearance": "Appearance",
   "nav_notifications": "Notifications",
   "nav_shortcuts": "Shortcuts",

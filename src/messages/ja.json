@@ -1,6 +1,9 @@
 {
   "settings_title": "設定",
   "nav_timer": "タイマー",
+  "nav_timer_sessions": "タイマーとセッション",
+  "timer_sessions_tab_defaults": "デフォルトタイマー",
+  "timer_sessions_tab_saved": "保存済みセッション",
   "nav_appearance": "外観",
   "nav_notifications": "通知",
   "nav_shortcuts": "ショートカット",

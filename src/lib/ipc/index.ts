@@ -2,7 +2,7 @@
 // All backend communication goes through this module.
 
 import { invoke } from '@tauri-apps/api/core';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { emitTo, listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open as dialogOpen } from '@tauri-apps/plugin-dialog';
 import type {
   TimerState,
@@ -135,6 +135,18 @@ export const onThemesChanged = (cb: (themes: Theme[]) => void): Promise<Unlisten
 export const onSessionsCleared = (cb: () => void): Promise<UnlistenFn> =>
   listen<void>('sessions:cleared', () => cb());
 
+export interface SettingsNavigatePayload {
+  section?: string;
+  tab?: 'defaults' | 'sessions';
+}
+
+export const navigateSettings = (section: string, tab?: 'defaults' | 'sessions') =>
+  emitTo('settings', 'settings:navigate', { section, tab } satisfies SettingsNavigatePayload);
+
+export const onSettingsNavigate = (
+  cb: (payload: SettingsNavigatePayload) => void
+): Promise<UnlistenFn> =>
+  listen<SettingsNavigatePayload>('settings:navigate', (e) => cb(e.payload));
 // --- Focus Session commands ---
 
 export const getFocusSnapshot = () => invoke<FocusSnapshot>('focus_snapshot_get');

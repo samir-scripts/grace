@@ -1,7 +1,13 @@
 <script lang="ts">
   import '../../app.css';
   import { onMount } from 'svelte';
-  import { getSettings, getThemes, onSettingsChanged, onThemesChanged } from '$lib/ipc';
+  import {
+    getSettings,
+    getThemes,
+    onSettingsChanged,
+    onThemesChanged,
+    onSettingsNavigate,
+  } from '$lib/ipc';
   import { settings } from '$lib/stores/settings';
   import { applyTheme } from '$lib/stores/theme';
   import { resolveThemeName } from '$lib/utils/theme';
@@ -12,22 +18,20 @@
   import { createLocalShortcutHandler } from '$lib/utils/localShortcuts';
 
   import SettingsTitlebar from '$lib/components/settings/SettingsTitlebar.svelte';
-  import TimerSection from '$lib/components/settings/sections/TimerSection.svelte';
+  import TimerSessionsSection from '$lib/components/settings/sections/TimerSessionsSection.svelte';
   import AppearanceSection from '$lib/components/settings/sections/AppearanceSection.svelte';
   import NotificationsSection from '$lib/components/settings/sections/NotificationsSection.svelte';
   import ShortcutsSection from '$lib/components/settings/sections/ShortcutsSection.svelte';
   import SystemSection from '$lib/components/settings/sections/SystemSection.svelte';
   import AboutSection from '$lib/components/settings/sections/AboutSection.svelte';
-  import SessionsSection from '$lib/components/settings/sections/SessionsSection.svelte';
   import { initFocusStore } from '$lib/stores/focus';
 
   import * as m from '$paraglide/messages.js';
 
-  type Section = 'timer' | 'sessions' | 'appearance' | 'notifications' | 'shortcuts' | 'system' | 'about';
+  type Section = 'timer' | 'appearance' | 'notifications' | 'shortcuts' | 'system' | 'about';
 
   const SECTIONS: { id: Section; label: () => string }[] = [
-    { id: 'timer', label: m.nav_timer },
-    { id: 'sessions', label: m.nav_sessions },
+    { id: 'timer', label: m.nav_timer_sessions },
     { id: 'appearance', label: m.nav_appearance },
     { id: 'notifications', label: m.nav_notifications },
     { id: 'shortcuts', label: m.nav_shortcuts },
@@ -36,6 +40,7 @@
   ];
 
   let active = $state<Section>('timer');
+  let activeTimerTab = $state<'defaults' | 'sessions'>('defaults');
 
   // Local shortcut state for the settings window.
   let localVolume = $state(1.0);
@@ -63,6 +68,45 @@
     });
     document.addEventListener('keydown', shortcutHandler);
     cleanups.push(() => document.removeEventListener('keydown', shortcutHandler));
+
+    // Parse query params for initial section / tab selection.
+    const urlParams = new URLSearchParams(window.location.search);
+    const querySection = urlParams.get('section');
+    const queryTab = urlParams.get('tab');
+    if (querySection === 'timer' || querySection === 'sessions') {
+      active = 'timer';
+    } else if (
+      querySection &&
+      ['appearance', 'notifications', 'shortcuts', 'system', 'about'].includes(querySection)
+    ) {
+      active = querySection as Section;
+    }
+    if (queryTab === 'sessions' || querySection === 'sessions') {
+      active = 'timer';
+      activeTimerTab = 'sessions';
+    } else if (queryTab === 'defaults') {
+      activeTimerTab = 'defaults';
+    }
+    // Register navigation listener immediately so early cross-window messages are not lost.
+    onSettingsNavigate((payload) => {
+      if (payload.section) {
+        if (payload.section === 'timer' || payload.section === 'sessions') {
+          active = 'timer';
+        } else if (
+          ['appearance', 'notifications', 'shortcuts', 'system', 'about'].includes(
+            payload.section
+          )
+        ) {
+          active = payload.section as Section;
+        }
+      }
+      if (payload.tab) {
+        activeTimerTab = payload.tab;
+      }
+    }).then((unlisten) => {
+      cleanups.push(unlisten);
+    });
+
 
     (async () => {
       try {
@@ -158,11 +202,9 @@
     </aside>
 
     <!-- Right content area -->
-    <main class="content">
+    <main class="content" class:no-scroll={active === 'timer'}>
       {#if active === 'timer'}
-        <TimerSection />
-      {:else if active === 'sessions'}
-        <SessionsSection />
+        <TimerSessionsSection bind:activeTab={activeTimerTab} />
       {:else if active === 'appearance'}
         <AppearanceSection />
       {:else if active === 'notifications'}
@@ -240,6 +282,10 @@
   .content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     min-width: 0;
+  }
+  .content.no-scroll {
+    overflow: hidden;
   }
 </style>

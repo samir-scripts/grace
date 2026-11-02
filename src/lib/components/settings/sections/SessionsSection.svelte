@@ -466,12 +466,13 @@
   }
 
   .profiles-sidebar {
-    width: 220px;
-    background: color-mix(in oklch, var(--color-background) 80%, black);
+    width: 170px;
+    background: var(--color-background-light);
     border-right: 1px solid var(--color-separator);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    min-width: 0;
   }
 
   .sidebar-header {
@@ -527,7 +528,7 @@
 
   .profile-card.selected {
     border-color: var(--color-accent);
-    background: color-mix(in oklch, var(--color-accent) 8%, var(--color-background));
+    background: color-mix(in oklch, var(--color-accent) 12%, var(--color-background));
   }
 
   .card-header {
@@ -567,26 +568,29 @@
   .profile-editor {
     flex: 1;
     overflow-y: auto;
-    padding: 20px 24px;
+    overflow-x: hidden;
+    min-width: 0;
+    padding: 16px 20px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 18px;
   }
 
   .editor-header {
     display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 16px;
-    padding-bottom: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding-bottom: 14px;
     border-bottom: 1px solid var(--color-separator);
   }
 
   .name-field {
-    flex: 1;
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    min-width: 0;
   }
 
   .name-field label {
@@ -597,12 +601,13 @@
 
   .header-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
+    justify-content: flex-end;
   }
-
   .text-input {
-    background: color-mix(in oklch, var(--color-background) 60%, black);
-    border: 1px solid var(--color-separator);
+    background: var(--color-hover);
+    border: 1px solid color-mix(in oklch, var(--color-foreground) 18%, transparent);
     border-radius: 6px;
     padding: 6px 10px;
     color: var(--color-foreground);
@@ -683,18 +688,40 @@
 
   .slider-container {
     position: relative;
-    height: 18px;
+    height: 20px;
     display: flex;
     align-items: center;
   }
 
   .slider-container input[type='range'] {
-    width: 100%;
-    appearance: none;
-    -webkit-appearance: none;
-    background: transparent;
-    cursor: pointer;
+    position: relative;
     z-index: 2;
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: color-mix(in oklch, var(--color-foreground) 14%, transparent);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .slider-container input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-foreground);
+    cursor: pointer;
+  }
+
+  .slider-container input[type='range']::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-foreground);
+    cursor: pointer;
+    border: none;
   }
 
   .slider-bar {
@@ -704,15 +731,18 @@
     border-radius: 2px;
     pointer-events: none;
     z-index: 1;
+    transition: width 0.05s;
   }
 
   .input-add-row {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .input-add-row .text-input {
-    flex: 1;
+    flex: 1 1 140px;
+    min-width: 0;
   }
 
   .chip-container {
@@ -721,7 +751,7 @@
     gap: 6px;
     min-height: 32px;
     padding: 8px;
-    background: color-mix(in oklch, var(--color-background) 70%, black);
+    background: color-mix(in oklch, var(--color-background-light) 60%, var(--color-background));
     border: 1px solid var(--color-separator);
     border-radius: 6px;
     align-items: center;
@@ -736,8 +766,16 @@
     border-radius: 4px;
     font-size: 11px;
     color: var(--color-foreground);
+    max-width: 100%;
+    min-width: 0;
   }
 
+  .domain-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
   .chip-remove {
     background: none;
     border: none;
@@ -760,7 +798,7 @@
 
   .passphrase-box {
     padding: 12px;
-    background: color-mix(in oklch, var(--color-background) 70%, black);
+    background: var(--color-background-light);
     border: 1px solid var(--color-separator);
     border-radius: 6px;
     display: flex;
@@ -788,15 +826,15 @@
   }
 
   .passphrase-inputs .text-input {
-    flex: 1;
-    min-width: 160px;
+    flex: 1 1 140px;
+    min-width: 0;
   }
 
   .passphrase-btns {
     display: flex;
     gap: 6px;
+    flex-wrap: wrap;
   }
-
   .passphrase-status {
     font-size: 10px;
     color: var(--color-short-round);

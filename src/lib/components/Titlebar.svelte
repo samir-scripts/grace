@@ -296,7 +296,9 @@
     justify-content: space-between;
     padding: 0 8px;
     position: relative;
+    z-index: 20;
     flex-shrink: 0;
+    border-bottom: 1px solid var(--color-separator);
   }
 
   .controls {
@@ -312,6 +314,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 25;
   }
 
   .btn-icon {

@@ -1,6 +1,9 @@
 {
   "settings_title": "Paramètres",
   "nav_timer": "Minuteur",
+  "nav_timer_sessions": "Minuteur et Sessions",
+  "timer_sessions_tab_defaults": "Minuteur par défaut",
+  "timer_sessions_tab_saved": "Sessions enregistrées",
   "nav_appearance": "Apparence",
   "nav_notifications": "Notifications",
   "nav_shortcuts": "Raccourcis",

@@ -68,6 +68,34 @@ body {
   color: var(--color-foreground);
   user-select: none;
 }
+/* ---------------------------------------------------------------------------
+   Theme-aware Scrollbars
+   Uses foreground color-mix so thumbs and tracks adapt to any light/dark theme.
+   --------------------------------------------------------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--color-foreground) 25%, transparent) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--color-foreground) 20%, transparent);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--color-foreground) 35%, transparent);
+}
+
 
 /* ---------------------------------------------------------------------------
    Keyframes (available to all scoped component stylesheets)

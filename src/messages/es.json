@@ -1,6 +1,9 @@
 {
   "settings_title": "Configuración",
   "nav_timer": "Temporizador",
+  "nav_timer_sessions": "Temporizador y Sesiones",
+  "timer_sessions_tab_defaults": "Temporizador predeterminado",
+  "timer_sessions_tab_saved": "Sesiones guardadas",
   "nav_appearance": "Apariencia",
   "nav_notifications": "Notificaciones",
   "nav_shortcuts": "Atajos",
