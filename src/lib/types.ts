@@ -119,3 +119,37 @@ export interface HeatmapStats {
   total_hours: number;
   longest_streak: number;
 }
+
+/** Focus Session Distraction Blocking types */
+export interface AppTarget {
+  id: string;
+  name: string;
+  identifier: string;
+  platform: 'macos' | 'windows' | 'all';
+}
+
+export interface FocusProfile {
+  id: string;
+  name: string;
+  work_secs: number;
+  short_break_secs: number;
+  long_break_secs: number;
+  work_rounds: number;
+  blocked_apps: AppTarget[];
+  blocked_domains: string[];
+  revision: number;
+}
+
+export type FocusStatus = 'idle' | 'preparing' | 'active' | 'releasing' | 'recovery_required';
+export type FocusPhase = 'work' | 'short_break' | 'long_break';
+
+export interface FocusSnapshot {
+  status: FocusStatus;
+  current_phase: FocusPhase | null;
+  active_profile: FocusProfile | null;
+  current_work_round: number;
+  total_work_rounds: number;
+  is_locked: boolean;
+  blocking_active: boolean;
+  unblock_during_breaks: boolean;
+}

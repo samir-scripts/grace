@@ -12,6 +12,8 @@ import type {
   DetailedStats,
   HeatmapStats,
   UpdateInfo,
+  FocusProfile,
+  FocusSnapshot,
 } from '$lib/types';
 
 // --- Timer commands ---
@@ -132,3 +134,31 @@ export const onThemesChanged = (cb: (themes: Theme[]) => void): Promise<Unlisten
 
 export const onSessionsCleared = (cb: () => void): Promise<UnlistenFn> =>
   listen<void>('sessions:cleared', () => cb());
+
+// --- Focus Session commands ---
+
+export const getFocusSnapshot = () => invoke<FocusSnapshot>('focus_snapshot_get');
+export const getFocusProfiles = () => invoke<FocusProfile[]>('focus_profiles_get');
+export const saveFocusProfile = (profile: FocusProfile) =>
+  invoke<FocusProfile>('focus_profile_save', { profile });
+export const deleteFocusProfile = (id: string) =>
+  invoke<boolean>('focus_profile_delete', { id });
+export const selectFocusProfile = (id: string | null) =>
+  invoke<void>('focus_profile_select', { id });
+export const setFocusUnblockBreaks = (unblock: boolean) =>
+  invoke<void>('focus_preferences_set_unblock_breaks', { unblock });
+export const setFocusPassphrase = (passphrase: string) =>
+  invoke<void>('focus_passphrase_set', { passphrase });
+export const clearFocusPassphrase = () =>
+  invoke<void>('focus_passphrase_clear');
+export const startEmergencyHold = () =>
+  invoke<string>('focus_escape_start_hold');
+export const pulseEmergencyHold = (attemptId: string) =>
+  invoke<boolean>('focus_escape_pulse_hold', { attemptId });
+export const cancelEmergencyHold = (attemptId: string) =>
+  invoke<void>('focus_escape_cancel_hold', { attemptId });
+export const submitEmergencyPassphrase = (passphrase: string) =>
+  invoke<boolean>('focus_escape_submit_passphrase', { passphrase });
+
+export const onFocusChanged = (cb: (snapshot: FocusSnapshot) => void): Promise<UnlistenFn> =>
+  listen<FocusSnapshot>('focus:changed', (e) => cb(e.payload));

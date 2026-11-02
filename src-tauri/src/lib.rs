@@ -32,6 +32,18 @@ use commands::{
     themes_list,
     timer_get_state, timer_reset, timer_restart_round, timer_skip, timer_toggle,
     window_set_visibility,
+    focus_snapshot_get,
+    focus_profiles_get,
+    focus_profile_save,
+    focus_profile_delete,
+    focus_profile_select,
+    focus_preferences_set_unblock_breaks,
+    focus_passphrase_set,
+    focus_passphrase_clear,
+    focus_escape_start_hold,
+    focus_escape_pulse_hold,
+    focus_escape_cancel_hold,
+    focus_escape_submit_passphrase,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -410,6 +422,19 @@ pub fn run() {
             // Updater
             check_update,
             install_update,
+            // Focus Sessions
+            focus_snapshot_get,
+            focus_profiles_get,
+            focus_profile_save,
+            focus_profile_delete,
+            focus_profile_select,
+            focus_preferences_set_unblock_breaks,
+            focus_passphrase_set,
+            focus_passphrase_clear,
+            focus_escape_start_hold,
+            focus_escape_pulse_hold,
+            focus_escape_cancel_hold,
+            focus_escape_submit_passphrase,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

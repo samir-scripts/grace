@@ -750,6 +750,94 @@ pub struct HeatmapStats {
     pub longest_streak: u32,
 }
 
+// ---------------------------------------------------------------------------
+// CMD-07 — Focus Session commands
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn focus_snapshot_get(focus: State<'_, Arc<FocusController>>) -> crate::focus::state::FocusSnapshot {
+    focus.get_snapshot()
+}
+
+#[tauri::command]
+pub fn focus_profiles_get(focus: State<'_, Arc<FocusController>>) -> Result<Vec<crate::focus::model::FocusProfile>, String> {
+    focus.get_profiles()
+}
+
+#[tauri::command]
+pub fn focus_profile_save(
+    profile: crate::focus::model::FocusProfile,
+    focus: State<'_, Arc<FocusController>>,
+) -> Result<crate::focus::model::FocusProfile, String> {
+    focus.save_profile(profile)
+}
+
+#[tauri::command]
+pub fn focus_profile_delete(
+    id: String,
+    focus: State<'_, Arc<FocusController>>,
+) -> Result<bool, String> {
+    focus.delete_profile(&id)
+}
+
+#[tauri::command]
+pub fn focus_profile_select(
+    id: Option<String>,
+    focus: State<'_, Arc<FocusController>>,
+) -> Result<(), String> {
+    focus.select_profile(id)
+}
+
+#[tauri::command]
+pub fn focus_preferences_set_unblock_breaks(
+    unblock: bool,
+    focus: State<'_, Arc<FocusController>>,
+) -> Result<(), String> {
+    focus.set_unblock_during_breaks(unblock)
+}
+
+#[tauri::command]
+pub fn focus_passphrase_set(
+    passphrase: String,
+    focus: State<'_, Arc<FocusController>>,
+) -> Result<(), String> {
+    focus.set_emergency_passphrase(&passphrase)
+}
+
+#[tauri::command]
+pub fn focus_passphrase_clear(focus: State<'_, Arc<FocusController>>) -> Result<(), String> {
+    focus.clear_emergency_passphrase()
+}
+
+#[tauri::command]
+pub fn focus_escape_start_hold(focus: State<'_, Arc<FocusController>>) -> String {
+    focus.start_emergency_hold()
+}
+
+#[tauri::command]
+pub fn focus_escape_pulse_hold(
+    attempt_id: String,
+    focus: State<'_, Arc<FocusController>>,
+) -> Result<bool, String> {
+    focus.pulse_emergency_hold(&attempt_id)
+}
+
+#[tauri::command]
+pub fn focus_escape_cancel_hold(
+    attempt_id: String,
+    focus: State<'_, Arc<FocusController>>,
+) {
+    focus.cancel_emergency_hold(&attempt_id);
+}
+
+#[tauri::command]
+pub fn focus_escape_submit_passphrase(
+    passphrase: String,
+    focus: State<'_, Arc<FocusController>>,
+) -> Result<bool, String> {
+    focus.submit_emergency_passphrase(&passphrase)
+}
+
 #[cfg(test)]
 mod tests {
     use rusqlite::Connection;
