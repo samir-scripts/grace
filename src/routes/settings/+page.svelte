@@ -18,13 +18,16 @@
   import ShortcutsSection from '$lib/components/settings/sections/ShortcutsSection.svelte';
   import SystemSection from '$lib/components/settings/sections/SystemSection.svelte';
   import AboutSection from '$lib/components/settings/sections/AboutSection.svelte';
+  import SessionsSection from '$lib/components/settings/sections/SessionsSection.svelte';
+  import { initFocusStore } from '$lib/stores/focus';
 
   import * as m from '$paraglide/messages.js';
 
-  type Section = 'timer' | 'appearance' | 'notifications' | 'shortcuts' | 'system' | 'about';
+  type Section = 'timer' | 'sessions' | 'appearance' | 'notifications' | 'shortcuts' | 'system' | 'about';
 
   const SECTIONS: { id: Section; label: () => string }[] = [
     { id: 'timer', label: m.nav_timer },
+    { id: 'sessions', label: m.nav_sessions },
     { id: 'appearance', label: m.nav_appearance },
     { id: 'notifications', label: m.nav_notifications },
     { id: 'shortcuts', label: m.nav_shortcuts },
@@ -70,6 +73,7 @@
         // Apply the stored locale on mount.
         setLocale(s.language);
         await info(`[settings] settings loaded, locale=${s.language}`);
+        await initFocusStore();
 
         const themes = await getThemes();
         const osDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -157,6 +161,8 @@
     <main class="content">
       {#if active === 'timer'}
         <TimerSection />
+      {:else if active === 'sessions'}
+        <SessionsSection />
       {:else if active === 'appearance'}
         <AppearanceSection />
       {:else if active === 'notifications'}
