@@ -912,8 +912,24 @@ pub fn focus_browsers_list() -> Result<Vec<crate::focus::browser_detector::Insta
     Ok(crate::focus::browser_detector::detect_installed_browsers())
 }
 
+fn resolve_extension_dist_dir(app: &AppHandle) -> std::path::PathBuf {
+    if let Ok(res_dir) = app.path().resource_dir() {
+        for sub in &["extensions/dist", "_up_/extensions/dist", "dist"] {
+            let p = res_dir.join(sub);
+            if p.exists() {
+                return p;
+            }
+        }
+    }
+    let dev_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../extensions/dist");
+    if dev_dir.exists() {
+        return dev_dir;
+    }
+    std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).join("extensions/dist")
+}
+
 #[tauri::command]
-pub fn focus_native_host_register() -> Result<(), String> {
+pub fn focus_native_host_register(app: AppHandle) -> Result<(), String> {
     let mut exe_path = std::env::current_exe().map_err(|e| format!("Cannot locate current exe: {e}"))?;
     exe_path.pop();
     #[cfg(windows)]
@@ -921,32 +937,56 @@ pub fn focus_native_host_register() -> Result<(), String> {
     #[cfg(not(windows))]
     let host_name = "pomotroid-native-host";
 
-    let host_path = exe_path.join(host_name);
+    let host_in_exe_dir = exe_path.join(host_name);
+    let host_path = if host_in_exe_dir.exists() {
+        host_in_exe_dir
+    } else if let Ok(res_dir) = app.path().resource_dir() {
+        let host_in_res = res_dir.join(host_name);
+        if host_in_res.exists() {
+            host_in_res
+        } else {
+            host_in_exe_dir
+        }
+    } else {
+        host_in_exe_dir
+    };
+
     crate::focus::native_messaging::register_native_messaging_manifests(&host_path)
 }
 
 #[tauri::command]
-pub fn focus_browser_extension_install(browser: crate::focus::browser::BrowserKind) -> Result<(), String> {
-    let base_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+pub fn focus_browser_extension_install(
+    browser: crate::focus::browser::BrowserKind,
+    app: AppHandle,
+    focus: State<'_, Arc<FocusController>>,
+    bridge: State<'_, Arc<crate::focus::browser::BrowserBridge>>,
+) -> Result<(), String> {
+    if focus.is_active() || focus.is_locked() || bridge.is_active() || focus.get_snapshot().status != crate::focus::state::FocusStatus::Idle {
+        return Err("Cannot modify browser extensions during an active focus session.".into());
+    }
+
+    let base_dir = resolve_extension_dist_dir(&app);
     let ext_path = match browser {
         crate::focus::browser::BrowserKind::Firefox | crate::focus::browser::BrowserKind::Zen => {
-            let xpi = base_dir.join("extensions/dist/firefox/focus@pomotroid.local.xpi");
-            if xpi.exists() {
-                xpi
+            let xpi_candidate1 = base_dir.join("firefox/focus@pomotroid.local.xpi");
+            let xpi_candidate2 = base_dir.join("focus@pomotroid.local.xpi");
+            if xpi_candidate1.exists() {
+                xpi_candidate1
+            } else if xpi_candidate2.exists() {
+                xpi_candidate2
             } else {
-                let manifest = base_dir.join("extensions/dist/firefox/manifest.json");
-                if !manifest.exists() {
-                    return Err("Firefox extension is not built. Run 'node scripts/build-browser-extensions.mjs' first.".into());
-                }
-                manifest
+                return Err("Firefox extension package (focus@pomotroid.local.xpi) was not found in application resources.".into());
             }
         }
         crate::focus::browser::BrowserKind::Chrome => {
-            let chrome_dist = base_dir.join("extensions/dist/chrome");
-            if !chrome_dist.exists() {
-                return Err("Chrome extension is not built. Run 'node scripts/build-browser-extensions.mjs' first.".into());
+            let chrome_candidate1 = base_dir.join("chrome");
+            if chrome_candidate1.exists() {
+                chrome_candidate1
+            } else if base_dir.exists() {
+                base_dir
+            } else {
+                return Err("Chrome extension directory was not found in application resources.".into());
             }
-            chrome_dist
         }
         crate::focus::browser::BrowserKind::Safari => {
             return Err("Extension installation is not supported for Safari".into());

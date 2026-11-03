@@ -29,6 +29,17 @@ fn main() {
 
     println!("cargo:rustc-env=APP_BUILD_VERSION={build_version}");
     println!("cargo:rustc-env=APP_BUILD_SHA={full_sha}");
+    println!("cargo:rerun-if-changed=../extensions/focus");
+    println!("cargo:rerun-if-changed=../extensions/chrome");
+    println!("cargo:rerun-if-changed=../extensions/firefox");
+    println!("cargo:rerun-if-changed=../extensions/safari");
+
+    let dist_xpi = std::path::Path::new("../extensions/dist/firefox/focus@pomotroid.local.xpi");
+    if !dist_xpi.exists() {
+        let _ = Command::new("node")
+            .arg("../scripts/build-browser-extensions.mjs")
+            .status();
+    }
 
     tauri_build::build()
 }
