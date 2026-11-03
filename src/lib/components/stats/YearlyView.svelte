@@ -398,7 +398,8 @@
   /* ── Heatmap SVG ─────────────────────────────────────────── */
   .heatmap-svg {
     display: block;
-    overflow: visible;
+    max-width: 100%;
+    height: auto;
   }
 
   .cell {

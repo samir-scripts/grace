@@ -19,6 +19,7 @@
 
   import SettingsTitlebar from '$lib/components/settings/SettingsTitlebar.svelte';
   import SessionsSection from '$lib/components/settings/sections/SessionsSection.svelte';
+  import StatisticsSection from '$lib/components/settings/sections/StatisticsSection.svelte';
   import AppearanceSection from '$lib/components/settings/sections/AppearanceSection.svelte';
   import NotificationsSection from '$lib/components/settings/sections/NotificationsSection.svelte';
   import ShortcutsSection from '$lib/components/settings/sections/ShortcutsSection.svelte';
@@ -28,10 +29,11 @@
 
   import * as m from '$paraglide/messages.js';
 
-  type Section = 'timer' | 'appearance' | 'notifications' | 'shortcuts' | 'system' | 'about';
+  type Section = 'timer' | 'stats' | 'appearance' | 'notifications' | 'shortcuts' | 'system' | 'about';
 
   const SECTIONS: { id: Section; label: () => string }[] = [
     { id: 'timer', label: m.nav_timer_sessions },
+    { id: 'stats', label: m.stats_title },
     { id: 'appearance', label: m.nav_appearance },
     { id: 'notifications', label: m.nav_notifications },
     { id: 'shortcuts', label: m.nav_shortcuts },
@@ -73,6 +75,8 @@
     const querySection = urlParams.get('section');
     if (querySection === 'timer' || querySection === 'sessions') {
       active = 'timer';
+    } else if (querySection === 'stats') {
+      active = 'stats';
     } else if (
       querySection &&
       ['appearance', 'notifications', 'shortcuts', 'system', 'about'].includes(querySection)
@@ -84,6 +88,8 @@
       if (payload.section) {
         if (payload.section === 'timer' || payload.section === 'sessions') {
           active = 'timer';
+        } else if (payload.section === 'stats') {
+          active = 'stats';
         } else if (
           ['appearance', 'notifications', 'shortcuts', 'system', 'about'].includes(
             payload.section
@@ -92,7 +98,6 @@
           active = payload.section as Section;
         }
       }
-
     }).then((unlisten) => {
       cleanups.push(unlisten);
     });
@@ -192,9 +197,11 @@
     </aside>
 
     <!-- Right content area -->
-    <main class="content" class:no-scroll={active === 'timer'}>
+    <main class="content" class:no-scroll={active === 'timer' || active === 'stats'}>
       {#if active === 'timer'}
         <SessionsSection />
+      {:else if active === 'stats'}
+        <StatisticsSection />
       {:else if active === 'appearance'}
         <AppearanceSection />
       {:else if active === 'notifications'}

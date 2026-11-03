@@ -47,7 +47,7 @@
     new WebviewWindow('settings', {
       url: '/settings?section=timer',
       title: 'Pomotroid — Settings',
-      width: 720,
+      width: 840,
       height: 520,
       decorations: isMac,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
