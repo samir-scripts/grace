@@ -904,6 +904,24 @@ pub fn focus_native_host_register() -> Result<(), String> {
     let host_path = exe_path.join(host_name);
     crate::focus::native_messaging::register_native_messaging_manifests(&host_path)
 }
+
+#[tauri::command]
+pub fn focus_browser_extension_install(browser: crate::focus::browser::BrowserKind) -> Result<(), String> {
+    let base_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let ext_path = match browser {
+        crate::focus::browser::BrowserKind::Firefox | crate::focus::browser::BrowserKind::Zen => {
+            base_dir.join("extensions/dist/firefox/manifest.json")
+        }
+        crate::focus::browser::BrowserKind::Chrome => {
+            base_dir.join("extensions/dist/chrome")
+        }
+        crate::focus::browser::BrowserKind::Safari => {
+            return Err("Extension installation is not supported for Safari".into());
+        }
+    };
+
+    crate::focus::enterprise_policy::install_browser_enterprise_policy(browser, &ext_path)
+}
 #[tauri::command]
 pub fn focus_enforcement_retry(
     focus: State<'_, Arc<FocusController>>,

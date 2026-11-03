@@ -3,6 +3,7 @@ pub mod browser;
 pub mod browser_detector;
 pub mod controller;
 pub mod enforcer;
+pub mod enterprise_policy;
 pub mod escape;
 pub mod model;
 pub mod native_messaging;
