@@ -5,6 +5,7 @@ pub mod controller;
 pub mod enforcer;
 pub mod escape;
 pub mod model;
+pub mod native_messaging;
 pub mod repository;
 pub mod security;
 pub mod state;

@@ -49,6 +49,7 @@ use commands::{
     focus_browser_setup_get,
     focus_browser_profile_require,
     focus_browsers_list,
+    focus_native_host_register,
     focus_enforcement_retry,
 };
 
@@ -458,6 +459,7 @@ pub fn run() {
             focus_browser_setup_get,
             focus_browser_profile_require,
             focus_browsers_list,
+            focus_native_host_register,
             focus_enforcement_retry,
         ])
         .run(tauri::generate_context!())

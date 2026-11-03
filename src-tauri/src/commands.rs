@@ -891,6 +891,19 @@ pub fn focus_browser_profile_require(
 pub fn focus_browsers_list() -> Result<Vec<crate::focus::browser_detector::InstalledBrowser>, String> {
     Ok(crate::focus::browser_detector::detect_installed_browsers())
 }
+
+#[tauri::command]
+pub fn focus_native_host_register() -> Result<(), String> {
+    let mut exe_path = std::env::current_exe().map_err(|e| format!("Cannot locate current exe: {e}"))?;
+    exe_path.pop();
+    #[cfg(windows)]
+    let host_name = "pomotroid-native-host.exe";
+    #[cfg(not(windows))]
+    let host_name = "pomotroid-native-host";
+
+    let host_path = exe_path.join(host_name);
+    crate::focus::native_messaging::register_native_messaging_manifests(&host_path)
+}
 #[tauri::command]
 pub fn focus_enforcement_retry(
     focus: State<'_, Arc<FocusController>>,
