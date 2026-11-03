@@ -376,19 +376,6 @@ pub fn run() {
                         if hide {
                             api.prevent_close();
                             let _ = win_for_close.hide();
-                            // Close auxiliary settings window so only background timer remains
-                            for label in ["settings", "stats"] {
-                                if let Some(win) = app_for_close.get_webview_window(label) {
-                                    let _ = win.close();
-                                }
-                            }
-                        } else {
-                            // Main window is truly closing — close child windows if open.
-                            for label in ["settings", "stats"] {
-                                if let Some(win) = app_for_close.get_webview_window(label) {
-                                    let _ = win.close();
-                                }
-                            }
                         }
                     }
                     tauri::WindowEvent::Moved(pos) => {
