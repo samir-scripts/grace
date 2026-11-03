@@ -4,6 +4,9 @@
   import Titlebar from '$lib/components/Titlebar.svelte';
   import Timer from '$lib/components/Timer.svelte';
   import FocusEscapeDialog from '$lib/components/FocusEscapeDialog.svelte';
+  import SettingsView from '$lib/components/settings/SettingsView.svelte';
+  import StatisticsSection from '$lib/components/settings/sections/StatisticsSection.svelte';
+  import { activeView, showTimerView } from '$lib/stores/navigation';
   import { getSettings, getThemes, onSettingsChanged, onThemesChanged } from '$lib/ipc';
   import { settings } from '$lib/stores/settings';
   import { applyTheme } from '$lib/stores/theme';
@@ -45,7 +48,7 @@
     function update() {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      isCompact = w < COMPACT_THRESHOLD || h < COMPACT_THRESHOLD;
+      isCompact = $activeView === 'timer' && (w < COMPACT_THRESHOLD || h < COMPACT_THRESHOLD);
       if (isCompact) {
         // Scale so the dial fills the available space, reserving
         // COMPACT_BOTTOM_PAD px for the intentional bottom whitespace.
@@ -87,6 +90,15 @@
     });
     document.addEventListener('keydown', shortcutHandler);
     cleanups.push(() => document.removeEventListener('keydown', shortcutHandler));
+
+    // Escape returns to timer view when no dialog/modal is open
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && $activeView !== 'timer' && !showEscapeDialog) {
+        showTimerView();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    cleanups.push(() => window.removeEventListener('keydown', handleKeyDown));
 
     (async () => {
       try {
@@ -185,8 +197,14 @@
 
 <div class="app">
   <Titlebar onEmergencyClick={() => (showEscapeDialog = true)} />
-  <main class:compact={isCompact}>
-    <Timer {isCompact} {uiScale} />
+  <main class:compact={isCompact} class:view-panel={$activeView !== 'timer'}>
+    {#if $activeView === 'timer'}
+      <Timer {isCompact} {uiScale} />
+    {:else if $activeView === 'settings'}
+      <SettingsView />
+    {:else if $activeView === 'stats'}
+      <StatisticsSection />
+    {/if}
   </main>
 </div>
 
@@ -213,6 +231,11 @@
     overflow: hidden;
   }
 
+  main.view-panel {
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
   main.compact {
     /* Bottom padding provides breathing room below the mini controls. */
     padding-bottom: 8px;
