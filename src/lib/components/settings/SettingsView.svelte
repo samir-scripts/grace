@@ -5,7 +5,7 @@
   import ShortcutsSection from '$lib/components/settings/sections/ShortcutsSection.svelte';
   import SystemSection from '$lib/components/settings/sections/SystemSection.svelte';
   import AboutSection from '$lib/components/settings/sections/AboutSection.svelte';
-  import { activeSettingsSection, type SettingsSectionId } from '$lib/stores/navigation';
+  import { activeSettingsSection, showTimerView, type SettingsSectionId } from '$lib/stores/navigation';
   import * as m from '$paraglide/messages.js';
 
   const SECTIONS: { id: SettingsSectionId; label: () => string }[] = [
@@ -21,6 +21,17 @@
 <div class="settings-view">
   <!-- Navigation: responsive top bar (<560px) or left sidebar (>=560px) -->
   <aside class="sidebar">
+    <button
+      type="button"
+      class="back-btn"
+      onclick={showTimerView}
+      aria-label={m.nav_back_timer()}
+    >
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="10 3 5 8 10 13" />
+      </svg>
+      <span>{m.nav_back_timer()}</span>
+    </button>
     <div class="nav-list" role="tablist">
       {#each SECTIONS as section (section.id)}
         <button
@@ -116,6 +127,35 @@
     font-weight: 600;
   }
 
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    background: color-mix(in oklch, var(--color-accent) 14%, transparent);
+    border: none;
+    border-right: 1px solid var(--color-separator);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--color-foreground);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+    transition: background 0.12s, color 0.12s;
+    flex-shrink: 0;
+  }
+
+  .back-btn:hover {
+    background: color-mix(in oklch, var(--color-accent) 24%, transparent);
+    color: var(--color-foreground);
+  }
+
+  .back-btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
   /* Content pane */
   .content {
     flex: 1;
@@ -149,6 +189,14 @@
       flex-direction: column;
       width: 100%;
       min-width: 0;
+    }
+
+    .back-btn {
+      border-right: none;
+      border-bottom: 1px solid var(--color-separator);
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      margin-bottom: 4px;
     }
 
     .nav-item {

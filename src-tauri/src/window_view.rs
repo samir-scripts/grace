@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, PhysicalSize, Size};
 
-pub const SETTINGS_VIEW_WIDTH: f64 = 720.0;
+pub const SETTINGS_VIEW_WIDTH: f64 = 840.0;
 pub const SETTINGS_VIEW_HEIGHT: f64 = 520.0;
 pub const STATS_VIEW_WIDTH: f64 = 840.0;
 pub const STATS_VIEW_HEIGHT: f64 = 520.0;
@@ -123,9 +123,16 @@ pub fn apply_view_size(
         .get_webview_window("main")
         .ok_or_else(|| "main window not found".to_string())?;
 
-    // If window is currently maximized or fullscreen, do not force-resize geometry
+    // If window is currently maximized or fullscreen, preserve the pending timer size
+    // and do not force-resize geometry, nor return to timer view until unmaximized.
     if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
-        let _ = state.transition_to(parsed, window.inner_size().ok());
+        let mut guard = state.inner.lock().unwrap();
+        if guard.current_view == ViewKind::Timer && parsed != ViewKind::Timer {
+            if let Ok(size) = window.inner_size() {
+                guard.saved_timer_size = Some(size);
+            }
+        }
+        guard.current_view = parsed;
         return Ok(());
     }
 
@@ -160,7 +167,7 @@ mod tests {
     #[test]
     fn test_optimal_logical_dimensions() {
         assert_eq!(optimal_view_logical_size(ViewKind::Timer), None);
-        assert_eq!(optimal_view_logical_size(ViewKind::Settings), Some((720.0, 520.0)));
+        assert_eq!(optimal_view_logical_size(ViewKind::Settings), Some((840.0, 520.0)));
         assert_eq!(optimal_view_logical_size(ViewKind::Stats), Some((840.0, 520.0)));
     }
 
@@ -171,13 +178,13 @@ mod tests {
 
         let timer_size = PhysicalSize::new(380, 500);
 
-        // Timer -> Settings: snapshots timer size and requests 720x520
+        // Timer -> Settings: snapshots timer size and requests 840x520
         let plan = state.transition_to(ViewKind::Settings, Some(timer_size));
-        assert_eq!(plan, SizePlan::ResizeLogical(720.0, 520.0));
+        assert_eq!(plan, SizePlan::ResizeLogical(840.0, 520.0));
         assert!(!state.is_timer_view());
 
         // Settings -> Stats: preserves original timer size snapshot, requests 840x520
-        let current_settings_size = PhysicalSize::new(720, 520);
+        let current_settings_size = PhysicalSize::new(840, 520);
         let plan2 = state.transition_to(ViewKind::Stats, Some(current_settings_size));
         assert_eq!(plan2, SizePlan::ResizeLogical(840.0, 520.0));
         assert!(!state.is_timer_view());

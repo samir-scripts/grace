@@ -195,9 +195,11 @@
     </div>
   {/if}
 
-  <div class="center-selector" data-tauri-drag-region="false">
-    <SessionSelector {onEmergencyClick} />
-  </div>
+  {#if $activeView === 'timer'}
+    <div class="center-selector" data-tauri-drag-region="false">
+      <SessionSelector {onEmergencyClick} />
+    </div>
+  {/if}
 
   <!-- Right: settings + stats buttons on macOS, window controls on Linux/Windows. -->
   <div class="controls">

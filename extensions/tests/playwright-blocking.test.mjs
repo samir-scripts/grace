@@ -104,16 +104,17 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
 
   // 3. Launch persistent Chromium context with the built MV3 extension
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-ext-chrome-'));
-  const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: false,
-    args: [
-      `--headless=new`,
-      `--disable-extensions-except=${chromeExtPath}`,
-      `--load-extension=${chromeExtPath}`,
-    ],
-  });
+  let context = null;
 
   try {
+    context = await chromium.launchPersistentContext(userDataDir, {
+      headless: false,
+      args: [
+        `--headless=new`,
+        `--disable-extensions-except=${chromeExtPath}`,
+        `--load-extension=${chromeExtPath}`,
+      ],
+    });
     // 4. Discover extension service worker and extId
     let sw = null;
     for (let i = 0; i < 30; i++) {
@@ -165,8 +166,13 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
     assert.equal(rules[0].action.type, 'block');
     assert.equal(rules[0].condition.urlFilter, '||example.com^');
 
-    // 8. Verify real webpage navigation to blocked domain is blocked
+    // 8. Verify allowed page loads, and real webpage navigation to blocked domain is blocked
     const page = await context.newPage();
+
+    const allowedRes = await page.goto(`http://127.0.0.1:${httpPort}/allowed`, { timeout: 3000 });
+    assert.equal(allowedRes.status(), 200);
+    assert.ok((await page.content()).includes('Allowed Content'));
+
     let blockedError = null;
     try {
       await page.goto('http://example.com/', { timeout: 3000 });
@@ -192,17 +198,17 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
     });
     assert.equal(clearedRules.length, 0);
 
-    // 10. Verify navigation to allowed local page succeeds
-    const res = await page.goto(`http://127.0.0.1:${httpPort}/allowed`, { timeout: 3000 });
-    assert.equal(res.status(), 200);
-    assert.ok((await page.content()).includes('Allowed Content'));
-
+    // 10. Verify navigation to previously blocked domain succeeds after policy release
+    const releasedRes = await page.goto('http://example.com/', { timeout: 4000 });
+    assert.ok(releasedRes !== null && releasedRes.status() >= 200);
+    const releasedContent = await page.content();
+    assert.ok(releasedContent.toLowerCase().includes('example domain'));
     await page.close();
   } finally {
     if (clientSocket) {
       try { clientSocket.destroy(); } catch {}
     }
-    await context.close().catch(() => {});
+    if (context) await context.close().catch(() => {});
     fs.rmSync(userDataDir, { recursive: true, force: true });
     await new Promise((r) => httpServer.close(r));
     await new Promise((r) => brokerServer.close(r));

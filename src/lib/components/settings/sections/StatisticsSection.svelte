@@ -10,6 +10,7 @@
   import type { DetailedStats, HeatmapStats } from '$lib/types';
   import * as m from '$paraglide/messages.js';
   import { error as logError } from '@tauri-apps/plugin-log';
+  import { showTimerView } from '$lib/stores/navigation';
 
   import DailyView from '$lib/components/stats/DailyView.svelte';
   import WeeklyView from '$lib/components/stats/WeeklyView.svelte';
@@ -84,6 +85,16 @@
   <div class="tabs">
     <button
       type="button"
+      class="tab-back"
+      onclick={showTimerView}
+      aria-label={m.nav_back_timer()}
+    >
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="10 3 5 8 10 13" />
+      </svg>
+      <span>{m.nav_back_timer()}</span>
+    </button>
+    <button
       class="tab"
       class:active={activeTab === 'today'}
       onclick={() => switchTab('today')}
@@ -138,6 +149,30 @@
     flex-shrink: 0;
     padding: 0 20px;
     background: var(--color-background);
+  }
+  .tab-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+    margin: 8px 12px 8px 0;
+    background: color-mix(in oklch, var(--color-accent) 15%, transparent);
+    border: 1px solid color-mix(in oklch, var(--color-accent) 30%, transparent);
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-foreground);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    font-family: inherit;
+  }
+  .tab-back:hover {
+    background: color-mix(in oklch, var(--color-accent) 25%, transparent);
+    border-color: var(--color-accent);
+  }
+  .tab-back:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
   }
 
   .tab {
