@@ -328,7 +328,19 @@ pub fn create_tray(app: &AppHandle, state: &Arc<TrayState>) {
                     }
                 }
                 "exit" => {
-                    log::info!("[tray] exit");
+                    log::info!("[tray] exit requested");
+                    if let Some(focus) = app.try_state::<crate::focus::controller::FocusController>() {
+                        if focus.should_prevent_app_exit() {
+                            log::warn!("[tray] exit blocked while focus session is locked");
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.unminimize();
+                                let _ = window.set_focus();
+                            }
+                            return;
+                        }
+                        focus.shutdown_blocking();
+                    }
                     app.exit(0);
                 }
                 _ => {}

@@ -363,15 +363,25 @@ pub fn run() {
             main_window.on_window_event(move |event| {
                 match event {
                     tauri::WindowEvent::CloseRequested { api, .. } => {
-                        let hide = db_for_close
+                        let min_to_tray = db_for_close
                             .lock()
                             .ok()
                             .and_then(|conn| settings::load(&conn).ok())
                             .map(|s| s.min_to_tray_on_close)
                             .unwrap_or(false);
+                        let hide = app_for_close
+                            .try_state::<crate::focus::controller::FocusController>()
+                            .map(|f| f.should_hide_on_window_close(min_to_tray))
+                            .unwrap_or(min_to_tray);
                         if hide {
                             api.prevent_close();
                             let _ = win_for_close.hide();
+                            // Close auxiliary settings window so only background timer remains
+                            for label in ["settings", "stats"] {
+                                if let Some(win) = app_for_close.get_webview_window(label) {
+                                    let _ = win.close();
+                                }
+                            }
                         } else {
                             // Main window is truly closing — close child windows if open.
                             for label in ["settings", "stats"] {
@@ -464,6 +474,25 @@ pub fn run() {
             focus_browser_extension_install,
             focus_enforcement_retry,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            match event {
+                tauri::RunEvent::ExitRequested { api, .. } => {
+                    if let Some(focus) = app_handle.try_state::<crate::focus::controller::FocusController>() {
+                        if focus.should_prevent_app_exit() {
+                            api.prevent_exit();
+                            if let Some(window) = app_handle.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.unminimize();
+                                let _ = window.set_focus();
+                            }
+                        } else {
+                            focus.shutdown_blocking();
+                        }
+                    }
+                }
+                _ => {}
+            }
+        });
 }

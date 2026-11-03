@@ -133,6 +133,21 @@ impl FocusController {
         self.state_machine.lock().unwrap().is_locked()
     }
 
+    pub fn should_hide_on_window_close(&self, min_to_tray_on_close: bool) -> bool {
+        min_to_tray_on_close || self.is_active()
+    }
+
+    pub fn should_prevent_app_exit(&self) -> bool {
+        self.is_locked()
+    }
+
+    pub fn shutdown_blocking(&self) {
+        let _lock = self.transition.lock().unwrap();
+        let _ = self.enforcer.release_blocking();
+        if let Ok(conn) = self.db.lock() {
+            let _ = self.repository.clear_run_journal(&conn);
+        }
+    }
     pub fn check_timer_command(&self, action: TimerAction) -> Result<(), String> {
         if !self.is_locked() {
             return Ok(());
@@ -715,5 +730,50 @@ mod tests {
         assert_eq!(profiles.len(), 1);
         let res = controller.delete_profile(&profiles[0].id);
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_window_close_and_exit_persistence_policies() {
+        let controller = setup_test_controller();
+        assert!(!controller.is_active());
+        assert!(!controller.is_locked());
+
+        // When inactive, window close honors min_to_tray_on_close
+        assert!(!controller.should_hide_on_window_close(false));
+        assert!(controller.should_hide_on_window_close(true));
+        assert!(!controller.should_prevent_app_exit());
+
+        // Setup a profile with actual blocking rules so work round is locked
+        let profile = FocusProfile {
+            id: "prof-lock".to_string(),
+            name: "Locked Focus".to_string(),
+            work_secs: 1500,
+            short_break_secs: 300,
+            long_break_secs: 900,
+            work_rounds: 4,
+            blocked_apps: vec![],
+            blocked_domains: vec!["social.example".to_string()],
+            revision: 1,
+        };
+        controller.save_profile(profile).unwrap();
+        controller.select_profile("prof-lock").unwrap();
+
+        // Start a locked focus work round
+        controller.on_timer_started("work").unwrap();
+        assert!(controller.is_active());
+        assert!(controller.is_locked());
+
+        // While active/locked, window close always hides even if min_to_tray_on_close is false
+        assert!(controller.should_hide_on_window_close(false));
+        assert!(controller.should_hide_on_window_close(true));
+        // And app exit is prevented while locked
+        assert!(controller.should_prevent_app_exit());
+
+        // When unlocked via emergency release, exit is allowed
+        controller.execute_emergency_release().unwrap();
+        assert!(!controller.is_active());
+        assert!(!controller.is_locked());
+        assert!(!controller.should_hide_on_window_close(false));
+        assert!(!controller.should_prevent_app_exit());
     }
 }
