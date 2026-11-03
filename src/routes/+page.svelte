@@ -19,6 +19,7 @@
     onRoundChange,
     onTimerReset,
     notificationShow,
+    setWindowViewSize,
   } from '$lib/ipc';
   import { timerState } from '$lib/stores/timer';
   import { settings } from '$lib/stores/settings';
@@ -57,6 +58,19 @@
   // dial upward so the whitespace sits at the bottom rather than being
   // split equally — compensates for the visual weight of the titlebar.
   const COMPACT_BOTTOM_PAD = 48;
+
+  // Automatically resize window to the optimal dimensions for settings / stats,
+  // and restore the timer's dimensions when returning to timer.
+  let lastView = $state<'timer' | 'settings' | 'stats'>('timer');
+  $effect(() => {
+    const current = $activeView;
+    if (current !== lastView) {
+      lastView = current;
+      setWindowViewSize(current).catch((err) => {
+        console.warn('[main] failed to resize window for view:', current, err);
+      });
+    }
+  });
 
   $effect(() => {
     function update() {
