@@ -44,6 +44,7 @@ struct InnerState {
 #[derive(Debug)]
 pub struct WindowViewState {
     inner: Mutex<InnerState>,
+    is_transitioning: std::sync::atomic::AtomicBool,
 }
 
 impl WindowViewState {
@@ -54,6 +55,7 @@ impl WindowViewState {
                 saved_timer_size: None,
                 saved_timer_position: None,
             }),
+            is_transitioning: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -61,6 +63,13 @@ impl WindowViewState {
         self.inner.lock().unwrap().current_view == ViewKind::Timer
     }
 
+    pub fn is_transitioning(&self) -> bool {
+        self.is_transitioning.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    pub fn set_transitioning(&self, val: bool) {
+        self.is_transitioning.store(val, std::sync::atomic::Ordering::SeqCst);
+    }
     pub fn transition_to(
         &self,
         target_view: ViewKind,
@@ -127,7 +136,12 @@ pub enum SizePlan {
 static RESIZE_GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 #[cfg(target_os = "macos")]
-fn animate_resize_macos(window: &tauri::WebviewWindow, target_w: f64, target_h: f64) -> Result<bool, String> {
+fn animate_frame_macos(
+    window: &tauri::WebviewWindow,
+    target_w: f64,
+    target_h: f64,
+    preferred_origin: Option<objc2_foundation::NSPoint>,
+) -> Result<bool, String> {
     use objc2::msg_send;
     use objc2::runtime::AnyObject;
     use objc2_foundation::{NSPoint, NSRect, NSSize};
@@ -140,18 +154,31 @@ fn animate_resize_macos(window: &tauri::WebviewWindow, target_w: f64, target_h: 
         if !ns_window.is_null() {
             unsafe {
                 let cur_frame: NSRect = msg_send![ns_window, frame];
-                let top_y = cur_frame.origin.y + cur_frame.size.height;
-                let new_origin_y = top_y - target_h;
-                let new_origin_x = cur_frame.origin.x - (target_w - cur_frame.size.width) / 2.0;
+                let (mut new_x, mut new_y) = if let Some(pref) = preferred_origin {
+                    (pref.x, pref.y)
+                } else {
+                    let top_y = cur_frame.origin.y + cur_frame.size.height;
+                    let y = top_y - target_h;
+                    let x = cur_frame.origin.x - (target_w - cur_frame.size.width) / 2.0;
+                    (x, y)
+                };
+
+                // Clamp to screen visibleFrame so window does not expand offscreen
+                let screen: *mut AnyObject = msg_send![ns_window, screen];
+                if !screen.is_null() {
+                    let visible: NSRect = msg_send![screen, visibleFrame];
+                    let min_x = visible.origin.x;
+                    let max_x = (visible.origin.x + visible.size.width - target_w).max(min_x);
+                    new_x = new_x.clamp(min_x, max_x);
+
+                    let min_y = visible.origin.y;
+                    let max_y = (visible.origin.y + visible.size.height - target_h).max(min_y);
+                    new_y = new_y.clamp(min_y, max_y);
+                }
+
                 let new_frame = NSRect {
-                    origin: NSPoint {
-                        x: new_origin_x,
-                        y: new_origin_y,
-                    },
-                    size: NSSize {
-                        width: target_w,
-                        height: target_h,
-                    },
+                    origin: NSPoint { x: new_x, y: new_y },
+                    size: NSSize { width: target_w, height: target_h },
                 };
                 let _: () = msg_send![ns_window, setFrame: new_frame display: true animate: true];
             }
@@ -229,15 +256,18 @@ pub fn apply_view_size(
         SizePlan::NoChange => Ok(()),
         SizePlan::ResizeLogical(w, h) => {
             if animate {
+                state.set_transitioning(true);
                 #[cfg(target_os = "macos")]
                 {
-                    if let Ok(true) = animate_resize_macos(&window, w, h) {
+                    if let Ok(true) = animate_frame_macos(&window, w, h, None) {
                         return Ok(());
                     }
                 }
                 animate_resize_fallback(&window, w, h);
                 Ok(())
             } else {
+                RESIZE_GENERATION.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                state.set_transitioning(false);
                 window
                     .set_size(Size::Logical(tauri::LogicalSize::new(w, h)))
                     .map_err(|e| format!("failed to resize window: {e}"))
@@ -245,12 +275,13 @@ pub fn apply_view_size(
         }
         SizePlan::RestorePhysical(phys, pos) => {
             if animate {
+                state.set_transitioning(true);
                 #[cfg(target_os = "macos")]
                 {
                     let scale = window.scale_factor().unwrap_or(1.0);
                     let target_w = phys.width as f64 / scale;
                     let target_h = phys.height as f64 / scale;
-                    if let Ok(true) = animate_resize_macos(&window, target_w, target_h) {
+                    if let Ok(true) = animate_frame_macos(&window, target_w, target_h, None) {
                         return Ok(());
                     }
                 }
@@ -261,6 +292,8 @@ pub fn apply_view_size(
                 animate_resize_fallback(&window, phys.width as f64 / scale, phys.height as f64 / scale);
                 Ok(())
             } else {
+                RESIZE_GENERATION.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                state.set_transitioning(false);
                 if let Some(p) = pos {
                     let _ = window.set_position(tauri::Position::Physical(p));
                 }

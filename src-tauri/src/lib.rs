@@ -385,7 +385,7 @@ pub fn run() {
                         }
                     }
                     tauri::WindowEvent::Moved(pos) => {
-                        if view_state_for_pos.is_timer_view() {
+                        if view_state_for_pos.is_timer_view() && !view_state_for_pos.is_transitioning() {
                             if let Ok(conn) = db_for_pos.lock() {
                                 let _ = settings::save_setting(&conn, "window_x", &pos.x.to_string());
                                 let _ = settings::save_setting(&conn, "window_y", &pos.y.to_string());
@@ -395,7 +395,7 @@ pub fn run() {
                     tauri::WindowEvent::Resized(size) => {
                         // Only persist window size while in the timer view so temporary
                         // Settings/Statistics expanded layouts do not overwrite the user's timer size.
-                        if view_state_for_pos.is_timer_view() {
+                        if view_state_for_pos.is_timer_view() && !view_state_for_pos.is_transitioning() {
                             if let Ok(conn) = db_for_pos.lock() {
                                 let _ = settings::save_setting(&conn, "window_width", &size.width.to_string());
                                 let _ = settings::save_setting(&conn, "window_height", &size.height.to_string());

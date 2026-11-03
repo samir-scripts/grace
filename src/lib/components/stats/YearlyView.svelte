@@ -320,7 +320,6 @@
     flex-direction: column;
     height: 100%;
     position: relative;
-    animation: app-fade-in 0.2s ease;
   }
 
   .loading {

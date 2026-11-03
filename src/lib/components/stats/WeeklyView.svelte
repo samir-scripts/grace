@@ -146,7 +146,6 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    animation: app-fade-in 0.2s ease;
   }
 
   /* ── Summary row ─────────────────────────────────────────── */

@@ -399,3 +399,79 @@ test('rapid navigation keeps only the final view and current timer', async () =>
 
   await context.close();
 });
+
+test('focusing button preserves non-activation shortcuts', async () => {
+  const context = await browser.newContext({
+    viewport: { width: 840, height: 520 },
+    locale: 'en',
+    reducedMotion: 'no-preference',
+  });
+  const page = await context.newPage();
+  await page.goto(`${serverUrl}/`);
+
+  // Focus the Settings button
+  const settingsBtn = page.getByRole('button', { name: 'Settings' });
+  await settingsBtn.focus();
+
+  // Press 'm' to mute
+  await page.keyboard.press('m');
+  // Verify mute did not activate settings navigation
+  const inSettings = await page.locator('.settings-view').count();
+  assert.equal(inSettings, 0, 'Pressing m did not click focused button');
+
+  await context.close();
+});
+
+test('statistics tab views do not contain nested outer animations', async () => {
+  const context = await browser.newContext({
+    viewport: { width: 840, height: 520 },
+    locale: 'en',
+    reducedMotion: 'no-preference',
+  });
+  const page = await context.newPage();
+  await page.goto(`${serverUrl}/?animations=true`);
+
+  await page.getByRole('button', { name: 'Statistics' }).click({ force: true });
+  await page.waitForSelector('.stats-section', { state: 'visible' });
+  await page.getByRole('button', { name: 'This Week' }).click({ force: true });
+  await page.waitForSelector('.stats-section .view');
+
+  // Check that the child .view does not have an outer animation
+  const viewAnimation = await page.evaluate(() => {
+    const viewEl = document.querySelector('.stats-section .view');
+    return viewEl ? window.getComputedStyle(viewEl).animationName : 'none';
+  });
+  assert.equal(viewAnimation, 'none', 'WeeklyView does not have nested app-fade-in animation');
+
+  await context.close();
+});
+
+test('live motion disable updates window view size immediately', async () => {
+  const context = await browser.newContext({
+    viewport: { width: 840, height: 520 },
+    locale: 'en',
+    reducedMotion: 'no-preference',
+  });
+  const page = await context.newPage();
+  await page.goto(`${serverUrl}/?animations=true`);
+
+  await page.getByRole('button', { name: 'Settings' }).click({ force: true });
+  await page.waitForSelector('.settings-view', { state: 'visible' });
+  await page.evaluate(() => window.__motionTest.clearResizeCalls());
+
+  // Live disable
+  await page.evaluate(async () => {
+    await window.__motionTest.emit('settings:changed', { animations_enabled: false });
+  });
+
+  await page.waitForFunction(() => {
+    const calls = window.__motionTest.getWindowResizeCalls();
+    return calls.some((c) => c.view === 'settings' && c.animate === false);
+  });
+
+  const calls = await page.evaluate(() => window.__motionTest.getWindowResizeCalls());
+  const cancelCall = calls.find((c) => c.view === 'settings' && c.animate === false);
+  assert.ok(cancelCall, 'setWindowViewSize called with animate: false on live motion disable');
+
+  await context.close();
+});

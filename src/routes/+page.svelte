@@ -76,16 +76,24 @@
   // Automatically resize window to the optimal dimensions for settings / stats,
   // and restore the timer's dimensions when returning to timer.
   let lastView = $state<'timer' | 'settings' | 'stats'>('timer');
+  let lastMotionEnabled = $state(true);
   $effect(() => {
     const current = $activeView;
+    const motionEnabled =
+      $settings.animations_enabled &&
+      !(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
     if (current !== lastView) {
       lastView = current;
-      const shouldAnimate =
-        $settings.animations_enabled &&
-        !(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-      setWindowViewSize(current, shouldAnimate).catch((err) => {
+      lastMotionEnabled = motionEnabled;
+      setWindowViewSize(current, motionEnabled).catch((err) => {
         console.warn('[main] failed to resize window for view:', current, err);
       });
+    } else if (lastMotionEnabled && !motionEnabled) {
+      lastMotionEnabled = false;
+      setWindowViewSize(current, false).catch(() => {});
+    } else {
+      lastMotionEnabled = motionEnabled;
     }
   });
 
@@ -148,6 +156,16 @@
     };
     window.addEventListener('keydown', handleKeyDown);
     cleanups.push(() => window.removeEventListener('keydown', handleKeyDown));
+    if (typeof window !== 'undefined') {
+      const motionMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const handleMotionMq = (e: MediaQueryListEvent) => {
+        if (e.matches) {
+          setWindowViewSize($activeView, false).catch(() => {});
+        }
+      };
+      motionMq.addEventListener('change', handleMotionMq);
+      cleanups.push(() => motionMq.removeEventListener('change', handleMotionMq));
+    }
 
     (async () => {
       try {
