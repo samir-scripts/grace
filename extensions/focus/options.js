@@ -31,9 +31,12 @@ saveBtn.addEventListener('click', () => {
     statusDiv.textContent = 'Profile ID cannot be empty.';
     return;
   }
-  chrome.storage.local.set({ token, profile_id }, () => {
-    statusDiv.style.color = '#a6e3a1';
-    statusDiv.textContent = 'Saved! Reconnecting to Pomotroid...';
-    chrome.runtime.sendMessage({ type: 'reconnect' }).catch(() => {});
+  chrome.storage.local.get(['port'], (items) => {
+    const port = items.port || 1421;
+    chrome.storage.local.set({ token, profile_id, port }, () => {
+      statusDiv.style.color = '#a6e3a1';
+      statusDiv.textContent = 'Saved! Reconnecting to Pomotroid...';
+      chrome.runtime.sendMessage({ type: 'reconnect' }).catch(() => {});
+    });
   });
 });
