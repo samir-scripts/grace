@@ -105,9 +105,13 @@
     document.addEventListener('keydown', shortcutHandler);
     cleanups.push(() => document.removeEventListener('keydown', shortcutHandler));
 
-    // Escape returns to timer view when no dialog/modal is open
+    // Escape returns to timer view when no dialog/modal or inner component has consumed Escape
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && $activeView !== 'timer' && !showEscapeDialog) {
+      if (e.key === 'Escape' && !e.defaultPrevented && $activeView !== 'timer' && !showEscapeDialog) {
+        // Guard against open dialogs inside settings (e.g. discard modal, app picker)
+        if (document.querySelector('.modal-backdrop, .dialog-backdrop, .modal-card, [role="dialog"][aria-modal="true"]')) {
+          return;
+        }
         showTimerView();
       }
     };

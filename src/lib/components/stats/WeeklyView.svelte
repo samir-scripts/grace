@@ -6,6 +6,7 @@
   let { week, streak }: { week: DayStat[] | null; streak: StreakInfo | null } = $props();
 
   const CHART_H = 140; // px, max bar height
+  const TOP_PAD = 14; // px, top padding for count labels above max bar
   const BAR_W = 52; // px per bar
   const BAR_GAP = 16; // px between bars
   const CHART_W = 7 * (BAR_W + BAR_GAP) - BAR_GAP; // 412px
@@ -91,8 +92,8 @@
       <div class="chart-wrap">
         <svg
           width={CHART_W}
-          height={CHART_H + 36}
-          viewBox="0 0 {CHART_W} {CHART_H + 36}"
+          height={CHART_H + TOP_PAD + 36}
+          viewBox="0 0 {CHART_W} {CHART_H + TOP_PAD + 36}"
           class="chart"
         >
           {#each days as day, i}
@@ -101,8 +102,7 @@
               Math.round((day.rounds / maxRounds) * CHART_H)
             )}
             {@const x = i * (BAR_W + BAR_GAP)}
-            {@const y = CHART_H - barH}
-
+            {@const y = CHART_H + TOP_PAD - barH}
             <!-- Bar -->
             <rect
               {x}
@@ -126,7 +126,7 @@
             <!-- Day label -->
             <text
               x={x + BAR_W / 2}
-              y={CHART_H + 20}
+              y={CHART_H + TOP_PAD + 20}
               text-anchor="middle"
               class="day-label"
               class:day-label-today={day.isToday}>{day.short}</text
@@ -134,7 +134,7 @@
           {/each}
 
           <!-- Baseline -->
-          <line x1="0" y1={CHART_H} x2={CHART_W} y2={CHART_H} class="baseline" />
+          <line x1="0" y1={CHART_H + TOP_PAD} x2={CHART_W} y2={CHART_H + TOP_PAD} class="baseline" />
         </svg>
       </div>
     {/if}
