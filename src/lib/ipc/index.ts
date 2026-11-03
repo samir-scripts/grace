@@ -50,8 +50,10 @@ export const notificationShow = (title: string, body: string) =>
 
 export const setWindowVisibility = (visible: boolean) =>
   invoke<void>('window_set_visibility', { visible });
-export const setWindowViewSize = (view: 'timer' | 'settings' | 'stats') =>
-  invoke<void>('window_set_view_size', { view });
+export const setWindowViewSize = (
+  view: 'timer' | 'settings' | 'stats',
+  animate?: boolean
+) => invoke<void>('window_set_view_size', { view, animate });
 
 // --- Audio commands ---
 

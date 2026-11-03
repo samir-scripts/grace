@@ -80,7 +80,10 @@
     const current = $activeView;
     if (current !== lastView) {
       lastView = current;
-      setWindowViewSize(current).catch((err) => {
+      const shouldAnimate =
+        $settings.animations_enabled &&
+        !(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      setWindowViewSize(current, shouldAnimate).catch((err) => {
         console.warn('[main] failed to resize window for view:', current, err);
       });
     }
@@ -300,17 +303,22 @@
 
 <div class="app">
   <Titlebar onEmergencyClick={() => (showEscapeDialog = true)} />
-  <main class:compact={isCompact} class:view-panel={$activeView !== 'timer'}>
-    {#if $activeView === 'timer'}
-      <Timer {isCompact} {uiScale} />
-    {:else if $activeView === 'settings'}
-      <SettingsView />
-    {:else if $activeView === 'stats'}
-      <StatisticsSection />
-    {/if}
-  </main>
+  {#key $activeView}
+    <main
+      class="view-enter"
+      class:compact={isCompact}
+      class:view-panel={$activeView !== 'timer'}
+    >
+      {#if $activeView === 'timer'}
+        <Timer {isCompact} {uiScale} />
+      {:else if $activeView === 'settings'}
+        <SettingsView />
+      {:else if $activeView === 'stats'}
+        <StatisticsSection />
+      {/if}
+    </main>
+  {/key}
 </div>
-
 <FocusEscapeDialog
   open={showEscapeDialog}
   onClose={() => (showEscapeDialog = false)}
@@ -323,7 +331,6 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    animation: app-fade-in 0.4s var(--transition-slow) both;
   }
 
   main {

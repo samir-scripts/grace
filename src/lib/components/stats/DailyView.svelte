@@ -103,7 +103,6 @@
     gap: 0;
     height: 100%;
     padding: 0;
-    animation: app-fade-in 0.2s ease;
   }
 
   /* ── Stat cards ──────────────────────────────────────────── */

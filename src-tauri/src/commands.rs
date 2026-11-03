@@ -405,11 +405,20 @@ pub fn window_set_visibility(visible: bool, app: AppHandle) -> Result<(), String
 #[tauri::command]
 pub fn window_set_view_size(
     view: String,
+    animate: Option<bool>,
     app: AppHandle,
     view_state: State<'_, Arc<crate::window_view::WindowViewState>>,
+    db: State<'_, DbState>,
 ) -> Result<(), String> {
-    log::debug!("[window] set view size for view={view}");
-    crate::window_view::apply_view_size(&app, &view, &view_state)
+    log::debug!("[window] set view size for view={view}, animate={animate:?}");
+    let effective_animate = animate.unwrap_or_else(|| {
+        db.lock()
+            .ok()
+            .and_then(|conn| settings::load(&conn).ok())
+            .map(|s| s.animations_enabled)
+            .unwrap_or(true)
+    });
+    crate::window_view::apply_view_size(&app, &view, &view_state, effective_animate)
 }
 
 // ---------------------------------------------------------------------------

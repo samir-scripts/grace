@@ -385,9 +385,11 @@ pub fn run() {
                         }
                     }
                     tauri::WindowEvent::Moved(pos) => {
-                        if let Ok(conn) = db_for_pos.lock() {
-                            let _ = settings::save_setting(&conn, "window_x", &pos.x.to_string());
-                            let _ = settings::save_setting(&conn, "window_y", &pos.y.to_string());
+                        if view_state_for_pos.is_timer_view() {
+                            if let Ok(conn) = db_for_pos.lock() {
+                                let _ = settings::save_setting(&conn, "window_x", &pos.x.to_string());
+                                let _ = settings::save_setting(&conn, "window_y", &pos.y.to_string());
+                            }
                         }
                     }
                     tauri::WindowEvent::Resized(size) => {

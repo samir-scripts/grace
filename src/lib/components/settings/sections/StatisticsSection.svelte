@@ -18,12 +18,16 @@
   type Tab = 'today' | 'week' | 'alltime';
 
   let activeTab = $state<Tab>('today');
+  let hasSwitchedTab = $state(false);
   let detailed = $state<DetailedStats | null>(null);
   let heatmap = $state<HeatmapStats | null>(null);
   let heatmapLoaded = $state(false);
 
   async function switchTab(tab: Tab) {
-    activeTab = tab;
+    if (tab !== activeTab) {
+      hasSwitchedTab = true;
+      activeTab = tab;
+    }
     if (tab === 'alltime' && !heatmapLoaded) {
       try {
         heatmap = await statsGetHeatmap();
@@ -109,15 +113,17 @@
   </div>
 
   <!-- Content -->
-  <div class="content">
-    {#if activeTab === 'today'}
-      <DailyView today={detailed?.today ?? null} />
-    {:else if activeTab === 'week'}
-      <WeeklyView week={detailed?.week ?? null} streak={detailed?.streak ?? null} />
-    {:else}
-      <YearlyView {heatmap} />
-    {/if}
-  </div>
+  {#key activeTab}
+    <div class="content" class:view-enter={hasSwitchedTab}>
+      {#if activeTab === 'today'}
+        <DailyView today={detailed?.today ?? null} />
+      {:else if activeTab === 'week'}
+        <WeeklyView week={detailed?.week ?? null} streak={detailed?.streak ?? null} />
+      {:else}
+        <YearlyView {heatmap} />
+      {/if}
+    </div>
+  {/key}
 </div>
 
 <style>
