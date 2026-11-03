@@ -67,6 +67,30 @@ pub fn merge_firefox_policies(existing: &serde_json::Value, xpi_path: &Path) -> 
     root
 }
 
+pub fn unmerge_firefox_policies(existing: &serde_json::Value) -> Option<serde_json::Value> {
+    let mut root = existing.clone();
+    if !root.is_object() {
+        return None;
+    }
+
+    if let Some(policies) = root.get_mut("policies").and_then(|p| p.as_object_mut()) {
+        if let Some(ext_settings) = policies.get_mut("ExtensionSettings").and_then(|e| e.as_object_mut()) {
+            ext_settings.remove(FIREFOX_EXTENSION_ID);
+            if ext_settings.is_empty() {
+                policies.remove("ExtensionSettings");
+            }
+        }
+        if policies.is_empty() {
+            let has_other_root_keys = root.as_object().map(|o| o.keys().any(|k| k != "policies")).unwrap_or(false);
+            if !has_other_root_keys {
+                return None;
+            }
+        }
+    }
+
+    Some(root)
+}
+
 pub fn generate_chrome_external_config(crx_path: Option<&Path>) -> serde_json::Value {
     if let Some(path) = crx_path {
         json!({
@@ -145,19 +169,49 @@ pub fn install_browser_enterprise_policy(browser: BrowserKind, extension_path: &
     Ok(())
 }
 
-pub fn is_policy_installed(browser: BrowserKind) -> bool {
+pub fn remove_browser_enterprise_policy(browser: BrowserKind) -> Result<(), String> {
     let browsers = detect_installed_browsers();
-    let Some(target) = browsers.into_iter().find(|b| b.kind == browser) else {
-        return false;
-    };
+    let target = browsers.into_iter().find(|b| b.kind == browser)
+        .ok_or_else(|| format!("Browser {:?} is not installed", browser))?;
 
-    let Some(policy_path) = target.policy_path else {
-        return false;
-    };
+    let policy_path = target.policy_path
+        .ok_or_else(|| format!("Could not determine policy path for {:?}", browser))?;
 
     match browser {
         BrowserKind::Firefox | BrowserKind::Zen => {
-            if let Ok(content) = fs::read_to_string(&policy_path) {
+            if !policy_path.exists() {
+                return Ok(());
+            }
+            let existing_text = fs::read_to_string(&policy_path)
+                .map_err(|e| format!("Cannot read existing policy file {}: {e}", policy_path.display()))?;
+            let existing_json = serde_json::from_str(&existing_text)
+                .map_err(|e| format!("Malformed existing policy JSON in {}: {e}", policy_path.display()))?;
+
+            if let Some(remaining) = unmerge_firefox_policies(&existing_json) {
+                write_policy_to_path(&policy_path, &remaining)?;
+            } else {
+                let _ = fs::remove_file(&policy_path);
+            }
+        }
+        BrowserKind::Chrome => {
+            let chrome_file = policy_path.join(format!("{CHROME_EXTENSION_ID}.json"));
+            if chrome_file.exists() {
+                fs::remove_file(&chrome_file)
+                    .map_err(|e| format!("Failed to remove Chrome policy file {}: {e}", chrome_file.display()))?;
+            }
+        }
+        BrowserKind::Safari => {
+            return Err("Extension removal is not supported for Safari".into());
+        }
+    }
+
+    Ok(())
+}
+
+pub fn is_policy_installed_at_path(browser: BrowserKind, policy_path: &Path) -> bool {
+    match browser {
+        BrowserKind::Firefox | BrowserKind::Zen => {
+            if let Ok(content) = fs::read_to_string(policy_path) {
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
                     return json["policies"]["ExtensionSettings"][FIREFOX_EXTENSION_ID].is_object();
                 }
@@ -170,4 +224,17 @@ pub fn is_policy_installed(browser: BrowserKind) -> bool {
         }
         BrowserKind::Safari => false,
     }
+}
+
+pub fn is_policy_installed(browser: BrowserKind) -> bool {
+    let browsers = detect_installed_browsers();
+    let Some(target) = browsers.into_iter().find(|b| b.kind == browser) else {
+        return false;
+    };
+
+    let Some(policy_path) = target.policy_path else {
+        return false;
+    };
+
+    is_policy_installed_at_path(browser, &policy_path)
 }

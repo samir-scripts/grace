@@ -1,8 +1,8 @@
 use std::fs;
 use pomotroid_lib::focus::browser::BrowserKind;
 use pomotroid_lib::focus::enterprise_policy::{
-    generate_firefox_policy, merge_firefox_policies, generate_chrome_external_config,
-    write_policy_to_path,
+    generate_firefox_policy, merge_firefox_policies, unmerge_firefox_policies,
+    generate_chrome_external_config, write_policy_to_path, is_policy_installed_at_path,
 };
 use serde_json::json;
 
@@ -42,6 +42,77 @@ fn test_policy_merges_without_overwriting_foreign_entries() {
     assert_eq!(focus["install_url"], "file:///tmp/pomotroid_focus.xpi");
 }
 
+#[test]
+fn test_policy_unmerges_and_preserves_foreign_entries() {
+    let policy_with_foreign = json!({
+        "policies": {
+            "DisableAppUpdate": true,
+            "ExtensionSettings": {
+                "uBlock0@raymondhill.net": {
+                    "installation_mode": "normal_installed"
+                },
+                "focus@pomotroid.local": {
+                    "installation_mode": "force_installed",
+                    "install_url": "file:///tmp/pomotroid_focus.xpi"
+                }
+            }
+        }
+    });
+
+    let unmerged = unmerge_firefox_policies(&policy_with_foreign);
+    assert!(unmerged.is_some());
+    let remaining = unmerged.unwrap();
+
+    assert_eq!(remaining["policies"]["DisableAppUpdate"], true);
+    assert_eq!(remaining["policies"]["ExtensionSettings"]["uBlock0@raymondhill.net"]["installation_mode"], "normal_installed");
+    assert!(remaining["policies"]["ExtensionSettings"].get("focus@pomotroid.local").is_none());
+}
+
+#[test]
+fn test_policy_unmerges_to_none_when_only_focus_installed() {
+    let only_focus = json!({
+        "policies": {
+            "ExtensionSettings": {
+                "focus@pomotroid.local": {
+                    "installation_mode": "force_installed",
+                    "install_url": "file:///tmp/pomotroid_focus.xpi"
+                }
+            }
+        }
+    });
+
+    let unmerged = unmerge_firefox_policies(&only_focus);
+    assert!(unmerged.is_none());
+}
+
+#[test]
+fn test_is_policy_installed_at_path_detection() {
+    let temp_dir = std::env::temp_dir().join(format!("pomotroid-test-detect-{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(&temp_dir).unwrap();
+    let policy_file = temp_dir.join("policies.json");
+
+    // 1. When absent
+    assert!(!is_policy_installed_at_path(BrowserKind::Firefox, &policy_file));
+
+    // 2. When foreign only
+    fs::write(&policy_file, json!({ "policies": { "DisableAppUpdate": true } }).to_string()).unwrap();
+    assert!(!is_policy_installed_at_path(BrowserKind::Firefox, &policy_file));
+
+    // 3. When focus installed
+    let focus_policy = json!({
+        "policies": {
+            "ExtensionSettings": {
+                "focus@pomotroid.local": {
+                    "installation_mode": "force_installed"
+                }
+            }
+        }
+    });
+    fs::write(&policy_file, focus_policy.to_string()).unwrap();
+    assert!(is_policy_installed_at_path(BrowserKind::Firefox, &policy_file));
+
+    fs::remove_dir_all(temp_dir).unwrap();
+}
 #[test]
 fn test_generate_chrome_external_extension_json() {
     let config = generate_chrome_external_config(None);

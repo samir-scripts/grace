@@ -995,6 +995,23 @@ pub fn focus_browser_extension_install(
 
     crate::focus::enterprise_policy::install_browser_enterprise_policy(browser, &ext_path)
 }
+
+#[tauri::command]
+pub fn focus_browser_extension_remove(
+    browser: crate::focus::browser::BrowserKind,
+    focus: State<'_, Arc<FocusController>>,
+    bridge: State<'_, Arc<crate::focus::browser::BrowserBridge>>,
+) -> Result<(), String> {
+    if focus.is_active() || focus.is_locked() || bridge.is_active() || focus.get_snapshot().status != crate::focus::state::FocusStatus::Idle {
+        return Err("Cannot modify browser extensions during an active focus session.".into());
+    }
+
+    crate::focus::enterprise_policy::remove_browser_enterprise_policy(browser)?;
+    let _ = crate::focus::native_messaging::unregister_native_messaging_manifests(browser);
+    bridge.remove_profiles_for_browser(browser);
+
+    Ok(())
+}
 #[tauri::command]
 pub fn focus_enforcement_retry(
     focus: State<'_, Arc<FocusController>>,

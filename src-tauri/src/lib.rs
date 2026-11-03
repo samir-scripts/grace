@@ -53,6 +53,7 @@ use commands::{
     focus_browsers_list,
     focus_native_host_register,
     focus_browser_extension_install,
+    focus_browser_extension_remove,
     focus_enforcement_retry,
 };
 
@@ -470,6 +471,7 @@ pub fn run() {
             focus_browsers_list,
             focus_native_host_register,
             focus_browser_extension_install,
+            focus_browser_extension_remove,
             focus_enforcement_retry,
         ])
         .build(tauri::generate_context!())

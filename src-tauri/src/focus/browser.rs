@@ -271,7 +271,15 @@ impl BrowserBridge {
         drop(profiles);
         self.save_config();
     }
-
+    pub fn remove_profiles_for_browser(&self, browser: BrowserKind) {
+        let mut profiles = self.shared.required_profiles.lock().unwrap();
+        profiles.retain(|_, (b, _)| *b != browser);
+        drop(profiles);
+        let mut clients = self.shared.connected_clients.lock().unwrap();
+        clients.retain(|_, c| c.browser != browser);
+        drop(clients);
+        self.save_config();
+    }
     pub fn get_token(&self) -> String {
         self.shared.token.clone()
     }

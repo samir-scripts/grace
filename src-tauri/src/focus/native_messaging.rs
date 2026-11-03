@@ -168,6 +168,57 @@ pub fn register_native_messaging_manifests(executable_path: &Path) -> Result<(),
     Ok(())
 }
 
+pub fn unregister_native_messaging_manifests(browser: super::browser::BrowserKind) -> Result<(), String> {
+    match browser {
+        super::browser::BrowserKind::Chrome => {
+            if let Some(chrome_dir) = get_chrome_manifest_dir() {
+                let chrome_file = chrome_dir.join(format!("{HOST_NAME}.json"));
+                if chrome_file.exists() {
+                    let _ = std::fs::remove_file(&chrome_file);
+                }
+                #[cfg(target_os = "windows")]
+                {
+                    let _ = std::process::Command::new("reg")
+                        .args([
+                            "delete",
+                            &format!(r"HKCU\Software\Google\Chrome\NativeMessagingHosts\{HOST_NAME}"),
+                            "/f",
+                        ])
+                        .output();
+                }
+            }
+        }
+        super::browser::BrowserKind::Firefox | super::browser::BrowserKind::Zen => {
+            let other = if browser == super::browser::BrowserKind::Firefox {
+                super::browser::BrowserKind::Zen
+            } else {
+                super::browser::BrowserKind::Firefox
+            };
+            if !super::enterprise_policy::is_policy_installed(other) {
+                if let Some(mozilla_dir) = get_mozilla_manifest_dir() {
+                    let mozilla_file = mozilla_dir.join(format!("{HOST_NAME}.json"));
+                    if mozilla_file.exists() {
+                        let _ = std::fs::remove_file(&mozilla_file);
+                    }
+                    #[cfg(target_os = "windows")]
+                    {
+                        let _ = std::process::Command::new("reg")
+                            .args([
+                                "delete",
+                                &format!(r"HKCU\Software\Mozilla\NativeMessagingHosts\{HOST_NAME}"),
+                                "/f",
+                            ])
+                            .output();
+                    }
+                }
+            }
+        }
+        super::browser::BrowserKind::Safari => {}
+    }
+
+    Ok(())
+}
+
 pub fn run_native_host_stdio() -> Result<(), Box<dyn std::error::Error>> {
     let mut stdin = std::io::stdin();
     let mut stdout = std::io::stdout();

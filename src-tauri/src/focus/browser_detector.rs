@@ -12,6 +12,7 @@ pub struct InstalledBrowser {
     pub executable_path: PathBuf,
     pub policy_path: Option<PathBuf>,
     pub is_installed: bool,
+    pub is_extension_installed: bool,
 }
 
 pub fn browsers_from_catalog(apps: &[InstalledApplication]) -> Vec<InstalledBrowser> {
@@ -34,12 +35,17 @@ pub fn browsers_from_catalog(apps: &[InstalledApplication]) -> Vec<InstalledBrow
                 let exec_path = PathBuf::from(&app.path);
                 if exec_path.exists() {
                     let policy_path = compute_policy_path(k, &exec_path);
+                    let is_extension_installed = policy_path
+                        .as_ref()
+                        .map(|p| super::enterprise_policy::is_policy_installed_at_path(k, p))
+                        .unwrap_or(false);
                     browsers.push(InstalledBrowser {
                         kind: k,
                         name: if app.name.is_empty() { default_name.into() } else { app.name.clone() },
                         executable_path: exec_path,
                         policy_path,
                         is_installed: true,
+                        is_extension_installed,
                     });
                 }
             }
@@ -120,12 +126,17 @@ pub fn detect_installed_browsers() -> Vec<InstalledBrowser> {
                 let path = PathBuf::from(candidate);
                 if path.exists() {
                     let policy_path = compute_policy_path(kind, &path);
+                    let is_extension_installed = policy_path
+                        .as_ref()
+                        .map(|p| super::enterprise_policy::is_policy_installed_at_path(kind, p))
+                        .unwrap_or(false);
                     detected.push(InstalledBrowser {
                         kind,
                         name: name.to_string(),
                         executable_path: path,
                         policy_path,
                         is_installed: true,
+                        is_extension_installed,
                     });
                     break;
                 }
