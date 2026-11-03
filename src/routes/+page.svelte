@@ -1,6 +1,6 @@
 <script lang="ts">
   import '../app.css';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import Titlebar from '$lib/components/Titlebar.svelte';
   import Timer from '$lib/components/Timer.svelte';
   import FocusEscapeDialog from '$lib/components/FocusEscapeDialog.svelte';
@@ -77,6 +77,7 @@
   // and restore the timer's dimensions when returning to timer.
   let lastView = $state<'timer' | 'settings' | 'stats'>('timer');
   let lastMotionEnabled = $state(true);
+  let transitionGeneration = 0;
   $effect(() => {
     const current = $activeView;
     const motionEnabled =
@@ -86,11 +87,18 @@
     if (current !== lastView) {
       lastView = current;
       lastMotionEnabled = motionEnabled;
-      setWindowViewSize(current, motionEnabled).catch((err) => {
-        console.warn('[main] failed to resize window for view:', current, err);
+      const gen = ++transitionGeneration;
+
+      // Page renders first: await DOM reconciliation before triggering window resize.
+      tick().then(() => {
+        if (gen !== transitionGeneration) return;
+        setWindowViewSize(current, motionEnabled).catch((err) => {
+          console.warn('[main] failed to resize window for view:', current, err);
+        });
       });
     } else if (lastMotionEnabled && !motionEnabled) {
       lastMotionEnabled = false;
+      transitionGeneration++;
       setWindowViewSize(current, false).catch(() => {});
     } else {
       lastMotionEnabled = motionEnabled;
