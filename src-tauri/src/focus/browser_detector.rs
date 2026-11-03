@@ -58,14 +58,37 @@ pub fn browsers_from_catalog(apps: &[InstalledApplication]) -> Vec<InstalledBrow
 
 fn compute_policy_path(kind: BrowserKind, exec_path: &Path) -> Option<PathBuf> {
     match kind {
-        BrowserKind::Firefox | BrowserKind::Zen => {
+        BrowserKind::Firefox => {
             #[cfg(target_os = "macos")]
             {
                 if exec_path.extension().is_some_and(|ext| ext == "app") {
                     return Some(exec_path.join("Contents/Resources/distribution/policies.json"));
                 }
             }
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            #[cfg(target_os = "linux")]
+            {
+                return Some(PathBuf::from("/etc/firefox/policies/policies.json"));
+            }
+            #[cfg(target_os = "windows")]
+            {
+                if let Some(parent) = exec_path.parent() {
+                    return Some(parent.join("distribution").join("policies.json"));
+                }
+            }
+            None
+        }
+        BrowserKind::Zen => {
+            #[cfg(target_os = "macos")]
+            {
+                if exec_path.extension().is_some_and(|ext| ext == "app") {
+                    return Some(exec_path.join("Contents/Resources/distribution/policies.json"));
+                }
+            }
+            #[cfg(target_os = "linux")]
+            {
+                return Some(PathBuf::from("/etc/zen/policies/policies.json"));
+            }
+            #[cfg(target_os = "windows")]
             {
                 if let Some(parent) = exec_path.parent() {
                     return Some(parent.join("distribution").join("policies.json"));
@@ -129,7 +152,6 @@ pub fn detect_installed_browsers() -> Vec<InstalledBrowser> {
         check_fallback(BrowserKind::Chrome, "Google Chrome", &[
             "/usr/bin/google-chrome",
             "/usr/bin/google-chrome-stable",
-            "/usr/bin/chromium",
         ]);
         check_fallback(BrowserKind::Firefox, "Mozilla Firefox", &[
             "/usr/bin/firefox",

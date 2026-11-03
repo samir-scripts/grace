@@ -116,7 +116,7 @@ pub fn register_native_messaging_manifests(executable_path: &Path) -> Result<(),
         return Err(format!("Native host executable does not exist at {}", executable_path.display()));
     }
 
-    let chrome_manifest = generate_chrome_manifest(executable_path, &[DEFAULT_CHROME_EXT_ID, "*"]);
+    let chrome_manifest = generate_chrome_manifest(executable_path, &[DEFAULT_CHROME_EXT_ID]);
     let mozilla_manifest = generate_mozilla_manifest(executable_path, &[DEFAULT_FIREFOX_EXT_ID]);
 
     if let Some(chrome_dir) = get_chrome_manifest_dir() {
@@ -124,6 +124,22 @@ pub fn register_native_messaging_manifests(executable_path: &Path) -> Result<(),
         let chrome_file = chrome_dir.join(format!("{HOST_NAME}.json"));
         let content = serde_json::to_string_pretty(&chrome_manifest).map_err(|e| e.to_string())?;
         std::fs::write(&chrome_file, content).map_err(|e| format!("Failed to write Chrome manifest: {e}"))?;
+
+        #[cfg(target_os = "windows")]
+        {
+            let _ = std::process::Command::new("reg")
+                .args([
+                    "add",
+                    &format!(r"HKCU\Software\Google\Chrome\NativeMessagingHosts\{HOST_NAME}"),
+                    "/ve",
+                    "/t",
+                    "REG_SZ",
+                    "/d",
+                    &chrome_file.to_string_lossy(),
+                    "/f",
+                ])
+                .output();
+        }
     }
 
     if let Some(mozilla_dir) = get_mozilla_manifest_dir() {
@@ -131,6 +147,22 @@ pub fn register_native_messaging_manifests(executable_path: &Path) -> Result<(),
         let mozilla_file = mozilla_dir.join(format!("{HOST_NAME}.json"));
         let content = serde_json::to_string_pretty(&mozilla_manifest).map_err(|e| e.to_string())?;
         std::fs::write(&mozilla_file, content).map_err(|e| format!("Failed to write Mozilla manifest: {e}"))?;
+
+        #[cfg(target_os = "windows")]
+        {
+            let _ = std::process::Command::new("reg")
+                .args([
+                    "add",
+                    &format!(r"HKCU\Software\Mozilla\NativeMessagingHosts\{HOST_NAME}"),
+                    "/ve",
+                    "/t",
+                    "REG_SZ",
+                    "/d",
+                    &mozilla_file.to_string_lossy(),
+                    "/f",
+                ])
+                .output();
+        }
     }
 
     Ok(())

@@ -910,10 +910,23 @@ pub fn focus_browser_extension_install(browser: crate::focus::browser::BrowserKi
     let base_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
     let ext_path = match browser {
         crate::focus::browser::BrowserKind::Firefox | crate::focus::browser::BrowserKind::Zen => {
-            base_dir.join("extensions/dist/firefox/manifest.json")
+            let xpi = base_dir.join("extensions/dist/firefox/focus@pomotroid.local.xpi");
+            if xpi.exists() {
+                xpi
+            } else {
+                let manifest = base_dir.join("extensions/dist/firefox/manifest.json");
+                if !manifest.exists() {
+                    return Err("Firefox extension is not built. Run 'node scripts/build-browser-extensions.mjs' first.".into());
+                }
+                manifest
+            }
         }
         crate::focus::browser::BrowserKind::Chrome => {
-            base_dir.join("extensions/dist/chrome")
+            let chrome_dist = base_dir.join("extensions/dist/chrome");
+            if !chrome_dist.exists() {
+                return Err("Chrome extension is not built. Run 'node scripts/build-browser-extensions.mjs' first.".into());
+            }
+            chrome_dist
         }
         crate::focus::browser::BrowserKind::Safari => {
             return Err("Extension installation is not supported for Safari".into());

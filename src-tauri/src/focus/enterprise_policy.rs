@@ -10,13 +10,24 @@ pub const FIREFOX_EXTENSION_ID: &str = "focus@pomotroid.local";
 pub const CHROME_EXTENSION_ID: &str = "pomotroid-focus-companion";
 pub const CHROME_DEFAULT_UPDATE_URL: &str = "https://clients2.google.com/service/update2/crx";
 
+pub fn file_url_for_path(path: &Path) -> String {
+    let abs_path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join(path)
+    };
+    url::Url::from_file_path(&abs_path)
+        .map(|u| u.to_string())
+        .unwrap_or_else(|_| format!("file://{}", abs_path.to_string_lossy()))
+}
+
 pub fn generate_firefox_policy(xpi_path: &Path) -> serde_json::Value {
     json!({
         "policies": {
             "ExtensionSettings": {
                 FIREFOX_EXTENSION_ID: {
                     "installation_mode": "force_installed",
-                    "install_url": format!("file://{}", xpi_path.to_string_lossy())
+                    "install_url": file_url_for_path(xpi_path)
                 }
             }
         }
@@ -49,7 +60,7 @@ pub fn merge_firefox_policies(existing: &serde_json::Value, xpi_path: &Path) -> 
         FIREFOX_EXTENSION_ID.to_string(),
         json!({
             "installation_mode": "force_installed",
-            "install_url": format!("file://{}", xpi_path.to_string_lossy())
+            "install_url": file_url_for_path(xpi_path)
         }),
     );
 
@@ -111,8 +122,10 @@ pub fn install_browser_enterprise_policy(browser: BrowserKind, extension_path: &
     match browser {
         BrowserKind::Firefox | BrowserKind::Zen => {
             let policy = if policy_path.exists() {
-                let existing_text = fs::read_to_string(&policy_path).unwrap_or_else(|_| "{}".into());
-                let existing_json = serde_json::from_str(&existing_text).unwrap_or_else(|_| json!({}));
+                let existing_text = fs::read_to_string(&policy_path)
+                    .map_err(|e| format!("Cannot read existing policy file {}: {e}", policy_path.display()))?;
+                let existing_json = serde_json::from_str(&existing_text)
+                    .map_err(|e| format!("Malformed existing policy JSON in {}: {e}", policy_path.display()))?;
                 merge_firefox_policies(&existing_json, extension_path)
             } else {
                 generate_firefox_policy(extension_path)
