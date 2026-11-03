@@ -187,5 +187,6 @@
   "browser_install_success": "扩展已安装！如有需要请重启浏览器。",
   "browser_connected_profiles": "已连接的浏览器配置文件",
   "browser_no_profiles": "尚未连接任何浏览器扩展。请点击上方的安装扩展进行设置。",
-  "browser_required_toggle": "会话必须连接"
+  "browser_required_toggle": "会话必须连接",
+  "nav_back_timer": "计时器"
 }

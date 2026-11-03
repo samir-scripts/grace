@@ -187,5 +187,6 @@
   "browser_install_success": "拡張機能がインストールされました！必要に応じてブラウザを再起動してください。",
   "browser_connected_profiles": "接続済みブラウザプロファイル",
   "browser_no_profiles": "接続されている拡張機能はまだありません。上の「拡張機能をインストール」をクリックしてください。",
-  "browser_required_toggle": "セッションに必須"
+  "browser_required_toggle": "セッションに必須",
+  "nav_back_timer": "タイマー"
 }

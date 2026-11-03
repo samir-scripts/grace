@@ -187,5 +187,6 @@
   "browser_install_success": "¡Extensión instalada! Reinicia tu navegador si es necesario.",
   "browser_connected_profiles": "Perfiles de navegador conectados",
   "browser_no_profiles": "No hay extensiones conectadas todavía. Haz clic en Instalar extensión arriba.",
-  "browser_required_toggle": "Requerido para la sesión"
+  "browser_required_toggle": "Requerido para la sesión",
+  "nav_back_timer": "Temporizador"
 }

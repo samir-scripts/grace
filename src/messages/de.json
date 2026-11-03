@@ -187,5 +187,6 @@
   "browser_install_success": "Erweiterung installiert! Starten Sie Ihren Browser ggf. neu.",
   "browser_connected_profiles": "Verbundene Browser-Profile",
   "browser_no_profiles": "Noch keine Browser-Erweiterungen verbunden. Klicken Sie oben auf Erweiterung installieren.",
-  "browser_required_toggle": "Für Sitzung erforderlich"
+  "browser_required_toggle": "Für Sitzung erforderlich",
+  "nav_back_timer": "Timer"
 }

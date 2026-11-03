@@ -78,6 +78,26 @@
   }
 </script>
 
+{#snippet backBtn()}
+  {#if $activeView !== 'timer'}
+    <Tooltip text={m.nav_back_timer()}>
+      <button
+        type="button"
+        class="btn-back"
+        class:macos={isMac}
+        onclick={showTimerView}
+        aria-label={m.nav_back_timer()}
+        data-tauri-drag-region="false"
+      >
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="10 3 5 8 10 13" />
+        </svg>
+        <span class="back-text">{m.nav_back_timer()}</span>
+      </button>
+    </Tooltip>
+  {/if}
+{/snippet}
+
 {#snippet settingsBtn()}
   <Tooltip text={m.tooltip_settings()}>
     <button
@@ -163,11 +183,16 @@
 {/snippet}
 
 <nav class="titlebar" class:suppress-hover={suppressTitlebarHover} data-tauri-drag-region>
-  <!-- Left: settings + stats buttons on Linux/Windows. On macOS the traffic
-       lights live here; the action buttons move to the right side instead. -->
-  {#if !isMac}
-    {@render settingsBtn()}
-    {@render statsBtn()}
+  <!-- Left controls: on macOS, back button appears after the traffic lights (at 68px);
+       on Windows/Linux, back button is first, followed by settings + stats. -->
+  {#if isMac}
+    {@render backBtn()}
+  {:else}
+    <div class="left-controls">
+      {@render backBtn()}
+      {@render settingsBtn()}
+      {@render statsBtn()}
+    </div>
   {/if}
 
   <div class="center-selector" data-tauri-drag-region="false">
@@ -276,6 +301,48 @@
     z-index: 20;
     flex-shrink: 0;
     border-bottom: 1px solid var(--color-separator);
+  }
+
+  .left-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-foreground);
+    background: color-mix(in oklch, var(--color-accent) 18%, transparent);
+    border: 1px solid color-mix(in oklch, var(--color-accent) 35%, transparent);
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.12s, border-color 0.12s;
+    white-space: nowrap;
+  }
+
+  .btn-back.macos {
+    margin-left: 68px;
+  }
+
+  .btn-back:hover {
+    background: color-mix(in oklch, var(--color-accent) 28%, transparent);
+    border-color: var(--color-accent);
+  }
+
+  .btn-back:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+
+  .back-text {
+    line-height: 1;
   }
 
   .controls {

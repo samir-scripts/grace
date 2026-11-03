@@ -187,5 +187,6 @@
   "browser_install_success": "Uzantı yüklendi! Gerekirse tarayıcınızı yeniden başlatın.",
   "browser_connected_profiles": "Bağlı Tarayıcı Profilleri",
   "browser_no_profiles": "Henüz bağlı tarayıcı uzantısı yok. Ayarlamak için yukarıdaki Uzantıyı Yükle'ye tıklayın.",
-  "browser_required_toggle": "Oturum için gerekli"
+  "browser_required_toggle": "Oturum için gerekli",
+  "nav_back_timer": "Zamanlayıcı"
 }

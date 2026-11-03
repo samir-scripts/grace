@@ -207,5 +207,6 @@
   "browser_install_success": "Extension installed! Restart your browser if needed.",
   "browser_connected_profiles": "Connected Browser Profiles",
   "browser_no_profiles": "No browser extensions connected yet. Click Install Extension above to set up your browser.",
-  "browser_required_toggle": "Required for session"
+  "browser_required_toggle": "Required for session",
+  "nav_back_timer": "Timer"
 }
