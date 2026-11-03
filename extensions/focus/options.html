@@ -39,11 +39,25 @@
     }
     button:hover { background: #b4befe; }
     .status { margin-top: 16px; font-size: 13px; color: #a6e3a1; }
+    .auto-badge {
+      display: none;
+      background: rgba(166, 227, 161, 0.15);
+      border: 1px solid #a6e3a1;
+      color: #a6e3a1;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
   <h1>Pomotroid Focus Companion</h1>
   <p>Connect this browser extension to Pomotroid on your computer.</p>
+
+  <div id="autoPairedBadge" class="auto-badge">
+    ✓ Automatically paired with Pomotroid on this computer via Native Messaging.
+  </div>
   
   <label for="token">Pairing Token</label>
   <input type="text" id="token" placeholder="Paste pairing token from Pomotroid Settings">

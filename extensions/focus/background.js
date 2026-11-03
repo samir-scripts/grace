@@ -1,6 +1,6 @@
 import { canonicalDomains, rulesForPolicy, isUrlBlocked } from './policy.js';
+import { tryNativePairing } from './native-pairing.js';
 
-const WS_URL = 'ws://127.0.0.1:1421/focus-browser';
 let socket = null;
 let currentRevision = 0;
 let lastAckedRevision = 0;
@@ -24,6 +24,9 @@ async function getSelfInfo() {
 
 function getBrowserKind() {
   if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.getURL('').startsWith('moz-extension://')) {
+    if (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().includes('zen')) {
+      return 'zen';
+    }
     return 'firefox';
   }
   if (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) {
@@ -37,19 +40,19 @@ async function connect() {
     return;
   }
 
-  const { token, profile_id } = await chrome.storage.local.get(['token', 'profile_id']);
+  const { token, profile_id, port } = await chrome.storage.local.get(['token', 'profile_id', 'port']);
   if (!token || !profile_id) {
     console.log('[pomotroid-focus] Missing token or profile_id. Configure in extension options.');
     return;
   }
 
+  const wsUrl = `ws://127.0.0.1:${port || 1421}/focus-browser`;
   try {
-    socket = new WebSocket(WS_URL);
+    socket = new WebSocket(wsUrl);
   } catch (e) {
     scheduleReconnect();
     return;
   }
-
   socket.onopen = async () => {
     console.log('[pomotroid-focus] Connected to desktop bridge.');
     const selfInfo = await getSelfInfo();
@@ -186,5 +189,25 @@ chrome.runtime.onMessage.addListener((msg) => {
   }
 });
 
-// Start connection on load
-connect();
+// Automated bootstrap with native messaging pairing fallback to stored config
+async function bootstrap() {
+  const connectNative = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.connectNative)
+    ? chrome.runtime.connectNative.bind(chrome.runtime)
+    : ((typeof browser !== 'undefined' && browser.runtime && browser.runtime.connectNative)
+      ? browser.runtime.connectNative.bind(browser.runtime)
+      : null);
+
+  if (connectNative) {
+    await tryNativePairing({
+      connectNative,
+      storage: chrome.storage.local,
+      onPaired: () => {
+        console.log('[pomotroid-focus] Paired automatically via native messaging.');
+      }
+    });
+  }
+
+  await connect();
+}
+
+bootstrap();
