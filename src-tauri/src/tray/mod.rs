@@ -329,7 +329,7 @@ pub fn create_tray(app: &AppHandle, state: &Arc<TrayState>) {
                 }
                 "exit" => {
                     log::info!("[tray] exit requested");
-                    if let Some(focus) = app.try_state::<crate::focus::controller::FocusController>() {
+                    if let Some(focus) = app.try_state::<std::sync::Arc<crate::focus::controller::FocusController>>() {
                         if focus.should_prevent_app_exit() {
                             log::warn!("[tray] exit blocked while focus session is locked");
                             if let Some(window) = app.get_webview_window("main") {

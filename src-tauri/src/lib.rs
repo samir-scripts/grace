@@ -370,7 +370,7 @@ pub fn run() {
                             .map(|s| s.min_to_tray_on_close)
                             .unwrap_or(false);
                         let hide = app_for_close
-                            .try_state::<crate::focus::controller::FocusController>()
+                            .try_state::<std::sync::Arc<crate::focus::controller::FocusController>>()
                             .map(|f| f.should_hide_on_window_close(min_to_tray))
                             .unwrap_or(min_to_tray);
                         if hide {
@@ -479,7 +479,7 @@ pub fn run() {
         .run(|app_handle, event| {
             match event {
                 tauri::RunEvent::ExitRequested { api, .. } => {
-                    if let Some(focus) = app_handle.try_state::<crate::focus::controller::FocusController>() {
+                    if let Some(focus) = app_handle.try_state::<std::sync::Arc<crate::focus::controller::FocusController>>() {
                         if focus.should_prevent_app_exit() {
                             api.prevent_exit();
                             if let Some(window) = app_handle.get_webview_window("main") {

@@ -348,6 +348,8 @@
     flex-direction: column;
     gap: 8px;
     align-items: flex-start;
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* ── Year navigation ─────────────────────────────────────── */

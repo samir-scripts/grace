@@ -36,16 +36,18 @@
 
   onMount(() => {
     const cleanups: UnlistenFn[] = [];
+    let mounted = true;
 
     (async () => {
       try {
-        detailed = await statsGetDetailed();
+        const res = await statsGetDetailed();
+        if (mounted) detailed = res;
       } catch (e) {
         await logError(`[stats section] initialization failed: ${e}`);
       }
 
-      cleanups.push(
-        await onRoundChange(async () => {
+      const unlisteners = await Promise.all([
+        onRoundChange(async () => {
           try {
             detailed = await statsGetDetailed();
             if (heatmapLoaded) heatmap = await statsGetHeatmap();
@@ -53,7 +55,7 @@
             await logError(`[stats section] failed to refresh stats after round change: ${e}`);
           }
         }),
-        await onSessionsCleared(async () => {
+        onSessionsCleared(async () => {
           try {
             detailed = await statsGetDetailed();
             if (heatmapLoaded) heatmap = await statsGetHeatmap();
@@ -61,10 +63,17 @@
             await logError(`[stats section] failed to refresh stats after session clear: ${e}`);
           }
         })
-      );
+      ]);
+
+      if (!mounted) {
+        for (const fn of unlisteners) fn();
+      } else {
+        cleanups.push(...unlisteners);
+      }
     })();
 
     return () => {
+      mounted = false;
       for (const fn of cleanups) fn();
     };
   });
