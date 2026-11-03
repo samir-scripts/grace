@@ -267,7 +267,7 @@
           onchange={handleSelectChange}
         >
           {#if selectedId === 'new'}
-            <option value="new">✦ {editingProfile.name || m.session_new_name()}</option>
+            <option value="new">+ {editingProfile.name || m.session_new_name()}</option>
           {/if}
           {#each profiles as p (p.id)}
             <option value={p.id}>
@@ -322,32 +322,26 @@
     <div class="editor-header">
       <div class="name-field">
         <label for="prof-name">{m.session_name()}</label>
-        <div class="name-input-row">
-          <input
-            id="prof-name"
-            type="text"
-            class="text-input"
-            bind:value={editingProfile.name}
-            placeholder="e.g. Deep Work"
-          />
-          {#if activeProfile?.id === editingProfile.id}
-            <span class="active-pill">
-              <span class="active-dot"></span>
-              {m.session_active_label()}
-            </span>
-          {:else if editingProfile.id}
-            <button
-              type="button"
-              class="btn-secondary btn-activate"
-              onclick={() => handleMakeActive(editingProfile.id)}
-            >
-              {m.session_make_active()}
-            </button>
-          {/if}
-        </div>
+        <input
+          id="prof-name"
+          type="text"
+          class="text-input"
+          bind:value={editingProfile.name}
+          placeholder="e.g. Deep Work"
+        />
       </div>
 
       <div class="header-actions">
+        {#if editingProfile.id && activeProfile?.id !== editingProfile.id}
+          <button
+            type="button"
+            class="btn-secondary"
+            disabled={isLocked}
+            onclick={() => handleMakeActive(editingProfile.id)}
+          >
+            {m.session_make_active()}
+          </button>
+        {/if}
         {#if editingProfile.id}
           <button
             type="button"
@@ -369,6 +363,7 @@
         </button>
       </div>
     </div>
+
 
     <!-- Durations & Rounds Sliders -->
     <div class="section-group">
@@ -773,44 +768,6 @@
     font-size: 12px;
     color: var(--color-foreground-darker);
     font-weight: 500;
-  }
-
-  .name-input-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .name-input-row .text-input {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .active-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    background: color-mix(in oklch, var(--color-short-round) 16%, transparent);
-    color: var(--color-short-round);
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .active-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--color-short-round);
-  }
-
-  .btn-activate {
-    white-space: nowrap;
-    flex-shrink: 0;
   }
 
   .header-actions {

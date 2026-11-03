@@ -56,7 +56,22 @@
         <span class="summary-label">{m.stats_current_streak()}</span>
         <span class="summary-value">
           {#if streak.current > 0}
-            <span class="flame" aria-hidden="true">🔥</span>{streak.current}
+            <svg
+              class="flame"
+              width="13"
+              height="13"
+              viewBox="0 0 16 16"
+              fill="var(--color-focus-round)"
+              stroke="var(--color-focus-round)"
+              stroke-width="1"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M8.5 1.5C8.5 1.5 9.8 3.8 9.8 5.6C9.8 6.7 9.2 7.6 8.5 8.2C8 7.3 7.8 6.2 7.8 5.1C6.2 6.1 5.2 7.8 5.2 9.7C5.2 12.3 7.1 14.5 9.8 14.5C12.4 14.5 14.2 12.5 14.2 9.8C14.2 6.4 11.8 3.5 8.5 1.5Z" />
+              <path d="M7.2 9.5C7.2 9.5 8.2 10.7 8.2 11.7C8.2 12.3 7.8 12.8 7.2 13C6.8 12.6 6.5 12 6.5 11.4C6.5 10.6 6.8 10 7.2 9.5Z" fill="var(--color-background)" stroke="var(--color-background)" />
+            </svg>
+            {streak.current}
             {streak.current === 1 ? m.stats_day() : m.stats_days()}
           {:else}
             <span class="streak-none">{m.stats_no_active_streak()}</span>
@@ -174,7 +189,9 @@
   }
 
   .flame {
-    font-size: 1rem;
+    display: inline-block;
+    vertical-align: -1px;
+    margin-right: 2px;
   }
 
   /* ── Bar chart ───────────────────────────────────────────── */

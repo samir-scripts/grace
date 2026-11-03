@@ -151,7 +151,25 @@
   <div class="escape-modal-backdrop" onclick={(e) => e.target === e.currentTarget && !isHolding && onClose()} role="presentation">
     <div class="escape-modal" role="dialog" aria-modal="true" aria-labelledby="escape-title">
       <div class="modal-header">
-        <h2 id="escape-title" class="modal-title">⚠️ {m.session_emergency_exit()}</h2>
+        <h2 id="escape-title" class="modal-title">
+          <svg
+            class="warning-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M8 2L1.5 13.5h13L8 2z" />
+            <line x1="8" y1="6.5" x2="8" y2="9.5" />
+            <circle cx="8" cy="11.5" r="0.5" fill="currentColor" />
+          </svg>
+          <span>{m.session_emergency_exit()}</span>
+        </h2>
         {#if !isHolding}
           <button class="btn-close" onclick={onClose} aria-label="Close dialog">×</button>
         {/if}

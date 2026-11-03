@@ -94,7 +94,21 @@
     aria-expanded={isOpen}
   >
     {#if isLocked}
-      <span class="lock-indicator" aria-hidden="true">🔒</span>
+      <svg
+        class="lock-indicator"
+        width="12"
+        height="12"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <rect x="3" y="7" width="10" height="7" rx="1.5" />
+        <path d="M5 7V5a3 3 0 0 1 6 0v2" />
+      </svg>
     {/if}
     <span class="session-name">
       {activeProfile ? activeProfile.name : 'Pomodoro'}
@@ -123,7 +137,20 @@
               </span>
             </div>
             {#if isSelected}
-              <span class="checkmark">✓</span>
+              <svg
+                class="checkmark"
+                width="13"
+                height="13"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
+              </svg>
             {/if}
           </button>
         {/each}
@@ -131,7 +158,26 @@
 
       <div class="menu-divider"></div>
       <button class="dropdown-item manage-link" onclick={openSettingsSessions}>
-        <span>⚙️ {m.session_manage()}</span>
+        <svg
+          class="manage-icon"
+          width="13"
+          height="13"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="2" y1="4" x2="14" y2="4" />
+          <circle cx="5" cy="4" r="1.8" />
+          <line x1="2" y1="8" x2="14" y2="8" />
+          <circle cx="11" cy="8" r="1.8" />
+          <line x1="2" y1="12" x2="14" y2="12" />
+          <circle cx="7" cy="12" r="1.8" />
+        </svg>
+        <span>{m.session_manage()}</span>
       </button>
     </div>
   {/if}
@@ -191,8 +237,8 @@
   }
 
   .lock-indicator {
-    font-size: 10px;
-    line-height: 1;
+    display: block;
+    flex-shrink: 0;
   }
 
   .chevron {
@@ -272,7 +318,8 @@
   }
 
   .checkmark {
-    font-size: 11px;
+    display: block;
+    flex-shrink: 0;
     color: var(--color-accent, var(--color-foreground));
     margin-left: 6px;
   }
@@ -284,9 +331,17 @@
   }
 
   .manage-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     color: var(--color-foreground-darker);
     font-size: 10px;
     opacity: 0.9;
+  }
+
+  .manage-icon {
+    display: block;
+    flex-shrink: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {

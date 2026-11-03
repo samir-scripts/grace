@@ -21,7 +21,22 @@
 {#if enf.state === 'failed' || enf.state === 'recovery_required'}
   <div class="notice-banner" class:danger={enf.state === 'recovery_required'}>
     <div class="notice-content">
-      <span class="icon">⚠️</span>
+      <svg
+        class="icon warning-icon"
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M8 2L1.5 13.5h13L8 2z" />
+        <line x1="8" y1="6.5" x2="8" y2="9.5" />
+        <circle cx="8" cy="11.5" r="0.5" fill="currentColor" />
+      </svg>
       <span class="text">
         {#if enf.state === 'recovery_required'}
           Cleanup required for website blocking. Click Retry to restore access.
@@ -61,7 +76,8 @@
     text-align: left;
   }
   .icon {
-    font-size: 14px;
+    display: block;
+    flex-shrink: 0;
   }
   .text {
     line-height: 1.4;
