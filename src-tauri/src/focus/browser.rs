@@ -45,6 +45,23 @@ pub struct BrowserConfig {
     pub port: u16,
     pub profiles: Vec<RequiredProfile>,
 }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectedProfileInfo {
+    pub profile_id: String,
+    pub browser: BrowserKind,
+    pub install_type: String,
+    pub may_disable: bool,
+    pub is_required: bool,
+    pub is_connected: bool,
+    pub last_seen_secs_ago: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BrowserSetupInfo {
+    pub token: String,
+    pub port: u16,
+    pub profiles: Vec<ConnectedProfileInfo>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -98,6 +115,8 @@ struct ConnectedClient {
 
 struct SharedState {
     token: String,
+    port: u16,
+    config_path: Option<PathBuf>,
     current_revision: AtomicU64,
     is_active: AtomicBool,
     current_domains: Mutex<Vec<String>>,
@@ -114,14 +133,54 @@ pub struct BrowserBridge {
 }
 
 impl BrowserBridge {
+    fn generate_token() -> String {
+        format!("{}{}", uuid::Uuid::new_v4().simple(), uuid::Uuid::new_v4().simple())
+    }
+
     pub async fn new_in_memory(token: String, port: u16) -> Result<Self, String> {
+        Self::init_bridge(token, port, None, HashMap::new()).await
+    }
+
+    pub async fn new_persistent(app_data_dir: &std::path::Path, port: u16) -> Result<Self, String> {
+        let config_path = app_data_dir.join("focus_browser_config.json");
+        let (token, profiles) = if config_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&config_path) {
+                if let Ok(cfg) = serde_json::from_str::<BrowserConfig>(&content) {
+                    let mut map = HashMap::new();
+                    for p in cfg.profiles {
+                        map.insert(p.profile_id, (p.browser, p.is_required));
+                    }
+                    (cfg.token, map)
+                } else {
+                    (Self::generate_token(), HashMap::new())
+                }
+            } else {
+                (Self::generate_token(), HashMap::new())
+            }
+        } else {
+            (Self::generate_token(), HashMap::new())
+        };
+
+        let bridge = Self::init_bridge(token, port, Some(config_path), profiles).await?;
+        bridge.save_config();
+        Ok(bridge)
+    }
+
+    async fn init_bridge(
+        token: String,
+        port: u16,
+        config_path: Option<PathBuf>,
+        required_profiles: HashMap<String, (BrowserKind, bool)>,
+    ) -> Result<Self, String> {
         let (broadcast_tx, _) = broadcast::channel(32);
         let shared = Arc::new(SharedState {
             token,
+            port,
+            config_path,
             current_revision: AtomicU64::new(0),
             is_active: AtomicBool::new(false),
             current_domains: Mutex::new(Vec::new()),
-            required_profiles: Mutex::new(HashMap::new()),
+            required_profiles: Mutex::new(required_profiles),
             connected_clients: Mutex::new(HashMap::new()),
             ack_condvar: Condvar::new(),
             apps: Mutex::new(None),
@@ -148,15 +207,73 @@ impl BrowserBridge {
         })
     }
 
+    fn save_config(&self) {
+        if let Some(path) = &self.shared.config_path {
+            let profiles: Vec<RequiredProfile> = self.shared.required_profiles.lock().unwrap()
+                .iter()
+                .map(|(id, (b, req))| RequiredProfile {
+                    profile_id: id.clone(),
+                    browser: *b,
+                    is_required: *req,
+                })
+                .collect();
+            let cfg = BrowserConfig {
+                token: self.shared.token.clone(),
+                port: self.shared.port,
+                profiles,
+            };
+            if let Ok(json) = serde_json::to_string_pretty(&cfg) {
+                let _ = std::fs::write(path, json);
+            }
+        }
+    }
+
+    pub fn get_setup_info(&self) -> BrowserSetupInfo {
+        let token = self.shared.token.clone();
+        let port = self.shared.port;
+        let clients = self.shared.connected_clients.lock().unwrap();
+        let required = self.shared.required_profiles.lock().unwrap();
+
+        let mut profiles = Vec::new();
+        for (id, (browser, is_req)) in required.iter() {
+            let client = clients.get(id);
+            profiles.push(ConnectedProfileInfo {
+                profile_id: id.clone(),
+                browser: *browser,
+                install_type: client.map(|c| c.install_type.clone()).unwrap_or_else(|| "unknown".into()),
+                may_disable: client.map(|c| c.may_disable).unwrap_or(true),
+                is_required: *is_req,
+                is_connected: client.is_some(),
+                last_seen_secs_ago: client.map(|c| c.last_seen.elapsed().as_secs()).unwrap_or(0),
+            });
+        }
+        // Also include connected but unconfigured profiles
+        for (id, client) in clients.iter() {
+            if !required.contains_key(id) {
+                profiles.push(ConnectedProfileInfo {
+                    profile_id: id.clone(),
+                    browser: client.browser,
+                    install_type: client.install_type.clone(),
+                    may_disable: client.may_disable,
+                    is_required: false,
+                    is_connected: true,
+                    last_seen_secs_ago: client.last_seen.elapsed().as_secs(),
+                });
+            }
+        }
+
+        BrowserSetupInfo { token, port, profiles }
+    }
     pub fn set_required_profile(&self, profile_id: &str, browser: BrowserKind, required: bool) {
         let mut profiles = self.shared.required_profiles.lock().unwrap();
         profiles.insert(profile_id.to_string(), (browser, required));
+        drop(profiles);
+        self.save_config();
     }
 
     pub fn get_token(&self) -> String {
         self.shared.token.clone()
     }
-
     pub fn is_active(&self) -> bool {
         self.shared.is_active.load(Ordering::SeqCst)
     }

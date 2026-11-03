@@ -868,6 +868,31 @@ pub fn focus_escape_submit_passphrase(
     focus.submit_emergency_passphrase(&passphrase)
 }
 
+#[tauri::command]
+pub fn focus_browser_setup_get(
+    bridge: State<'_, Arc<crate::focus::browser::BrowserBridge>>,
+) -> crate::focus::browser::BrowserSetupInfo {
+    bridge.get_setup_info()
+}
+
+#[tauri::command]
+pub fn focus_browser_profile_require(
+    profile_id: String,
+    browser: crate::focus::browser::BrowserKind,
+    is_required: bool,
+    bridge: State<'_, Arc<crate::focus::browser::BrowserBridge>>,
+) -> Result<(), String> {
+    bridge.set_required_profile(&profile_id, browser, is_required);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn focus_enforcement_retry(
+    focus: State<'_, Arc<FocusController>>,
+) -> Result<(), String> {
+    focus.on_timer_started("work")
+}
+
 #[cfg(test)]
 mod tests {
     use rusqlite::Connection;

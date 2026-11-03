@@ -9,8 +9,10 @@
     setFocusPassphrase,
     clearFocusPassphrase,
     getFocusProfiles,
+    getBrowserSetup,
+    requireBrowserProfile,
   } from '$lib/ipc';
-  import type { FocusProfile } from '$lib/types';
+  import type { FocusProfile, BrowserSetupInfo, BrowserKind } from '$lib/types';
   import { settings } from '$lib/stores/settings';
   import { setSetting } from '$lib/ipc';
   import SettingsToggle from '$lib/components/settings/SettingsToggle.svelte';
@@ -22,6 +24,42 @@
   let isLocked = $derived($focusSnapshot.is_locked);
   let unblockBreaks = $derived($focusSnapshot.unblock_during_breaks);
 
+  let browserSetup = $state<BrowserSetupInfo | null>(null);
+  let copyFeedback = $state('');
+
+  onMount(() => {
+    refreshBrowserSetup();
+    const interval = setInterval(refreshBrowserSetup, 3000);
+    return () => clearInterval(interval);
+  });
+
+  async function refreshBrowserSetup() {
+    try {
+      browserSetup = await getBrowserSetup();
+    } catch (e) {
+      console.warn('[sessions] failed to get browser setup:', e);
+    }
+  }
+
+  async function copyToken() {
+    if (!browserSetup?.token) return;
+    try {
+      await navigator.clipboard.writeText(browserSetup.token);
+      copyFeedback = 'Copied!';
+      setTimeout(() => { copyFeedback = ''; }, 2000);
+    } catch {
+      copyFeedback = 'Copy failed';
+    }
+  }
+
+  async function toggleRequireProfile(profileId: string, browser: BrowserKind, currentReq: boolean) {
+    try {
+      await requireBrowserProfile(profileId, browser, !currentReq);
+      await refreshBrowserSetup();
+    } catch (e) {
+      console.error('[sessions] failed to toggle required profile:', e);
+    }
+  }
   // Selected profile in the settings editor
   let editingProfile = $state<FocusProfile>({
     id: '',
@@ -476,6 +514,60 @@
         {/if}
       </div>
       <span class="unblock-note">{m.session_no_blocking()}</span>
+    </div>
+    <!-- Browser Extension Companions -->
+    <div class="section-group">
+      <h3 class="group-title">Browser Extension Companions</h3>
+      <p class="section-desc">
+        Pair extensions in Chrome, Firefox, or Safari to enforce website blocks without requiring admin privileges.
+      </p>
+
+      {#if browserSetup}
+        <div class="pairing-box">
+          <div class="token-row">
+            <span class="token-label">Pairing Token:</span>
+            <code class="token-val">{browserSetup.token}</code>
+            <button type="button" class="btn-secondary copy-btn" onclick={copyToken}>
+              {copyFeedback || 'Copy Token'}
+            </button>
+          </div>
+
+          <div class="profiles-list">
+            <span class="sub-label">Connected Browser Profiles:</span>
+            {#if browserSetup.profiles.length === 0}
+              <div class="empty-hint">
+                No browser extensions connected yet. Load the extension from <code>extensions/dist/</code> in your browser and enter the token above.
+              </div>
+            {:else}
+              {#each browserSetup.profiles as prof}
+                <div class="browser-profile-row">
+                  <div class="prof-meta">
+                    <span class="prof-browser">{prof.browser.toUpperCase()}</span>
+                    <span class="prof-id">{prof.profile_id}</span>
+                    {#if prof.is_connected}
+                      <span class="badge online">Online</span>
+                    {:else}
+                      <span class="badge offline">Offline</span>
+                    {/if}
+                    {#if prof.browser === 'safari'}
+                      <span class="badge dev">Dev</span>
+                    {/if}
+                  </div>
+                  <label class="req-toggle">
+                    <input
+                      type="checkbox"
+                      checked={prof.is_required}
+                      disabled={isLocked && activeProfile?.id === editingProfile.id}
+                      onchange={() => toggleRequireProfile(prof.profile_id, prof.browser, prof.is_required)}
+                    />
+                    <span>Required for session</span>
+                  </label>
+                </div>
+              {/each}
+            {/if}
+          </div>
+        </div>
+      {/if}
     </div>
 
     <!-- Timer Execution Preferences -->
@@ -1142,6 +1234,118 @@
     background: color-mix(in oklch, var(--color-short-round) 15%, transparent);
     border: 1px solid var(--color-short-round);
     color: var(--color-short-round);
+  }
+
+  .pairing-box {
+    padding: 12px;
+    background: var(--color-background-light);
+    border: 1px solid var(--color-separator);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .token-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    flex-wrap: wrap;
+  }
+
+  .token-label {
+    color: var(--color-foreground-darker);
+    font-weight: 500;
+  }
+
+  .token-val {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    color: var(--color-foreground);
+  }
+
+  .copy-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  .profiles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sub-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-foreground-darker);
+  }
+
+  .browser-profile-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--color-separator);
+    border-radius: 6px;
+    font-size: 12px;
+    gap: 12px;
+  }
+
+  .prof-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .prof-browser {
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--color-background-dark);
+    color: var(--color-foreground);
+  }
+
+  .prof-id {
+    font-family: monospace;
+    color: var(--color-foreground);
+  }
+
+  .badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .badge.online {
+    background: color-mix(in oklch, var(--color-short-round) 25%, transparent);
+    color: var(--color-short-round);
+  }
+
+  .badge.offline {
+    background: color-mix(in oklch, var(--color-foreground-darker) 25%, transparent);
+    color: var(--color-foreground-darker);
+  }
+
+  .badge.dev {
+    background: color-mix(in oklch, var(--color-long-round) 25%, transparent);
+    color: var(--color-long-round);
+  }
+
+  .req-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--color-foreground-darker);
+    cursor: pointer;
   }
 
   @media (prefers-reduced-motion: reduce) {

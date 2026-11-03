@@ -165,6 +165,24 @@ export interface EnforcementStatus {
   error_code: EnforcementErrorCode | null;
 }
 
+export type BrowserKind = 'chrome' | 'firefox' | 'safari';
+
+export interface ConnectedProfileInfo {
+  profile_id: string;
+  browser: BrowserKind;
+  install_type: string;
+  may_disable: boolean;
+  is_required: boolean;
+  is_connected: boolean;
+  last_seen_secs_ago: number;
+}
+
+export interface BrowserSetupInfo {
+  token: string;
+  port: number;
+  profiles: ConnectedProfileInfo[];
+}
+
 export interface FocusSnapshot {
   status: FocusStatus;
   current_phase: FocusPhase | null;

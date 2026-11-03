@@ -21,6 +21,7 @@
   import TimerFooter from './TimerFooter.svelte';
   import MiniControls from './MiniControls.svelte';
   import Tooltip from './Tooltip.svelte';
+  import FocusEnforcementNotice from './FocusEnforcementNotice.svelte';
   import type { UnlistenFn } from '@tauri-apps/api/event';
   import * as m from '$paraglide/messages.js';
   import { notificationShow } from '$lib/ipc';
@@ -127,6 +128,8 @@
       <div class="round-label" style="color: {roundColor(state.round_type)}">
         {roundLabel(state.round_type)}
       </div>
+
+      <FocusEnforcementNotice />
 
       <div class="controls-wrapper">
         <!-- Back: restart current round -->

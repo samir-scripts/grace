@@ -15,6 +15,8 @@ import type {
   FocusProfile,
   FocusSnapshot,
   ApplicationCatalog,
+  BrowserKind,
+  BrowserSetupInfo,
 } from '$lib/types';
 
 // --- Timer commands ---
@@ -176,6 +178,13 @@ export const cancelEmergencyHold = (attemptId: string) =>
   invoke<void>('focus_escape_cancel_hold', { attemptId });
 export const submitEmergencyPassphrase = (passphrase: string) =>
   invoke<boolean>('focus_escape_submit_passphrase', { passphrase });
+
+export const getBrowserSetup = () =>
+  invoke<BrowserSetupInfo>('focus_browser_setup_get');
+export const requireBrowserProfile = (profileId: string, browser: BrowserKind, isRequired: boolean) =>
+  invoke<void>('focus_browser_profile_require', { profileId, browser, isRequired });
+export const retryFocusEnforcement = () =>
+  invoke<void>('focus_enforcement_retry');
 
 export const onFocusChanged = (cb: (snapshot: FocusSnapshot) => void): Promise<UnlistenFn> =>
   listen<FocusSnapshot>('focus:changed', (e) => cb(e.payload));

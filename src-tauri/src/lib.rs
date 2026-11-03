@@ -46,6 +46,9 @@ use commands::{
     focus_escape_pulse_hold,
     focus_escape_cancel_hold,
     focus_escape_submit_passphrase,
+    focus_browser_setup_get,
+    focus_browser_profile_require,
+    focus_enforcement_retry,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -144,8 +147,20 @@ pub fn run() {
                 app.manage(audio);
             }
 
-            // --- Focus controller ---
-            let focus = Arc::new(focus::controller::FocusController::new(db.clone(), None));
+            // --- Browser Bridge & Focus controller ---
+            let browser_bridge = Arc::new(
+                tauri::async_runtime::block_on(focus::browser::BrowserBridge::new_persistent(
+                    &app_data_dir,
+                    focus::browser::BROWSER_PORT_DEFAULT,
+                ))
+                .expect("failed to initialize browser focus bridge"),
+            );
+            app.manage(Arc::clone(&browser_bridge));
+
+            let focus = Arc::new(focus::controller::FocusController::new(
+                db.clone(),
+                Some(browser_bridge),
+            ));
             focus.set_app_handle(app.handle().clone());
             app.manage(Arc::clone(&focus));
 
@@ -439,6 +454,9 @@ pub fn run() {
             focus_escape_pulse_hold,
             focus_escape_cancel_hold,
             focus_escape_submit_passphrase,
+            focus_browser_setup_get,
+            focus_browser_profile_require,
+            focus_enforcement_retry,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
