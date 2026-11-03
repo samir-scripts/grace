@@ -177,5 +177,15 @@
   "apps_partial": "一部のアプリフォルダーを読み込めませんでした",
   "apps_close": "アプリ選択を閉じる",
   "apps_windows_scope": "同じ実行可能ファイル名を持つすべてのプロセスをブロックします。",
-  "session_no_blocking": "ブロックなしのタイマーにするには両方のリストを空のままにします。"
+  "session_no_blocking": "ブロックなしのタイマーにするには両方のリストを空のままにします。",
+  "browser_companions_title": "ブラウザ拡張機能",
+  "browser_companions_desc": "インストールされているブラウザを選択して拡張機能を配置し、Native Messagingで自動ペアリングします。",
+  "browser_install_button": "拡張機能をインストール（削除不可）",
+  "browser_status_installed": "インストール済み",
+  "browser_status_not_installed": "未インストール",
+  "browser_installing": "インストール中…",
+  "browser_install_success": "拡張機能がインストールされました！必要に応じてブラウザを再起動してください。",
+  "browser_connected_profiles": "接続済みブラウザプロファイル",
+  "browser_no_profiles": "接続されている拡張機能はまだありません。上の「拡張機能をインストール」をクリックしてください。",
+  "browser_required_toggle": "セッションに必須"
 }

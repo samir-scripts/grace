@@ -197,5 +197,15 @@
   "apps_partial": "Some application folders could not be read",
   "apps_close": "Close application picker",
   "apps_windows_scope": "Blocks every process with the same executable name.",
-  "session_no_blocking": "Leave both lists empty for a timer without blocking."
+  "session_no_blocking": "Leave both lists empty for a timer without blocking.",
+  "browser_companions_title": "Browser Companions",
+  "browser_companions_desc": "Select an installed browser to place the distraction-blocking extension and pair automatically via Native Messaging.",
+  "browser_install_button": "Install Extension (Unremovable)",
+  "browser_status_installed": "Installed",
+  "browser_status_not_installed": "Not Installed",
+  "browser_installing": "Installing…",
+  "browser_install_success": "Extension installed! Restart your browser if needed.",
+  "browser_connected_profiles": "Connected Browser Profiles",
+  "browser_no_profiles": "No browser extensions connected yet. Click Install Extension above to set up your browser.",
+  "browser_required_toggle": "Required for session"
 }

@@ -177,5 +177,15 @@
   "apps_partial": "No se pudieron leer algunas carpetas de aplicaciones",
   "apps_close": "Cerrar selector de aplicaciones",
   "apps_windows_scope": "Bloquea todos los procesos con el mismo nombre de ejecutable.",
-  "session_no_blocking": "Deja ambas listas vacías para un temporizador sin bloqueos."
+  "session_no_blocking": "Deja ambas listas vacías para un temporizador sin bloqueos.",
+  "browser_companions_title": "Extensiones de navegador",
+  "browser_companions_desc": "Selecciona un navegador instalado para instalar la extensión y emparejarla automáticamente mediante Native Messaging.",
+  "browser_install_button": "Instalar extensión (inamovible)",
+  "browser_status_installed": "Instalado",
+  "browser_status_not_installed": "No instalado",
+  "browser_installing": "Instalando…",
+  "browser_install_success": "¡Extensión instalada! Reinicia tu navegador si es necesario.",
+  "browser_connected_profiles": "Perfiles de navegador conectados",
+  "browser_no_profiles": "No hay extensiones conectadas todavía. Haz clic en Instalar extensión arriba.",
+  "browser_required_toggle": "Requerido para la sesión"
 }

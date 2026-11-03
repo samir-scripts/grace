@@ -177,5 +177,15 @@
   "apps_partial": "Certains dossiers d'applications n'ont pas pu être lus",
   "apps_close": "Fermer le sélecteur d'applications",
   "apps_windows_scope": "Bloque tous les processus ayant le même nom d'exécutable.",
-  "session_no_blocking": "Laissez les deux listes vides pour un minuteur sans blocage."
+  "session_no_blocking": "Laissez les deux listes vides pour un minuteur sans blocage.",
+  "browser_companions_title": "Extensions de navigateur",
+  "browser_companions_desc": "Sélectionnez un navigateur installé pour placer l'extension et l'associer automatiquement via Native Messaging.",
+  "browser_install_button": "Installer l'extension (inamovible)",
+  "browser_status_installed": "Installé",
+  "browser_status_not_installed": "Non installé",
+  "browser_installing": "Installation en cours…",
+  "browser_install_success": "Extension installée ! Redémarrez votre navigateur si nécessaire.",
+  "browser_connected_profiles": "Profils de navigateur connectés",
+  "browser_no_profiles": "Aucune extension connectée pour le moment. Cliquez sur Installer l'extension ci-dessus.",
+  "browser_required_toggle": "Requis pour la session"
 }

@@ -177,5 +177,15 @@
   "apps_partial": "部分应用程序文件夹无法读取",
   "apps_close": "关闭应用程序选择器",
   "apps_windows_scope": "将阻止具有相同可执行文件名称的所有进程。",
-  "session_no_blocking": "若两项列表均保持为空，则计时器不启用任何阻止。"
+  "session_no_blocking": "若两项列表均保持为空，则计时器不启用任何阻止。",
+  "browser_companions_title": "浏览器扩展",
+  "browser_companions_desc": "选择已安装的浏览器以安装防分心扩展并通过 Native Messaging 自动配对。",
+  "browser_install_button": "安装扩展（不可移除）",
+  "browser_status_installed": "已安装",
+  "browser_status_not_installed": "未安装",
+  "browser_installing": "正在安装…",
+  "browser_install_success": "扩展已安装！如有需要请重启浏览器。",
+  "browser_connected_profiles": "已连接的浏览器配置文件",
+  "browser_no_profiles": "尚未连接任何浏览器扩展。请点击上方的安装扩展进行设置。",
+  "browser_required_toggle": "会话必须连接"
 }
