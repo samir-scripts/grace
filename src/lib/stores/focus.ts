@@ -14,6 +14,12 @@ const initialSnapshot: FocusSnapshot = {
   is_locked: false,
   blocking_active: false,
   unblock_during_breaks: false,
+  enforcement: {
+    state: 'inactive',
+    applications_active: false,
+    websites_active: false,
+    error_code: null,
+  },
 };
 
 export const focusSnapshot = writable<FocusSnapshot>(initialSnapshot);

@@ -159,7 +159,11 @@ fn fire_action(app: &AppHandle, action: ShortcutAction) {
     log::info!("[shortcut] fired: {}", action.as_str());
     let Some(timer) = app.try_state::<TimerController>() else { return };
     match action {
-        ShortcutAction::Toggle       => timer.toggle(),
+        ShortcutAction::Toggle => {
+            if let Err(error) = timer.toggle() {
+                log::warn!("[shortcut] timer start blocked: {error}");
+            }
+        }
         ShortcutAction::Reset        => timer.reset(),
         ShortcutAction::Skip         => timer.skip(),
         ShortcutAction::RestartRound => timer.restart_round(),

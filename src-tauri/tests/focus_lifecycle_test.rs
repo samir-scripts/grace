@@ -46,7 +46,7 @@ fn test_full_focus_session_lifecycle() {
     assert!(!snap.blocking_active);
 
     // 3. Start Work Round 1
-    controller.on_timer_started("work");
+    controller.on_timer_started("work").unwrap();
     let snap_work_1 = controller.get_snapshot();
     assert!(snap_work_1.is_locked);
     assert!(snap_work_1.blocking_active);
@@ -62,14 +62,14 @@ fn test_full_focus_session_lifecycle() {
     assert!(controller.check_timer_command(TimerAction::RestartRound).is_ok());
 
     // 4. Complete Work Round 1 -> Transition to Short Break
-    controller.on_round_completed("work", "short-break", false);
+    controller.on_round_completed("work", "short-break", false).unwrap();
     let snap_break = controller.get_snapshot();
     assert!(snap_break.is_locked); // Still locked
     assert!(!snap_break.blocking_active); // Unblocked during break
     assert!(!mock_enforcer.is_active.load(std::sync::atomic::Ordering::Relaxed));
 
     // 5. Complete Short Break -> Transition to Work Round 2
-    controller.on_round_completed("short-break", "work", false);
+    controller.on_round_completed("short-break", "work", false).unwrap();
     let snap_work_2 = controller.get_snapshot();
     assert!(snap_work_2.is_locked);
     assert!(snap_work_2.blocking_active); // Re-blocked
@@ -77,13 +77,13 @@ fn test_full_focus_session_lifecycle() {
     assert!(mock_enforcer.is_active.load(std::sync::atomic::Ordering::Relaxed));
 
     // 6. Complete Work Round 2 -> Transition to Long Break
-    controller.on_round_completed("work", "long-break", true);
+    controller.on_round_completed("work", "long-break", true).unwrap();
     let snap_long_break = controller.get_snapshot();
     assert!(snap_long_break.is_locked);
     assert!(!snap_long_break.blocking_active);
 
     // 7. Complete Long Break -> Cycle Complete!
-    controller.on_round_completed("long-break", "work", true);
+    controller.on_round_completed("long-break", "work", true).unwrap();
     let snap_final = controller.get_snapshot();
     assert!(!snap_final.is_locked);
     assert!(!snap_final.blocking_active);
@@ -119,7 +119,7 @@ fn test_emergency_exit_during_active_work() {
     controller.select_profile("prof-escape").unwrap();
 
     // Start work
-    controller.on_timer_started("work");
+    controller.on_timer_started("work").unwrap();
     assert!(controller.is_active());
     assert!(mock_enforcer.is_active.load(std::sync::atomic::Ordering::Relaxed));
 
@@ -186,7 +186,7 @@ fn test_empty_rule_session_allows_ordinary_reset_and_skip() {
     controller.select_profile("profile-empty").unwrap();
 
     // Start work round
-    controller.on_timer_started("work");
+    controller.on_timer_started("work").unwrap();
     let snap = controller.get_snapshot();
 
     // Must NOT be locked

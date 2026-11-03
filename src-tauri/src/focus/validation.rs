@@ -8,6 +8,7 @@ pub enum ValidationError {
     IpAddressNotAllowed,
     InvalidDuration(&'static str),
     InvalidRounds,
+    TooManyDomains,
 }
 
 impl fmt::Display for ValidationError {
@@ -19,6 +20,7 @@ impl fmt::Display for ValidationError {
             Self::IpAddressNotAllowed => write!(f, "IP addresses are not allowed"),
             Self::InvalidDuration(s) => write!(f, "Invalid duration: {s}"),
             Self::InvalidRounds => write!(f, "Work rounds must be between 1 and 12"),
+            Self::TooManyDomains => write!(f, "A session can block at most 256 distinct domains"),
         }
     }
 }
@@ -79,6 +81,13 @@ pub fn normalize_domain(input: &str) -> Result<String, ValidationError> {
         }
         Err(_) => Err(ValidationError::InvalidDomain(lower)),
     }
+}
+
+pub fn validate_domain_count(count: usize) -> Result<(), ValidationError> {
+    if count > super::enforcer::protocol::MAX_DOMAINS {
+        return Err(ValidationError::TooManyDomains);
+    }
+    Ok(())
 }
 
 pub fn validate_profile_durations(

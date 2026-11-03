@@ -152,6 +152,19 @@ export interface FocusProfile {
 export type FocusStatus = 'idle' | 'preparing' | 'active' | 'releasing' | 'recovery_required';
 export type FocusPhase = 'work' | 'short_break' | 'long_break';
 
+export type EnforcementState =
+  | 'inactive' | 'preparing' | 'active' | 'failed' | 'releasing' | 'recovery_required';
+export type EnforcementErrorCode =
+  | 'helper_unavailable' | 'authorization_required' | 'authorization_denied'
+  | 'unsupported_platform' | 'invalid_target' | 'apply_failed' | 'release_failed'
+  | 'lease_lost' | 'protocol_mismatch';
+export interface EnforcementStatus {
+  state: EnforcementState;
+  applications_active: boolean;
+  websites_active: boolean;
+  error_code: EnforcementErrorCode | null;
+}
+
 export interface FocusSnapshot {
   status: FocusStatus;
   current_phase: FocusPhase | null;
@@ -161,4 +174,5 @@ export interface FocusSnapshot {
   is_locked: boolean;
   blocking_active: boolean;
   unblock_during_breaks: boolean;
+  enforcement: EnforcementStatus;
 }

@@ -304,7 +304,9 @@ pub fn create_tray(app: &AppHandle, state: &Arc<TrayState>) {
             match event.id().as_ref() {
                 "toggle" => {
                     if let Some(timer) = app.try_state::<TimerController>() {
-                        timer.toggle();
+                        if let Err(error) = timer.toggle() {
+                            log::warn!("[tray] timer start blocked: {error}");
+                        }
                     }
                 }
                 "skip" => {

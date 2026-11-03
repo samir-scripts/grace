@@ -25,8 +25,8 @@ use crate::websocket::{self, WsState};
 /// Toggle the timer: start if idle, resume if paused, pause if running.
 /// This is the primary action bound to the space bar and the play/pause button.
 #[tauri::command]
-pub fn timer_toggle(timer: State<'_, TimerController>) {
-    timer.toggle();
+pub fn timer_toggle(timer: State<'_, TimerController>) -> Result<(), String> {
+    timer.toggle()
 }
 
 /// Reset the current round's timer without advancing the sequence.

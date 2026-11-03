@@ -2,13 +2,16 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter};
 
 use crate::db::DbState;
-use super::enforcer::{MockEnforcer, NativeEnforcer, SystemEnforcer};
+use super::enforcer::{NativeEnforcer, SystemEnforcer};
+#[cfg(test)]
+use super::enforcer::MockEnforcer;
+use super::enforcer::protocol::{EnforcementErrorCode, EnforcementState, EnforcementStatus};
 use super::escape::EscapeHandler;
-use super::model::{FocusPreferences, FocusProfile, FocusRunJournal};
+use super::model::{FocusProfile, FocusRunJournal};
 use super::repository::FocusRepository;
 use super::security::hash_passphrase;
 use super::state::{FocusPhase, FocusSnapshot, FocusStateMachine};
-use super::validation::{normalize_domain, validate_profile_durations};
+use super::validation::{normalize_domain, validate_domain_count, validate_profile_durations};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TimerAction {
@@ -25,6 +28,8 @@ pub struct FocusController {
     enforcer: Arc<dyn NativeEnforcer>,
     db: DbState,
     app_handle: Mutex<Option<AppHandle>>,
+    transition: Mutex<()>,
+    engine: Mutex<Option<crate::timer::engine::EngineHandle>>,
 }
 
 impl FocusController {
@@ -78,8 +83,17 @@ impl FocusController {
                     "[focus] Found leftover focus journal run_id={}. Cleaning up dangling enforcement.",
                     journal.run_id
                 );
-                let _ = enforcer.release_blocking();
-                let _ = repo.clear_run_journal(&conn);
+                if enforcer.release_blocking().is_ok() {
+                    if let Err(e) = repo.clear_run_journal(&conn) {
+                        log::error!("[focus] Failed to clear recovered journal: {e}");
+                    }
+                } else {
+                    sm.set_enforcement(EnforcementStatus {
+                        state: EnforcementState::RecoveryRequired,
+                        error_code: Some(EnforcementErrorCode::ReleaseFailed),
+                        ..Default::default()
+                    });
+                }
             }
         }
 
@@ -90,6 +104,8 @@ impl FocusController {
             enforcer,
             db,
             app_handle: Mutex::new(None),
+            transition: Mutex::new(()),
+            engine: Mutex::new(None),
         }
     }
 
@@ -167,6 +183,7 @@ impl FocusController {
             }
         }
         profile.blocked_domains = normalized_domains;
+        validate_domain_count(profile.blocked_domains.len()).map_err(|e| e.to_string())?;
 
         if profile.id.is_empty() {
             profile.id = uuid::Uuid::new_v4().to_string();
@@ -260,17 +277,17 @@ impl FocusController {
 
 
     pub fn set_unblock_during_breaks(&self, unblock: bool) -> Result<(), String> {
-        let conn = self.db.lock().map_err(|e| e.to_string())?;
-        let mut prefs = self.repository.get_preferences(&conn).unwrap_or_default();
-        prefs.unblock_during_breaks = unblock;
-        self.repository.save_preferences(&conn, &prefs).map_err(|e| e.to_string())?;
+        let _transition = self.transition.lock().unwrap();
+        {
+            let conn = self.db.lock().map_err(|e| e.to_string())?;
+            let mut prefs = self.repository.get_preferences(&conn).unwrap_or_default();
+            prefs.unblock_during_breaks = unblock;
+            self.repository.save_preferences(&conn, &prefs).map_err(|e| e.to_string())?;
+        }
 
-        let mut sm = self.state_machine.lock().unwrap();
-        sm.set_unblock_during_breaks(unblock);
-        drop(sm);
-
-        self.emit_changed();
-        Ok(())
+        let mut candidate = self.state_machine.lock().unwrap().clone();
+        candidate.set_unblock_during_breaks(unblock);
+        self.commit_enforcement_transition(candidate)
     }
 
     pub fn set_emergency_passphrase(&self, passphrase: &str) -> Result<(), String> {
@@ -322,91 +339,155 @@ impl FocusController {
     }
 
     pub fn execute_emergency_release(&self) -> Result<(), String> {
-        let _ = self.enforcer.release_blocking();
-        {
-            let mut sm = self.state_machine.lock().unwrap();
-            sm.handle_emergency_released().map_err(|e| e.to_string())?;
+        let _transition = self.transition.lock().unwrap();
+        let mut candidate = self.state_machine.lock().unwrap().clone();
+        candidate.handle_emergency_released().map_err(|e| e.to_string())?;
+        let result = self.commit_enforcement_transition(candidate);
+        if result.is_ok() {
+            if let Some(engine) = self.engine.lock().unwrap().as_ref() {
+                engine.send(crate::timer::engine::TimerCommand::Reset);
+            }
         }
-        if let Ok(conn) = self.db.lock() {
-            let _ = self.repository.clear_run_journal(&conn);
-        }
-        self.emit_changed();
-        Ok(())
+        result
     }
 
     // --- Hooks called by Timer Engine / Event Loop ---
 
-    pub fn on_timer_started(&self, round_type: &str) {
-        let mut sm = self.state_machine.lock().unwrap();
-        if sm.snapshot().active_profile.is_none() {
-            return;
+    pub fn on_timer_started(&self, round_type: &str) -> Result<(), String> {
+        let _transition = self.transition.lock().unwrap();
+        let mut candidate = self.state_machine.lock().unwrap().clone();
+        if candidate.snapshot().status == super::state::FocusStatus::RecoveryRequired {
+            return Err("Blocking cleanup is required before starting the timer.".into());
         }
-
+        if candidate.snapshot().active_profile.is_none() {
+            return Err("No session is selected.".into());
+        }
         if round_type == "work" {
-            let _ = sm.handle_work_started();
-            if let Some(prof) = &sm.snapshot().active_profile {
-                if prof.has_blocking_rules() {
-                    let _ = self.enforcer.apply_blocking(&prof.blocked_apps, &prof.blocked_domains);
-                    // Record run journal
-                    if let Ok(conn) = self.db.lock() {
-                        let journal = FocusRunJournal {
-                            run_id: uuid::Uuid::new_v4().to_string(),
-                            profile_snapshot_json: serde_json::to_string(prof).unwrap_or_default(),
-                            phase: "work".to_string(),
-                            current_round: sm.snapshot().current_work_round,
-                            started_at: chrono_now_secs(),
-                            lease_expires_at: chrono_now_secs() + 15,
-                        };
-                        let _ = self.repository.save_run_journal(&conn, &journal);
+            candidate.handle_work_started().map_err(|e| e.to_string())?;
+        }
+        self.commit_enforcement_transition(candidate)
+    }
+
+    // Call only while holding the transition gate. Native work never holds state or DB locks.
+    fn commit_enforcement_transition(&self, mut candidate: FocusStateMachine) -> Result<(), String> {
+        let original = self.state_machine.lock().unwrap().clone();
+        let previous = original.snapshot();
+        let next = candidate.snapshot();
+        let was_blocking = previous.enforcement.state == EnforcementState::Active;
+        let should_block = next.blocking_active;
+        self.state_machine.lock().unwrap().preparing();
+
+        let result = (|| -> Result<(), String> {
+            if should_block {
+                let profile = next.active_profile.as_ref().ok_or("No session is selected.")?;
+                if !was_blocking {
+                    let journal = FocusRunJournal {
+                        run_id: uuid::Uuid::new_v4().to_string(),
+                        profile_snapshot_json: serde_json::to_string(profile).map_err(|e| e.to_string())?,
+                        phase: next.current_phase.map(|p| p.as_str()).unwrap_or("work").into(),
+                        current_round: next.current_work_round,
+                        started_at: chrono_now_secs(),
+                        lease_expires_at: chrono_now_secs() + 15,
+                    };
+                    {
+                        let conn = self.db.lock().map_err(|e| e.to_string())?;
+                        self.repository.save_run_journal(&conn, &journal).map_err(|e| e.to_string())?;
                     }
+                    self.enforcer.apply_blocking(&profile.blocked_apps, &profile.blocked_domains)
+                        .map_err(|e| e.to_string())?;
                 }
+                candidate.set_enforcement(EnforcementStatus {
+                    state: EnforcementState::Active,
+                    applications_active: !profile.blocked_apps.is_empty(),
+                    websites_active: !profile.blocked_domains.is_empty(),
+                    error_code: None,
+                });
+            } else {
+                if was_blocking || previous.enforcement.state == EnforcementState::RecoveryRequired {
+                    self.enforcer.release_blocking().map_err(|e| e.to_string())?;
+                }
+                let conn = self.db.lock().map_err(|e| e.to_string())?;
+                self.repository.clear_run_journal(&conn).map_err(|e| e.to_string())?;
+                candidate.set_enforcement(EnforcementStatus::default());
             }
+            Ok(())
+        })();
+
+        if let Err(error) = result {
+            let cleanup_ok = should_block && self.enforcer.release_blocking().is_ok();
+            let mut failed = if original.snapshot().status == super::state::FocusStatus::Idle {
+                original
+            } else {
+                candidate
+            };
+            let recovered = cleanup_ok && self.db.lock().ok().map(|conn| {
+                self.repository.clear_run_journal(&conn).is_ok()
+            }).unwrap_or(false);
+            failed.set_enforcement(EnforcementStatus {
+                state: if recovered { EnforcementState::Failed } else { EnforcementState::RecoveryRequired },
+                error_code: Some(if should_block { EnforcementErrorCode::ApplyFailed } else { EnforcementErrorCode::ReleaseFailed }),
+                ..Default::default()
+            });
+            *self.state_machine.lock().unwrap() = failed;
+            self.emit_changed();
+            return Err(error);
         }
-        drop(sm);
+        *self.state_machine.lock().unwrap() = candidate;
         self.emit_changed();
+        Ok(())
     }
 
-    pub fn on_timer_tick(&self) {
-        if self.is_locked() && self.is_active() {
-            self.enforcer.renew_lease();
+    pub fn check_enforcement_health(&self) -> Result<(), String> {
+        let _transition = self.transition.lock().unwrap();
+        let snapshot = self.get_snapshot();
+        if snapshot.enforcement.state != EnforcementState::Active {
+            return Ok(());
         }
+        if let Err(error) = self.enforcer.renew_lease() {
+            let released = self.enforcer.release_blocking().is_ok();
+            self.state_machine.lock().unwrap().set_enforcement(EnforcementStatus {
+                state: if released { EnforcementState::Failed } else { EnforcementState::RecoveryRequired },
+                error_code: Some(EnforcementErrorCode::LeaseLost),
+                ..Default::default()
+            });
+            self.emit_changed();
+            return Err(error.to_string());
+        }
+        Ok(())
     }
 
-    pub fn on_round_completed(&self, completed_round: &str, next_round: &str, is_last_round: bool) {
-        let mut sm = self.state_machine.lock().unwrap();
-        if !sm.is_active() {
-            return;
-        }
+    pub fn start_supervisor(self: &Arc<Self>, engine: crate::timer::engine::EngineHandle) {
+        *self.engine.lock().unwrap() = Some(engine.clone());
+        let controller = Arc::downgrade(self);
+        std::thread::Builder::new().name("focus-supervisor".into()).spawn(move || loop {
+            std::thread::sleep(std::time::Duration::from_secs(super::enforcer::protocol::HEARTBEAT_SECS));
+            let Some(controller) = controller.upgrade() else { break };
+            if let Err(error) = controller.check_enforcement_health() {
+                log::error!("[focus] enforcement lost: {error}");
+                engine.send(crate::timer::engine::TimerCommand::Pause);
+            }
+        }).expect("failed to start focus supervisor");
+    }
 
+    pub fn on_round_completed(&self, completed_round: &str, next_round: &str, is_last_round: bool) -> Result<(), String> {
+        let _transition = self.transition.lock().unwrap();
+        let mut candidate = self.state_machine.lock().unwrap().clone();
+        if !candidate.is_active() {
+            return Ok(());
+        }
         if is_last_round && completed_round == "long-break" {
             // Full cycle complete!
-            let _ = self.enforcer.release_blocking();
-            let _ = sm.handle_cycle_finished();
-            if let Ok(conn) = self.db.lock() {
-                let _ = self.repository.clear_run_journal(&conn);
-            }
+            candidate.handle_cycle_finished().map_err(|e| e.to_string())?;
         } else {
             let next_phase = match next_round {
                 "work" => FocusPhase::Work,
                 "short-break" => FocusPhase::ShortBreak,
                 "long-break" => FocusPhase::LongBreak,
-                _ => FocusPhase::Work,
+                _ => return Err("Invalid timer round type.".into()),
             };
-
-            let _ = sm.handle_round_completed(next_phase);
-            let snap = sm.snapshot();
-
-            if snap.blocking_active {
-                if let Some(prof) = &snap.active_profile {
-                    let _ = self.enforcer.apply_blocking(&prof.blocked_apps, &prof.blocked_domains);
-                }
-            } else {
-                let _ = self.enforcer.release_blocking();
-            }
+            candidate.handle_round_completed(next_phase).map_err(|e| e.to_string())?;
         }
-
-        drop(sm);
-        self.emit_changed();
+        self.commit_enforcement_transition(candidate)
     }
 }
 
@@ -429,6 +510,136 @@ mod tests {
         Arc::new(FocusController::new(db, Some(mock_enforcer)))
     }
 
+    struct FailingEnforcer {
+        fail_apply: std::sync::atomic::AtomicBool,
+        fail_release: std::sync::atomic::AtomicBool,
+        fail_renew: std::sync::atomic::AtomicBool,
+    }
+
+    impl FailingEnforcer {
+        fn new(fail_apply: bool) -> Self {
+            Self {
+                fail_apply: std::sync::atomic::AtomicBool::new(fail_apply),
+                fail_release: std::sync::atomic::AtomicBool::new(false),
+                fail_renew: std::sync::atomic::AtomicBool::new(false),
+            }
+        }
+    }
+
+    impl NativeEnforcer for FailingEnforcer {
+        fn apply_blocking(&self, _: &[super::super::model::AppTarget], _: &[String])
+            -> Result<(), super::super::enforcer::EnforcerError>
+        {
+            if self.fail_apply.load(std::sync::atomic::Ordering::SeqCst) {
+                Err(super::super::enforcer::EnforcerError::NotAuthorized)
+            } else { Ok(()) }
+        }
+        fn release_blocking(&self) -> Result<(), super::super::enforcer::EnforcerError> {
+            if self.fail_release.load(std::sync::atomic::Ordering::SeqCst) {
+                Err(super::super::enforcer::EnforcerError::HostsFileError("denied".into()))
+            } else { Ok(()) }
+        }
+        fn renew_lease(&self) -> Result<(), super::super::enforcer::EnforcerError> {
+            if self.fail_renew.load(std::sync::atomic::Ordering::SeqCst) {
+                Err(super::super::enforcer::EnforcerError::LeaseLost)
+            } else { Ok(()) }
+        }
+    }
+
+    fn controller_with_rules(enforcer: Arc<dyn NativeEnforcer>) -> FocusController {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        crate::db::migrations::run(&conn).unwrap();
+        let controller = FocusController::new(Arc::new(Mutex::new(conn)), Some(enforcer));
+        let mut profile = controller.get_profiles().unwrap().remove(0);
+        profile.blocked_domains = vec!["example.com".into()];
+        controller.save_profile(profile).unwrap();
+        controller
+    }
+
+    #[test]
+    fn test_start_failure_does_not_enter_work() {
+        let controller = controller_with_rules(Arc::new(FailingEnforcer::new(true)));
+        assert!(controller.on_timer_started("work").is_err());
+        assert!(!controller.is_active());
+        assert!(!controller.is_locked());
+        assert!(!controller.get_snapshot().blocking_active);
+        assert!(controller.repository.get_run_journal(&controller.db.lock().unwrap()).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_release_failure_preserves_recovery_state() {
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        let controller = controller_with_rules(enforcer.clone());
+        controller.on_timer_started("work").unwrap();
+        enforcer.fail_release.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert!(controller.execute_emergency_release().is_err());
+        assert_eq!(controller.get_snapshot().status, super::super::state::FocusStatus::RecoveryRequired);
+        assert!(controller.repository.get_run_journal(&controller.db.lock().unwrap()).unwrap().is_some());
+    }
+
+    #[test]
+    fn test_break_acquire_retry_advances_round_once() {
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        let controller = controller_with_rules(enforcer.clone());
+        controller.set_unblock_during_breaks(true).unwrap();
+        controller.on_timer_started("work").unwrap();
+        controller.on_round_completed("work", "short-break", false).unwrap();
+        enforcer.fail_apply.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert!(controller.on_round_completed("short-break", "work", false).is_err());
+        assert!(!controller.get_snapshot().blocking_active);
+        enforcer.fail_apply.store(false, std::sync::atomic::Ordering::SeqCst);
+        controller.on_timer_started("work").unwrap();
+        assert_eq!(controller.get_snapshot().current_work_round, 2);
+        controller.on_timer_started("work").unwrap();
+        assert_eq!(controller.get_snapshot().current_work_round, 2);
+    }
+
+    #[test]
+    fn test_break_preference_releases_current_policy() {
+        let enforcer = Arc::new(MockEnforcer::new());
+        let controller = controller_with_rules(enforcer.clone());
+        controller.on_timer_started("work").unwrap();
+        controller.on_round_completed("work", "short-break", false).unwrap();
+        assert!(enforcer.is_active.load(std::sync::atomic::Ordering::SeqCst));
+        controller.set_unblock_during_breaks(true).unwrap();
+        assert!(!enforcer.is_active.load(std::sync::atomic::Ordering::SeqCst));
+        assert!(!controller.get_snapshot().blocking_active);
+    }
+
+    #[test]
+    fn test_emergency_release_resets_running_engine() {
+        let controller = Arc::new(controller_with_rules(Arc::new(MockEnforcer::new())));
+        let (engine, events) = crate::timer::engine::spawn(60, std::time::Duration::from_secs(1));
+        controller.start_supervisor(engine.clone());
+        controller.on_timer_started("work").unwrap();
+        engine.send(crate::timer::engine::TimerCommand::Start);
+        assert!(matches!(events.recv_timeout(std::time::Duration::from_secs(1)).unwrap(), crate::timer::engine::TimerEvent::Started { .. }));
+        controller.execute_emergency_release().unwrap();
+        let event = events.recv_timeout(std::time::Duration::from_secs(1));
+        engine.send(crate::timer::engine::TimerCommand::Shutdown);
+        assert!(matches!(event, Ok(crate::timer::engine::TimerEvent::Reset)));
+    }
+
+    #[test]
+    fn test_profile_rejects_more_than_256_distinct_domains() {
+        let controller = setup_test_controller();
+        let mut profile = controller.get_profiles().unwrap().remove(0);
+        profile.blocked_domains = (0..257).map(|i| format!("site{i}.example")).collect();
+        assert!(controller.save_profile(profile).is_err());
+        assert!(controller.get_profiles().unwrap()[0].blocked_domains.is_empty());
+    }
+
+    #[test]
+    fn test_profile_domain_limit_counts_normalized_unique_domains() {
+        let controller = setup_test_controller();
+        let mut profile = controller.get_profiles().unwrap().remove(0);
+        profile.blocked_domains = (0..256).map(|i| format!("site{i}.example")).collect();
+        profile.blocked_domains.push("https://WWW.SITE0.EXAMPLE/path".to_string());
+        let saved = controller.save_profile(profile).unwrap();
+        assert_eq!(saved.blocked_domains.len(), 256);
+        assert_eq!(saved.blocked_domains[0], "site0.example");
+    }
+
     #[test]
     fn test_timer_reset_blocked_during_active_focus() {
         let controller = setup_test_controller();
@@ -448,7 +659,7 @@ mod tests {
         controller.select_profile("prof-1").unwrap();
 
         // Start work
-        controller.on_timer_started("work");
+        controller.on_timer_started("work").unwrap();
         assert!(controller.is_active());
         assert!(controller.is_locked());
 
@@ -487,7 +698,7 @@ mod tests {
         controller.save_profile(profile).unwrap();
         controller.select_profile("empty-1").unwrap();
 
-        controller.on_timer_started("work");
+        controller.on_timer_started("work").unwrap();
         assert!(controller.is_active());
         assert!(!controller.is_locked());
         assert!(controller.check_timer_command(TimerAction::Reset).is_ok());

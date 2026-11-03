@@ -84,6 +84,7 @@ impl TimerController {
         let seq = SequenceState::new(rounds, work, short_b, long_b);
         let duration = seq.current_duration_secs();
         let (engine, event_rx) = engine::spawn(duration, Duration::from_secs(1));
+        focus.start_supervisor(engine.clone());
 
         let sequence = Arc::new(Mutex::new(seq));
         let settings_arc = Arc::new(Mutex::new(settings));
@@ -133,18 +134,26 @@ impl TimerController {
     // --- Commands ---
 
     /// Toggle: start a fresh timer if idle, resume if paused, pause if running.
-    pub fn toggle(&self) {
-        let s = self.shared.lock().unwrap();
-        if s.is_running {
+    pub fn toggle(&self) -> Result<(), String> {
+        let (is_running, elapsed_secs) = {
+            let s = self.shared.lock().unwrap();
+            (s.is_running, s.elapsed_secs)
+        };
+        if is_running {
             log::info!("[timer] pause");
             self.engine.send(TimerCommand::Pause);
-        } else if s.elapsed_secs > 0 {
-            log::info!("[timer] resume");
-            self.engine.send(TimerCommand::Resume);
         } else {
-            log::info!("[timer] start");
-            self.engine.send(TimerCommand::Start);
+            let round_type = self.sequence.lock().unwrap().current_round.as_str().to_string();
+            self.focus.on_timer_started(&round_type)?;
+            if elapsed_secs > 0 {
+                log::info!("[timer] resume");
+                self.engine.send(TimerCommand::Resume);
+            } else {
+                log::info!("[timer] start");
+                self.engine.send(TimerCommand::Start);
+            }
         }
+        Ok(())
     }
 
     pub fn reset(&self) {
@@ -277,8 +286,6 @@ fn listen_events(
                     websocket::broadcast_started(&ws, total_secs);
                 }
                 tray::update_menu_items(&tray, true, false);
-                let rt = sequence.lock().unwrap().current_round.as_str().to_string();
-                focus.on_timer_started(&rt);
             }
 
             TimerEvent::Tick { elapsed_secs, total_secs } => {
@@ -322,7 +329,6 @@ fn listen_events(
                     tray::update_icon(&tray, &rt, false, progress);
                     last_tray_progress = progress;
                 }
-                focus.on_timer_tick();
             }
 
             TimerEvent::Complete { skipped: was_skipped } => {
@@ -367,7 +373,13 @@ fn listen_events(
                     let seq = sequence.lock().unwrap();
                     seq.work_round_number >= seq.work_rounds_total
                 };
-                focus.on_round_completed(&completed_round, next_round.as_str(), is_last_round);
+                let enforcement_ready = match focus.on_round_completed(&completed_round, next_round.as_str(), is_last_round) {
+                    Ok(()) => true,
+                    Err(error) => {
+                        log::error!("[focus] round transition blocked: {error}");
+                        false
+                    }
+                };
                 // Desktop notifications are dispatched by the frontend via the
                 // notification_show command after receiving the timer:round-change
                 // event, so translated strings can be used.
@@ -416,9 +428,15 @@ fn listen_events(
                     RoundType::Work => auto_start_work,
                     _ => auto_start_break,
                 };
-                if should_auto {
-                    log::debug!("[timer] auto-starting {}", next_round.as_str());
-                    engine.send(TimerCommand::Start);
+                if should_auto && enforcement_ready {
+                    let round_type = next_round.as_str();
+                    if let Err(error) = focus.on_timer_started(round_type) {
+                        log::error!("[focus] auto-start blocked: {error}");
+                        tray::update_menu_items(&tray, false, false);
+                    } else {
+                        log::debug!("[timer] auto-starting {round_type}");
+                        engine.send(TimerCommand::Start);
+                    }
                 } else {
                     // Timer is idle waiting for the user to start the new round.
                     // Reset the tray menu to "Start" so it doesn't keep showing

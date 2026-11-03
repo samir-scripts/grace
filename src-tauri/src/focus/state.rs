@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use super::model::FocusProfile;
+use super::enforcer::protocol::EnforcementStatus;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -41,6 +42,7 @@ pub struct FocusSnapshot {
     pub is_locked: bool,
     pub blocking_active: bool,
     pub unblock_during_breaks: bool,
+    pub enforcement: EnforcementStatus,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -62,6 +64,7 @@ impl fmt::Display for FocusError {
 
 impl std::error::Error for FocusError {}
 
+#[derive(Clone)]
 pub struct FocusStateMachine {
     status: FocusStatus,
     current_phase: Option<FocusPhase>,
@@ -70,6 +73,7 @@ pub struct FocusStateMachine {
     total_work_rounds: u32,
     blocking_active: bool,
     unblock_during_breaks: bool,
+    enforcement: EnforcementStatus,
 }
 
 impl FocusStateMachine {
@@ -82,6 +86,7 @@ impl FocusStateMachine {
             total_work_rounds: 0,
             blocking_active: false,
             unblock_during_breaks: false,
+            enforcement: EnforcementStatus::default(),
         }
     }
 
@@ -95,7 +100,20 @@ impl FocusStateMachine {
             is_locked: self.is_locked(),
             blocking_active: self.blocking_active,
             unblock_during_breaks: self.unblock_during_breaks,
+            enforcement: self.enforcement.clone(),
         }
+    }
+
+    pub fn set_enforcement(&mut self, enforcement: EnforcementStatus) {
+        self.blocking_active = enforcement.applications_active || enforcement.websites_active;
+        if enforcement.state == super::enforcer::protocol::EnforcementState::RecoveryRequired {
+            self.status = FocusStatus::RecoveryRequired;
+        }
+        self.enforcement = enforcement;
+    }
+
+    pub fn preparing(&mut self) {
+        self.status = FocusStatus::Preparing;
     }
 
     pub fn set_unblock_during_breaks(&mut self, unblock: bool) {
@@ -126,10 +144,10 @@ impl FocusStateMachine {
 
     pub fn handle_work_started(&mut self) -> Result<(), FocusError> {
         self.status = FocusStatus::Active;
-        self.current_phase = Some(FocusPhase::Work);
         if self.current_work_round == 0 {
             self.current_work_round = 1;
         }
+        self.current_phase = Some(FocusPhase::Work);
         self.blocking_active = self.active_profile.as_ref().map(|p| p.has_blocking_rules()).unwrap_or(false);
         Ok(())
     }
@@ -184,7 +202,7 @@ impl FocusStateMachine {
 
     pub fn is_locked(&self) -> bool {
         let has_rules = self.active_profile.as_ref().map(|p| p.has_blocking_rules()).unwrap_or(false);
-        has_rules && (self.status == FocusStatus::Active || self.status == FocusStatus::Preparing)
+        has_rules && self.status != FocusStatus::Idle
     }
 }
 
