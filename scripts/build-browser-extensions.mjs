@@ -4,8 +4,7 @@ import path from 'node:path';
 const rootDir = process.cwd();
 const sharedDir = path.join(rootDir, 'extensions', 'focus');
 const distDir = path.join(rootDir, 'extensions', 'dist');
-
-const browsers = ['chrome', 'firefox'];
+const browsers = ['chrome', 'firefox', 'safari'];
 
 for (const browser of browsers) {
   const browserDist = path.join(distDir, browser);
@@ -23,4 +22,4 @@ for (const browser of browsers) {
   }
 }
 
-console.log('Extensions built in extensions/dist/{chrome,firefox}');
+console.log('Extensions built in extensions/dist/{chrome,firefox,safari}');
