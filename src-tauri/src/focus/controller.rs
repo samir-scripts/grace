@@ -141,9 +141,19 @@ impl FocusController {
         self.is_locked()
     }
 
+    pub fn execute_guarded_browser_mutation<F, R>(&self, f: F) -> Result<R, String>
+    where
+        F: FnOnce() -> Result<R, String>,
+    {
+        let _transition = self.transition.lock().unwrap();
+        if self.is_active() || self.is_locked() || self.get_snapshot().status != super::state::FocusStatus::Idle {
+            return Err("Cannot modify browser extensions during an active focus session.".into());
+        }
+        f()
+    }
+
     pub fn shutdown_blocking(&self) {
         let _lock = self.transition.lock().unwrap();
-        let _ = self.enforcer.release_blocking();
         if let Ok(conn) = self.db.lock() {
             let _ = self.repository.clear_run_journal(&conn);
         }

@@ -35,10 +35,17 @@ fn main() {
     println!("cargo:rerun-if-changed=../extensions/safari");
 
     let dist_xpi = std::path::Path::new("../extensions/dist/firefox/focus@pomotroid.local.xpi");
-    if !dist_xpi.exists() {
-        let _ = Command::new("node")
-            .arg("../scripts/build-browser-extensions.mjs")
+    let dist_chrome = std::path::Path::new("../extensions/dist/chrome");
+    if !dist_xpi.exists() || !dist_chrome.exists() {
+        let status = Command::new("node")
+            .arg("scripts/build-browser-extensions.mjs")
+            .current_dir("..")
             .status();
+        if let Ok(s) = status {
+            if !s.success() {
+                println!("cargo:warning=Failed to build browser extensions automatically via node");
+            }
+        }
     }
 
     tauri_build::build()

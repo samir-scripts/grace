@@ -190,7 +190,8 @@ pub fn remove_browser_enterprise_policy(browser: BrowserKind) -> Result<(), Stri
             if let Some(remaining) = unmerge_firefox_policies(&existing_json) {
                 write_policy_to_path(&policy_path, &remaining)?;
             } else {
-                let _ = fs::remove_file(&policy_path);
+                fs::remove_file(&policy_path)
+                    .map_err(|e| format!("Failed to delete policy file {}: {e}", policy_path.display()))?;
             }
         }
         BrowserKind::Chrome => {

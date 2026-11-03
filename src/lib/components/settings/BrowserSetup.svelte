@@ -68,7 +68,7 @@
   }
 
   async function handleRemove(browser: InstalledBrowser) {
-    if (isLocked || !!activeSessionId) {
+    if (isLocked) {
       statusMessage = m.browser_locked_hint();
       statusType = 'error';
       return;
@@ -160,8 +160,8 @@
           <button
             type="button"
             class="btn-install btn-remove"
-            disabled={mutating !== null || isLocked || !!activeSessionId}
-            title={isLocked || !!activeSessionId ? m.browser_locked_hint() : undefined}
+            disabled={mutating !== null || isLocked}
+            title={isLocked ? m.browser_locked_hint() : undefined}
             onclick={() => handleRemove(browser)}
           >
             {#if mutating?.kind === browser.kind && mutating?.action === 'remove'}

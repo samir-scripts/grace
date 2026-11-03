@@ -961,39 +961,41 @@ pub fn focus_browser_extension_install(
     focus: State<'_, Arc<FocusController>>,
     bridge: State<'_, Arc<crate::focus::browser::BrowserBridge>>,
 ) -> Result<(), String> {
-    if focus.is_active() || focus.is_locked() || bridge.is_active() || focus.get_snapshot().status != crate::focus::state::FocusStatus::Idle {
+    if bridge.is_active() {
         return Err("Cannot modify browser extensions during an active focus session.".into());
     }
 
-    let base_dir = resolve_extension_dist_dir(&app);
-    let ext_path = match browser {
-        crate::focus::browser::BrowserKind::Firefox | crate::focus::browser::BrowserKind::Zen => {
-            let xpi_candidate1 = base_dir.join("firefox/focus@pomotroid.local.xpi");
-            let xpi_candidate2 = base_dir.join("focus@pomotroid.local.xpi");
-            if xpi_candidate1.exists() {
-                xpi_candidate1
-            } else if xpi_candidate2.exists() {
-                xpi_candidate2
-            } else {
-                return Err("Firefox extension package (focus@pomotroid.local.xpi) was not found in application resources.".into());
+    focus.execute_guarded_browser_mutation(|| {
+        let base_dir = resolve_extension_dist_dir(&app);
+        let ext_path = match browser {
+            crate::focus::browser::BrowserKind::Firefox | crate::focus::browser::BrowserKind::Zen => {
+                let xpi_candidate1 = base_dir.join("firefox/focus@pomotroid.local.xpi");
+                let xpi_candidate2 = base_dir.join("focus@pomotroid.local.xpi");
+                if xpi_candidate1.exists() {
+                    xpi_candidate1
+                } else if xpi_candidate2.exists() {
+                    xpi_candidate2
+                } else {
+                    return Err("Firefox extension package (focus@pomotroid.local.xpi) was not found in application resources.".into());
+                }
             }
-        }
-        crate::focus::browser::BrowserKind::Chrome => {
-            let chrome_candidate1 = base_dir.join("chrome");
-            if chrome_candidate1.exists() {
-                chrome_candidate1
-            } else if base_dir.exists() {
-                base_dir
-            } else {
-                return Err("Chrome extension directory was not found in application resources.".into());
+            crate::focus::browser::BrowserKind::Chrome => {
+                let chrome_candidate1 = base_dir.join("chrome");
+                if chrome_candidate1.exists() {
+                    chrome_candidate1
+                } else if base_dir.exists() {
+                    base_dir
+                } else {
+                    return Err("Chrome extension directory was not found in application resources.".into());
+                }
             }
-        }
-        crate::focus::browser::BrowserKind::Safari => {
-            return Err("Extension installation is not supported for Safari".into());
-        }
-    };
+            crate::focus::browser::BrowserKind::Safari => {
+                return Err("Extension installation is not supported for Safari".into());
+            }
+        };
 
-    crate::focus::enterprise_policy::install_browser_enterprise_policy(browser, &ext_path)
+        crate::focus::enterprise_policy::install_browser_enterprise_policy(browser, &ext_path)
+    })
 }
 
 #[tauri::command]
@@ -1002,15 +1004,16 @@ pub fn focus_browser_extension_remove(
     focus: State<'_, Arc<FocusController>>,
     bridge: State<'_, Arc<crate::focus::browser::BrowserBridge>>,
 ) -> Result<(), String> {
-    if focus.is_active() || focus.is_locked() || bridge.is_active() || focus.get_snapshot().status != crate::focus::state::FocusStatus::Idle {
+    if bridge.is_active() {
         return Err("Cannot modify browser extensions during an active focus session.".into());
     }
 
-    crate::focus::enterprise_policy::remove_browser_enterprise_policy(browser)?;
-    let _ = crate::focus::native_messaging::unregister_native_messaging_manifests(browser);
-    bridge.remove_profiles_for_browser(browser);
-
-    Ok(())
+    focus.execute_guarded_browser_mutation(|| {
+        crate::focus::enterprise_policy::remove_browser_enterprise_policy(browser)?;
+        crate::focus::native_messaging::unregister_native_messaging_manifests(browser)?;
+        bridge.remove_profiles_for_browser(browser);
+        Ok(())
+    })
 }
 #[tauri::command]
 pub fn focus_enforcement_retry(

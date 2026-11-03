@@ -174,7 +174,8 @@ pub fn unregister_native_messaging_manifests(browser: super::browser::BrowserKin
             if let Some(chrome_dir) = get_chrome_manifest_dir() {
                 let chrome_file = chrome_dir.join(format!("{HOST_NAME}.json"));
                 if chrome_file.exists() {
-                    let _ = std::fs::remove_file(&chrome_file);
+                    std::fs::remove_file(&chrome_file)
+                        .map_err(|e| format!("Failed to remove Chrome native manifest: {e}"))?;
                 }
                 #[cfg(target_os = "windows")]
                 {
@@ -198,7 +199,8 @@ pub fn unregister_native_messaging_manifests(browser: super::browser::BrowserKin
                 if let Some(mozilla_dir) = get_mozilla_manifest_dir() {
                     let mozilla_file = mozilla_dir.join(format!("{HOST_NAME}.json"));
                     if mozilla_file.exists() {
-                        let _ = std::fs::remove_file(&mozilla_file);
+                        std::fs::remove_file(&mozilla_file)
+                            .map_err(|e| format!("Failed to remove Mozilla native manifest: {e}"))?;
                     }
                     #[cfg(target_os = "windows")]
                     {
