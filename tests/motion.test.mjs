@@ -314,7 +314,8 @@ test('main navigation matches statistics entrance and requests fluid window resi
   // Navigate Timer -> Settings
   await page.getByRole('button', { name: 'Settings' }).click();
 
-  // Check IPC call to window_set_view_size
+  // Wait for asynchronous render-before-resize to dispatch IPC
+  await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((c) => c.view === 'settings'));
   const calls = await page.evaluate(() => window.__motionTest.getWindowResizeCalls());
   const settingsCall = calls.find((c) => c.view === 'settings');
   assert.ok(settingsCall, 'window_set_view_size called with settings');
@@ -327,45 +328,43 @@ test('main navigation matches statistics entrance and requests fluid window resi
   await context.close();
 });
 
-test('destination view renders in DOM before window resize IPC is dispatched', async () => {
-  const context = await browser.newContext({
-    viewport: { width: 360, height: 478 },
-    locale: 'en',
-    reducedMotion: 'no-preference',
-  });
+test('destination is visible before a resize is requested', async () => {
+  const context = await browser.newContext({ viewport: { width: 360, height: 478 }, reducedMotion: 'no-preference' });
   const page = await context.newPage();
-  await page.goto(`${serverUrl}/?animations=true`);
-
-  // Clear startup calls
-  await page.evaluate(() => window.__motionTest.clearResizeCalls());
-
-  // Navigate Timer -> Settings
-  await page.getByRole('button', { name: 'Settings' }).click();
-
-  // Verify settingsCall was recorded and that .settings-view was mounted before IPC
-  const calls = await page.evaluate(() => window.__motionTest.getWindowResizeCalls());
-  const settingsCall = calls.find((c) => c.view === 'settings');
-  assert.ok(settingsCall, 'window_set_view_size called with settings');
-  assert.equal(settingsCall.renderedBeforeResize, true, 'SettingsView mounted before resize IPC');
-
-  // Navigate Settings -> Statistics
-  await page.evaluate(() => window.__motionTest.clearResizeCalls());
-  await page.getByRole('button', { name: 'Statistics' }).click();
-
-  const statsCalls = await page.evaluate(() => window.__motionTest.getWindowResizeCalls());
-  const statsCall = statsCalls.find((c) => c.view === 'stats');
-  assert.ok(statsCall, 'window_set_view_size called with stats');
-  assert.equal(statsCall.renderedBeforeResize, true, 'StatisticsSection mounted before resize IPC');
-
-  // Navigate Statistics -> Timer
-  await page.evaluate(() => window.__motionTest.clearResizeCalls());
-  await page.getByRole('button', { name: 'Timer' }).click();
-
-  const timerCalls = await page.evaluate(() => window.__motionTest.getWindowResizeCalls());
-  const timerCall = timerCalls.find((c) => c.view === 'timer');
-  assert.ok(timerCall, 'window_set_view_size called with timer');
-  assert.equal(timerCall.renderedBeforeResize, true, 'Timer mounted before resize IPC');
-  await context.close();
+  try {
+    await page.goto(`${serverUrl}/?animations=true`);
+    await page.waitForSelector('.dial');
+    await page.evaluate(() => {
+      window.__motionTest.clearResizeCalls();
+      const callbacks = new Map();
+      let id = 0;
+      window.requestAnimationFrame = (callback) => {
+        callbacks.set(++id, callback);
+        return id;
+      };
+      window.cancelAnimationFrame = (id) => callbacks.delete(id);
+      window.__frameGate = {
+        count: () => callbacks.size,
+        step: () => {
+          const frame = [...callbacks.values()];
+          callbacks.clear();
+          frame.forEach((callback) => callback(performance.now()));
+        },
+      };
+      document.querySelector('button[aria-label="Settings"]').click();
+    });
+    await page.waitForSelector('.settings-view', { state: 'attached' });
+    assert.equal((await page.evaluate(() => window.__motionTest.getWindowResizeCalls())).length, 0);
+    await page.evaluate(() => document.querySelector('main.view-enter').getAnimations().forEach((animation) => animation.finish()));
+    await page.waitForFunction(() => window.__frameGate.count() > 0, { polling: 10 });
+    await page.evaluate(() => window.__frameGate.step());
+    assert.equal((await page.evaluate(() => window.__motionTest.getWindowResizeCalls())).length, 0);
+    await page.evaluate(() => window.__frameGate.step());
+    await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((call) => call.view === 'settings'), { polling: 10 });
+    assert.equal(await page.locator('main.view-enter').evaluate((element) => Number(getComputedStyle(element).opacity)), 1);
+  } finally {
+    await context.close();
+  }
 });
 
 test('disabled motion requests immediate window resize', async () => {
@@ -379,7 +378,8 @@ test('disabled motion requests immediate window resize', async () => {
 
   await page.evaluate(() => window.__motionTest.clearResizeCalls());
   await page.getByRole('button', { name: 'Settings' }).click();
-
+  // Wait for asynchronous render-before-resize to dispatch IPC
+  await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((c) => c.view === 'settings'));
   const calls = await page.evaluate(() => window.__motionTest.getWindowResizeCalls());
   const settingsCall = calls.find((c) => c.view === 'settings');
   assert.ok(settingsCall, 'window_set_view_size called with settings');

@@ -75,9 +75,55 @@
 
   // Automatically resize window to the optimal dimensions for settings / stats,
   // and restore the timer's dimensions when returning to timer.
+  let viewContainer = $state<HTMLElement>();
   let lastView = $state<'timer' | 'settings' | 'stats'>('timer');
   let lastMotionEnabled = $state(true);
   let transitionGeneration = 0;
+  let activeRafHandle: number | null = null;
+  let isDestroyed = false;
+
+  async function requestViewResize(targetView: 'timer' | 'settings' | 'stats', animate: boolean) {
+    const gen = ++transitionGeneration;
+    if (activeRafHandle !== null) {
+      cancelAnimationFrame(activeRafHandle);
+      activeRafHandle = null;
+    }
+
+    // 1. Await Svelte 5 DOM reconciliation
+    await tick();
+    if (gen !== transitionGeneration || isDestroyed) return;
+
+    // 2. Await Web Animations API completion on the destination view container
+    if (viewContainer && animate) {
+      const animations = viewContainer.getAnimations();
+      if (animations.length > 0) {
+        await Promise.allSettled(animations.map((a) => a.finished));
+        if (gen !== transitionGeneration || isDestroyed) return;
+      }
+    }
+
+    // 3. Double requestAnimationFrame: frame 1 executes layout/paint, frame 2 ensures compositor presentation
+    await new Promise<void>((resolve) => {
+      activeRafHandle = requestAnimationFrame(() => {
+        if (gen !== transitionGeneration || isDestroyed) return resolve();
+        activeRafHandle = requestAnimationFrame(() => {
+          activeRafHandle = null;
+          resolve();
+        });
+      });
+    });
+
+    if (gen !== transitionGeneration || isDestroyed) return;
+
+    if ($activeView === targetView) {
+      try {
+        await setWindowViewSize(targetView, animate);
+      } catch (err) {
+        console.warn('[main] failed to resize window for view:', targetView, err);
+      }
+    }
+  }
+
   $effect(() => {
     const current = $activeView;
     const motionEnabled =
@@ -87,18 +133,14 @@
     if (current !== lastView) {
       lastView = current;
       lastMotionEnabled = motionEnabled;
-      const gen = ++transitionGeneration;
-
-      // Page renders first: await DOM reconciliation before triggering window resize.
-      tick().then(() => {
-        if (gen !== transitionGeneration) return;
-        setWindowViewSize(current, motionEnabled).catch((err) => {
-          console.warn('[main] failed to resize window for view:', current, err);
-        });
-      });
+      requestViewResize(current, motionEnabled);
     } else if (lastMotionEnabled && !motionEnabled) {
       lastMotionEnabled = false;
       transitionGeneration++;
+      if (activeRafHandle !== null) {
+        cancelAnimationFrame(activeRafHandle);
+        activeRafHandle = null;
+      }
       setWindowViewSize(current, false).catch(() => {});
     } else {
       lastMotionEnabled = motionEnabled;
@@ -168,6 +210,11 @@
       const motionMq = window.matchMedia('(prefers-reduced-motion: reduce)');
       const handleMotionMq = (e: MediaQueryListEvent) => {
         if (e.matches) {
+          transitionGeneration++;
+          if (activeRafHandle !== null) {
+            cancelAnimationFrame(activeRafHandle);
+            activeRafHandle = null;
+          }
           setWindowViewSize($activeView, false).catch(() => {});
         }
       };
@@ -301,6 +348,12 @@
     })();
 
     return () => {
+      isDestroyed = true;
+      transitionGeneration++;
+      if (activeRafHandle !== null) {
+        cancelAnimationFrame(activeRafHandle);
+        activeRafHandle = null;
+      }
       for (const fn of cleanups) fn();
     };
   });
@@ -331,6 +384,7 @@
   <Titlebar onEmergencyClick={() => (showEscapeDialog = true)} />
   {#key $activeView}
     <main
+      bind:this={viewContainer}
       class="view-enter"
       class:compact={isCompact}
       class:view-panel={$activeView !== 'timer'}
