@@ -4,7 +4,6 @@
   import { timerToggle, timerRestartRound, timerSkip } from '$lib/ipc';
   import { timerState } from '$lib/stores/timer';
   import { settings } from '$lib/stores/settings';
-  import { fade } from 'svelte/transition';
   import TimerDial from './TimerDial.svelte';
   import TimerDisplay from './TimerDisplay.svelte';
   import TimerFooter from './TimerFooter.svelte';
@@ -70,7 +69,7 @@
           aria-label={state.is_running ? 'Pause' : 'Play'}
         >
           {#key state.is_running}
-            <span class="icon" in:fade={{ duration: 120 }}>
+            <span class="icon">
               {#if state.is_running}
                 <svg width="24" height="24" viewBox="0 0 24 24">
                   <rect x="5" y="3" width="5" height="18" rx="1.5" fill="currentColor" />
@@ -186,6 +185,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    animation: control-fade-in 120ms linear;
   }
 
   .round-label {

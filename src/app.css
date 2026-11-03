@@ -127,3 +127,38 @@ body {
     transform: scale(1);
   }
 }
+
+@keyframes control-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Global motion suppression policy
+   Disables animation/transition interpolation when setting is disabled or
+   when prefers-reduced-motion is active.
+   --------------------------------------------------------------------------- */
+
+:root[data-animations-enabled="false"],
+:root[data-animations-enabled="false"] *,
+:root[data-animations-enabled="false"] *::before,
+:root[data-animations-enabled="false"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  :root *,
+  :root *::before,
+  :root *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

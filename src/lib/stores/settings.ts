@@ -28,6 +28,7 @@ const defaults: Settings = {
   theme_light: 'Pomotroid',
   theme_dark: 'Pomotroid',
   dial_countdown: true,
+  animations_enabled: true,
   language: 'auto',
   verbose_logging: false,
   check_for_updates: true,

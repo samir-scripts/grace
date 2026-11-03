@@ -7,13 +7,31 @@
     checked: boolean;
     description?: string;
     tooltip?: string;
+    disabled?: boolean;
     onclick: () => void;
   }
 
-  let { label, checked, description, tooltip, onclick }: Props = $props();
+  let { label, checked, description, tooltip, disabled = false, onclick }: Props = $props();
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (disabled) return;
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      onclick();
+    }
+  }
 </script>
 
-<button class="row" {onclick}>
+<button
+  type="button"
+  class="row"
+  {onclick}
+  onkeydown={handleKeyDown}
+  {disabled}
+  role="switch"
+  aria-checked={checked}
+  aria-label={label}
+>
   <span class="text">
     <span class="label"
       >{label}{#if tooltip}<TooltipInfo text={tooltip} />{/if}</span
@@ -22,7 +40,7 @@
       <span class="desc">{description}</span>
     {/if}
   </span>
-  <span class="toggle" class:on={checked} aria-checked={checked} role="switch"></span>
+  <span class="toggle" class:on={checked} aria-hidden="true"></span>
 </button>
 
 <style>
@@ -43,6 +61,10 @@
 
   .row:hover {
     background: var(--color-hover);
+  }
+  .row:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .text {

@@ -2,8 +2,9 @@
   // SVG arc dial showing timer progress.
   // Replicates the original Pomotroid dial: fills from 0% to 100% as time elapses.
   // Uses Svelte tweened store for smooth animation.
-  import { tweened } from 'svelte/motion';
+  import { tweened, prefersReducedMotion } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
+  import { settings } from '$lib/stores/settings';
   import type { TimerState } from '$lib/types';
 
   interface Props {
@@ -33,18 +34,14 @@
   $effect(() => {
     const rt = snap.round_type;
     const progress = snap.total_secs > 0 ? snap.elapsed_secs / snap.total_secs : 0;
-
-    // Elapsed mode: arc grows from empty → full (offset counts down to 0).
-    // Countdown mode: arc shrinks from full → empty (offset counts up to CIRCUMFERENCE).
     const target = countdown ? CIRCUMFERENCE * progress : CIRCUMFERENCE * (1 - progress);
-    const startOffset = countdown ? 0 : CIRCUMFERENCE;
+    const motionEnabled = $settings.animations_enabled && !prefersReducedMotion.current;
 
-    // On round change: snap to start position immediately.
     if (rt !== prevRound) {
-      dashOffset.set(startOffset, { duration: 0 });
+      dashOffset.set(target, { duration: 0 });
       prevRound = rt;
     } else {
-      dashOffset.set(target);
+      dashOffset.set(target, { duration: motionEnabled ? 800 : 0 });
     }
   });
 </script>

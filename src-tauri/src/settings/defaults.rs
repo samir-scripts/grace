@@ -17,6 +17,7 @@ pub const DEFAULTS: &[(&str, &str)] = &[
     ("theme_mode", "auto"),
     ("theme_light", "Pomotroid Light"),
     ("theme_dark", "Pomotroid"),
+    ("animations_enabled", "true"),
     ("tick_sounds_work", "false"),
     ("volume", "100"),
     ("websocket_enabled", "false"),

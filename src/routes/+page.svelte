@@ -41,6 +41,20 @@
   let isFullscreen = $state(false);
   let showEscapeDialog = $state(false);
 
+  let settingsLoaded = $state(false);
+
+  $effect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.animationsEnabled = String(
+        settingsLoaded && $settings.animations_enabled
+      );
+    }
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.documentElement.dataset.animationsEnabled = 'false';
+      }
+    };
+  });
   // Base window dimensions (natural/default size).
   const BASE_W = 360;
   const BASE_H = 478;
@@ -137,6 +151,7 @@
         // Load settings from backend.
         const s = await getSettings();
         settings.set(s);
+        settingsLoaded = true;
         localVolume = s.volume;
 
         await initFocusStore();

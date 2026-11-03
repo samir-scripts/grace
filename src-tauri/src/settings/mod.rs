@@ -27,6 +27,7 @@ pub struct Settings {
     pub theme_mode: String,
     pub theme_light: String,
     pub theme_dark: String,
+    pub animations_enabled: bool,
     pub tick_sounds_during_work: bool,
     pub tick_sounds_during_break: bool,
     /// Audio volume in the 0.0–1.0 range.
@@ -77,6 +78,7 @@ impl Default for Settings {
             theme_light: "Pomotroid Light".to_string(),
             theme_dark: "Pomotroid".to_string(),
             tick_sounds_during_work: false,
+            animations_enabled: true,
             tick_sounds_during_break: false,
             volume: 1.0,
             #[cfg(target_os = "macos")]
@@ -191,6 +193,7 @@ pub fn load(conn: &Connection) -> Result<Settings> {
             .cloned()
             .unwrap_or(d.theme_dark),
         tick_sounds_during_work: parse_bool(&map, "tick_sounds_work", d.tick_sounds_during_work),
+        animations_enabled: parse_bool(&map, "animations_enabled", d.animations_enabled),
         tick_sounds_during_break: parse_bool(
             &map,
             "tick_sounds_break",
@@ -290,6 +293,19 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         migrations::run(&conn).unwrap();
         conn
+    }
+
+    #[test]
+    fn animation_preference_survives_seed_and_reload() {
+        let conn = setup();
+        assert!(load(&conn).unwrap().animations_enabled);
+        save_setting(&conn, "animations_enabled", "false").unwrap();
+        seed_defaults(&conn).unwrap();
+        let saved = load(&conn).unwrap();
+        assert!(!saved.animations_enabled);
+        assert_eq!(serde_json::to_value(&saved).unwrap()["animations_enabled"], false);
+        save_setting(&conn, "animations_enabled", "true").unwrap();
+        assert!(load(&conn).unwrap().animations_enabled);
     }
 
     #[test]

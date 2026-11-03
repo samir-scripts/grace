@@ -7,6 +7,7 @@
   import { resolveThemeName, getLightThemes, getDarkThemes } from '$lib/utils/theme';
   import type { UnlistenFn } from '@tauri-apps/api/event';
   import * as m from '$paraglide/messages.js';
+  import SettingsToggle from '$lib/components/settings/SettingsToggle.svelte';
 
   let themes = $state<Theme[]>([]);
   let osDark = $state(window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -74,6 +75,23 @@
   async function selectDark(theme: Theme) {
     if (darkIsActive) applyTheme(theme);
     await setSetting('theme_dark', theme.name);
+  }
+  let savingAnimations = $state(false);
+  let animationsSaveError = $state<string | null>(null);
+
+  async function toggleAnimations() {
+    if (savingAnimations) return;
+    savingAnimations = true;
+    animationsSaveError = null;
+    const target = !$settings.animations_enabled;
+    try {
+      const updated = await setSetting('animations_enabled', String(target));
+      settings.set(updated);
+    } catch {
+      animationsSaveError = m.appearance_animations_save_error();
+    } finally {
+      savingAnimations = false;
+    }
   }
 </script>
 
@@ -285,12 +303,33 @@
       </div>
     {/if}
   </div>
+
+  <SettingsToggle
+    label={m.appearance_animations()}
+    description={m.appearance_animations_desc()}
+    checked={$settings.animations_enabled}
+    disabled={savingAnimations}
+    onclick={toggleAnimations}
+  />
+  {#if animationsSaveError}
+    <div class="alert error" role="alert">{animationsSaveError}</div>
+  {/if}
 </div>
 
 <style>
   .section {
     display: flex;
     flex-direction: column;
+  }
+
+  .alert.error {
+    margin: 8px 20px;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    background: color-mix(in oklch, var(--color-focus-round) 15%, transparent);
+    border: 1px solid var(--color-focus-round);
+    color: var(--color-focus-round);
   }
 
   .group-label {
