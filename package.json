@@ -12,6 +12,9 @@
   "repository": "github:splode/pomotroid",
   "type": "module",
   "scripts": {
+    "extensions:build": "node scripts/build-browser-extensions.mjs",
+    "predev": "npm run extensions:build",
+    "prebuild": "npm run extensions:build",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
