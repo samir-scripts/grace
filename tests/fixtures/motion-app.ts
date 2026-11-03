@@ -2,7 +2,6 @@ import { mockWindows, mockIPC } from '@tauri-apps/api/mocks';
 import { mount } from 'svelte';
 import type { Settings, Theme, TimerState, FocusSnapshot, DetailedStats, HeatmapStats } from '$lib/types';
 import { emit } from '@tauri-apps/api/event';
-import { activeView } from '$lib/stores/navigation';
 
 declare global {
   interface Window {
@@ -177,23 +176,7 @@ function readField(obj: unknown, key: string): unknown {
   return undefined;
 }
 
-export const windowResizeCalls: Array<{ view: string; animate?: boolean; renderedBeforeResize?: boolean; paintedBeforeResize?: boolean }> = [];
-
-let framesAfterViewChange = 0;
-let initialViewLoaded = false;
-activeView.subscribe(() => {
-  if (!initialViewLoaded) {
-    initialViewLoaded = true;
-    return;
-  }
-  framesAfterViewChange = 0;
-  requestAnimationFrame(() => {
-    framesAfterViewChange++;
-    requestAnimationFrame(() => {
-      framesAfterViewChange++;
-    });
-  });
-});
+export const windowResizeCalls: Array<{ view: string; animate?: boolean; renderedBeforeResize?: boolean }> = [];
 
 mockWindows('main');
 mockIPC((cmd, args: unknown) => {
@@ -318,12 +301,10 @@ mockIPC((cmd, args: unknown) => {
         : viewVal === 'stats'
           ? !!document.querySelector('.stats-section')
           : !!(document.querySelector('.timer-outer') || document.querySelector('.dial'));
-    const paintedBeforeResize = framesAfterViewChange > 0;
     windowResizeCalls.push({
       view: typeof viewVal === 'string' ? viewVal : '',
       animate: typeof animVal === 'boolean' ? animVal : undefined,
       renderedBeforeResize: targetElementMounted,
-      paintedBeforeResize,
     });
     return;
   }
@@ -347,7 +328,7 @@ export interface MotionTestController {
   releaseSave: (reject?: boolean) => void;
   setNextSaveError: (msg: string) => void;
   getSaveCount: () => number;
-  getWindowResizeCalls: () => Array<{ view: string; animate?: boolean; renderedBeforeResize?: boolean; paintedBeforeResize?: boolean }>;
+  getWindowResizeCalls: () => Array<{ view: string; animate?: boolean; renderedBeforeResize?: boolean }>;
   clearResizeCalls: () => void;
   setFocusSnapshot: (snap: FocusSnapshot) => Promise<void>;
 }

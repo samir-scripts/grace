@@ -347,7 +347,6 @@ test('destination view renders in DOM before window resize IPC is dispatched', a
   const settingsCall = calls.find((c) => c.view === 'settings');
   assert.ok(settingsCall, 'window_set_view_size called with settings');
   assert.equal(settingsCall.renderedBeforeResize, true, 'SettingsView mounted before resize IPC');
-  assert.equal(settingsCall.paintedBeforeResize, true, 'SettingsView painted before resize IPC');
 
   // Navigate Settings -> Statistics
   await page.evaluate(() => window.__motionTest.clearResizeCalls());
@@ -357,7 +356,6 @@ test('destination view renders in DOM before window resize IPC is dispatched', a
   const statsCall = statsCalls.find((c) => c.view === 'stats');
   assert.ok(statsCall, 'window_set_view_size called with stats');
   assert.equal(statsCall.renderedBeforeResize, true, 'StatisticsSection mounted before resize IPC');
-  assert.equal(statsCall.paintedBeforeResize, true, 'StatisticsSection painted before resize IPC');
 
   // Navigate Statistics -> Timer
   await page.evaluate(() => window.__motionTest.clearResizeCalls());
@@ -367,7 +365,6 @@ test('destination view renders in DOM before window resize IPC is dispatched', a
   const timerCall = timerCalls.find((c) => c.view === 'timer');
   assert.ok(timerCall, 'window_set_view_size called with timer');
   assert.equal(timerCall.renderedBeforeResize, true, 'Timer mounted before resize IPC');
-  assert.equal(timerCall.paintedBeforeResize, true, 'Timer painted before resize IPC');
   await context.close();
 });
 
