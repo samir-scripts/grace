@@ -4,7 +4,7 @@
   import { settings } from '$lib/stores/settings';
   import { applyTheme } from '$lib/stores/theme';
   import { getThemes, setSetting, onThemesChanged } from '$lib/ipc';
-  import { resolveThemeName } from '$lib/utils/theme';
+  import { resolveThemeName, getLightThemes, getDarkThemes } from '$lib/utils/theme';
   import type { UnlistenFn } from '@tauri-apps/api/event';
   import * as m from '$paraglide/messages.js';
 
@@ -25,6 +25,8 @@
   let selectedLightTheme = $derived(themes.find((t) => t.name === $settings.theme_light));
   let selectedDarkTheme = $derived(themes.find((t) => t.name === $settings.theme_dark));
 
+  let lightThemes = $derived(getLightThemes(themes));
+  let darkThemes = $derived(getDarkThemes(themes));
   function togglePicker(picker: 'light' | 'dark') {
     openPicker = openPicker === picker ? null : picker;
   }
@@ -78,16 +80,52 @@
 <div class="section">
   <!-- Mode selector -->
   <div class="group-label">{m.appearance_group_mode()}</div>
-  <div class="mode-selector">
-    {#each [['auto', m.appearance_mode_auto()], ['light', m.appearance_mode_light()], ['dark', m.appearance_mode_dark()]] as [value, label] (value)}
-      <button
-        class="mode-btn"
-        class:active={$settings.theme_mode === value}
-        onclick={() => setMode(value)}
-      >
-        {label}
-      </button>
-    {/each}
+  <div class="mode-selector" role="group" aria-label={m.appearance_group_mode()}>
+    <button
+      type="button"
+      class="mode-btn"
+      class:active={$settings.theme_mode === 'auto'}
+      onclick={() => setMode('auto')}
+      aria-label={m.appearance_mode_auto()}
+      title={m.appearance_mode_auto()}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" />
+      </svg>
+    </button>
+    <button
+      type="button"
+      class="mode-btn"
+      class:active={$settings.theme_mode === 'light'}
+      onclick={() => setMode('light')}
+      aria-label={m.appearance_mode_light()}
+      title={m.appearance_mode_light()}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="5" fill="currentColor" />
+        <line x1="12" y1="1" x2="12" y2="3" />
+        <line x1="12" y1="21" x2="12" y2="23" />
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+        <line x1="1" y1="12" x2="3" y2="12" />
+        <line x1="21" y1="12" x2="23" y2="12" />
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+      </svg>
+    </button>
+    <button
+      type="button"
+      class="mode-btn"
+      class:active={$settings.theme_mode === 'dark'}
+      onclick={() => setMode('dark')}
+      aria-label={m.appearance_mode_dark()}
+      title={m.appearance_mode_dark()}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" />
+      </svg>
+    </button>
   </div>
 
   <!-- Light theme picker -->
@@ -99,7 +137,6 @@
     >
       <span class="trigger-label">
         {m.appearance_group_light_theme()}
-        {#if lightIsActive}<span class="active-badge">{m.appearance_badge_active()}</span>{/if}
       </span>
       <span class="trigger-preview">
         <span class="preview-name">{$settings.theme_light}</span>
@@ -128,7 +165,7 @@
     </button>
     {#if openPicker === 'light'}
       <div class="theme-list">
-        {#each themes as theme (theme.name)}
+        {#each lightThemes as theme (theme.name)}
           {@const bg = theme.colors['--color-background'] ?? '#2f384b'}
           {@const fg = theme.colors['--color-foreground'] ?? '#d7e1f4'}
           {@const accent = theme.colors['--color-accent'] ?? '#e25d60'}
@@ -179,7 +216,6 @@
     >
       <span class="trigger-label">
         {m.appearance_group_dark_theme()}
-        {#if darkIsActive}<span class="active-badge">{m.appearance_badge_active()}</span>{/if}
       </span>
       <span class="trigger-preview">
         <span class="preview-name">{$settings.theme_dark}</span>
@@ -208,7 +244,7 @@
     </button>
     {#if openPicker === 'dark'}
       <div class="theme-list">
-        {#each themes as theme (theme.name)}
+        {#each darkThemes as theme (theme.name)}
           {@const bg = theme.colors['--color-background'] ?? '#2f384b'}
           {@const fg = theme.colors['--color-foreground'] ?? '#d7e1f4'}
           {@const accent = theme.colors['--color-accent'] ?? '#e25d60'}
@@ -271,16 +307,6 @@
     padding: 16px 20px 6px;
   }
 
-  .active-badge {
-    font-size: 0.6rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    padding: 1px 5px;
-    border-radius: 3px;
-    background: color-mix(in oklch, var(--color-accent) 20%, transparent);
-    color: var(--color-accent);
-    opacity: 1;
-  }
 
   /* Mode selector */
   .mode-selector {
