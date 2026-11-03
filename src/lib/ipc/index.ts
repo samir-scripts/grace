@@ -185,6 +185,8 @@ export const registerNativeHost = () =>
   invoke<void>('focus_native_host_register');
 export const installBrowserExtension = (browser: BrowserKind) =>
   invoke<void>('focus_browser_extension_install', { browser });
+export const removeBrowserExtension = (browser: BrowserKind) =>
+  invoke<void>('focus_browser_extension_remove', { browser });
 
 export const onFocusChanged = (cb: (snapshot: FocusSnapshot) => void): Promise<UnlistenFn> =>
   listen<FocusSnapshot>('focus:changed', (e) => cb(e.payload));

@@ -4,6 +4,7 @@
     listInstalledBrowsers,
     registerNativeHost,
     installBrowserExtension,
+    removeBrowserExtension,
     getBrowserSetup,
     requireBrowserProfile,
   } from '$lib/ipc';
@@ -20,7 +21,7 @@
 
   let installedBrowsers = $state<InstalledBrowser[]>([]);
   let browserSetup = $state<BrowserSetupInfo | null>(null);
-  let installingKind = $state<BrowserKind | null>(null);
+  let mutating = $state<{ kind: BrowserKind; action: 'install' | 'remove' } | null>(null);
   let statusMessage = $state('');
   let statusType = $state<'success' | 'error' | ''>('');
 
@@ -48,7 +49,7 @@
   }
 
   async function handleInstall(browser: InstalledBrowser) {
-    installingKind = browser.kind;
+    mutating = { kind: browser.kind, action: 'install' };
     statusMessage = '';
     statusType = '';
     try {
@@ -56,12 +57,36 @@
       await installBrowserExtension(browser.kind);
       statusMessage = m.browser_install_success();
       statusType = 'success';
+      await loadBrowsers();
       await refreshSetup();
     } catch (e: any) {
       statusMessage = typeof e === 'string' ? e : (e?.message || 'Failed to install extension');
       statusType = 'error';
     } finally {
-      installingKind = null;
+      mutating = null;
+    }
+  }
+
+  async function handleRemove(browser: InstalledBrowser) {
+    if (isLocked || !!activeSessionId) {
+      statusMessage = m.browser_locked_hint();
+      statusType = 'error';
+      return;
+    }
+    mutating = { kind: browser.kind, action: 'remove' };
+    statusMessage = '';
+    statusType = '';
+    try {
+      await removeBrowserExtension(browser.kind);
+      statusMessage = m.browser_remove_success();
+      statusType = 'success';
+      await loadBrowsers();
+      await refreshSetup();
+    } catch (e: any) {
+      statusMessage = typeof e === 'string' ? e : (e?.message || 'Failed to remove extension');
+      statusType = 'error';
+    } finally {
+      mutating = null;
     }
   }
 
@@ -131,18 +156,34 @@
           </div>
         </div>
 
-        <button
-          type="button"
-          class="btn-install"
-          disabled={installingKind === browser.kind}
-          onclick={() => handleInstall(browser)}
-        >
-          {#if installingKind === browser.kind}
-            {m.browser_installing()}
-          {:else}
-            {m.browser_install_button()}
-          {/if}
-        </button>
+        {#if browser.is_extension_installed}
+          <button
+            type="button"
+            class="btn-install btn-remove"
+            disabled={mutating !== null || isLocked || !!activeSessionId}
+            title={isLocked || !!activeSessionId ? m.browser_locked_hint() : undefined}
+            onclick={() => handleRemove(browser)}
+          >
+            {#if mutating?.kind === browser.kind && mutating?.action === 'remove'}
+              {m.browser_removing()}
+            {:else}
+              {m.browser_remove_button()}
+            {/if}
+          </button>
+        {:else}
+          <button
+            type="button"
+            class="btn-install"
+            disabled={mutating !== null}
+            onclick={() => handleInstall(browser)}
+          >
+            {#if mutating?.kind === browser.kind && mutating?.action === 'install'}
+              {m.browser_installing()}
+            {:else}
+              {m.browser_install_button()}
+            {/if}
+          </button>
+        {/if}
       </div>
     {/each}
   </div>
@@ -333,6 +374,15 @@
     cursor: not-allowed;
   }
 
+  .btn-install.btn-remove {
+    background: transparent;
+    color: var(--color-focus-round);
+    border: 1px solid var(--color-focus-round);
+  }
+
+  .btn-install.btn-remove:hover:not(:disabled) {
+    background: color-mix(in oklch, var(--color-focus-round) 15%, transparent);
+  }
   .profiles-section {
     display: flex;
     flex-direction: column;

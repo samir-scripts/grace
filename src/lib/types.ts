@@ -174,6 +174,7 @@ export interface InstalledBrowser {
   executable_path: string;
   policy_path: string | null;
   is_installed: boolean;
+  is_extension_installed: boolean;
 }
 
 export interface ConnectedProfileInfo {
