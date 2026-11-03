@@ -200,7 +200,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px 32px;
+    padding: clamp(12px, 3vh, 24px) clamp(16px, 4vw, 32px);
   }
 
   .empty {
@@ -214,11 +214,17 @@
   }
 
   .chart-wrap {
-    overflow: visible;
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
   }
   .chart {
     display: block;
-    overflow: visible;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
   }
 
   .bar {

@@ -120,7 +120,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 28px 24px;
+    padding: clamp(14px, 3vh, 28px) clamp(8px, 2vw, 24px);
     animation: card-rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: var(--delay, 0ms);
   }
@@ -145,7 +145,7 @@
   }
 
   .card-value {
-    font-size: 2.4rem;
+    font-size: clamp(1.4rem, 6vw, 2.4rem);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
@@ -192,12 +192,17 @@
 
   /* ── Hourly chart ────────────────────────────────────────── */
   .chart-wrap {
+    width: 100%;
+    min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
   }
 
   .chart {
     display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
   }
 
   .bar {
