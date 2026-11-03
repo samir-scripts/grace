@@ -7,8 +7,22 @@
   import SettingsView from '$lib/components/settings/SettingsView.svelte';
   import StatisticsSection from '$lib/components/settings/sections/StatisticsSection.svelte';
   import { activeView, showTimerView } from '$lib/stores/navigation';
-  import { getSettings, getThemes, onSettingsChanged, onThemesChanged } from '$lib/ipc';
+  import {
+    getSettings,
+    getThemes,
+    onSettingsChanged,
+    onThemesChanged,
+    getTimerState,
+    onTimerTick,
+    onTimerPaused,
+    onTimerResumed,
+    onRoundChange,
+    onTimerReset,
+    notificationShow,
+  } from '$lib/ipc';
+  import { timerState } from '$lib/stores/timer';
   import { settings } from '$lib/stores/settings';
+  import * as m from '$paraglide/messages.js';
   import { applyTheme } from '$lib/stores/theme';
   import { resolveThemeName } from '$lib/utils/theme';
   import { isMac } from '$lib/utils/platform';
@@ -119,6 +133,62 @@
         if (active) applyTheme(active);
         await getCurrentWebviewWindow().show();
         await info(`[main] initialized, theme=${active?.name ?? 'none'}`);
+
+        // Hydrate timer state and register background listeners once at the window root
+        const initialTimer = await getTimerState();
+        timerState.set(initialTimer);
+
+        cleanups.push(
+          await onTimerTick(({ elapsed_secs, total_secs }) => {
+            timerState.update((st) => ({
+              ...st,
+              elapsed_secs,
+              total_secs,
+              is_running: true,
+              is_paused: false,
+            }));
+          }),
+          await onTimerPaused(({ elapsed_secs }) => {
+            timerState.update((st) => ({
+              ...st,
+              elapsed_secs,
+              is_running: false,
+              is_paused: true,
+            }));
+          }),
+          await onTimerResumed(({ elapsed_secs }) => {
+            timerState.update((st) => ({
+              ...st,
+              elapsed_secs,
+              is_running: true,
+              is_paused: false,
+            }));
+          }),
+          await onRoundChange((snap) => {
+            timerState.set(snap);
+            if ($settings.notifications_enabled) {
+              let title: string;
+              let body: string;
+              if (snap.round_type === 'work') {
+                const afterBreak =
+                  snap.previous_round_type === 'short-break' ||
+                  snap.previous_round_type === 'long-break';
+                title = afterBreak ? m.notification_work_title() : m.notification_work_start_title();
+                body = afterBreak ? m.notification_work_body() : m.notification_work_start_body();
+              } else if (snap.round_type === 'short-break') {
+                title = m.notification_short_break_title();
+                body = m.notification_short_break_body();
+              } else {
+                title = m.notification_long_break_title();
+                body = m.notification_long_break_body();
+              }
+              notificationShow(title, body).catch(() => {});
+            }
+          }),
+          await onTimerReset((snap) => {
+            timerState.set(snap);
+          })
+        );
       } catch (e) {
         await logError(`[main] initialization failed: ${e}`);
         throw e;
