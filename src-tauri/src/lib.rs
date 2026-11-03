@@ -48,6 +48,7 @@ use commands::{
     focus_escape_submit_passphrase,
     focus_browser_setup_get,
     focus_browser_profile_require,
+    focus_browsers_list,
     focus_enforcement_retry,
 };
 
@@ -456,6 +457,7 @@ pub fn run() {
             focus_escape_submit_passphrase,
             focus_browser_setup_get,
             focus_browser_profile_require,
+            focus_browsers_list,
             focus_enforcement_retry,
         ])
         .run(tauri::generate_context!())

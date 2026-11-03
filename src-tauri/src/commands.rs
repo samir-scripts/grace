@@ -886,6 +886,11 @@ pub fn focus_browser_profile_require(
     Ok(())
 }
 
+
+#[tauri::command]
+pub fn focus_browsers_list() -> Result<Vec<crate::focus::browser_detector::InstalledBrowser>, String> {
+    Ok(crate::focus::browser_detector::detect_installed_browsers())
+}
 #[tauri::command]
 pub fn focus_enforcement_retry(
     focus: State<'_, Arc<FocusController>>,

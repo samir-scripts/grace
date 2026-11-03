@@ -24,12 +24,13 @@ pub const BROWSER_PORT_DEFAULT: u16 = 1421;
 pub const BROWSER_PROTOCOL_VERSION: u32 = 1;
 pub const BROWSER_LEASE_SECS: u64 = 15;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BrowserKind {
     Chrome,
     Firefox,
     Safari,
+    Zen,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

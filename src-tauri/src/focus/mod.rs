@@ -1,5 +1,6 @@
 pub mod app_catalog;
 pub mod browser;
+pub mod browser_detector;
 pub mod controller;
 pub mod enforcer;
 pub mod escape;

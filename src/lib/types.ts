@@ -165,7 +165,15 @@ export interface EnforcementStatus {
   error_code: EnforcementErrorCode | null;
 }
 
-export type BrowserKind = 'chrome' | 'firefox' | 'safari';
+export type BrowserKind = 'chrome' | 'firefox' | 'safari' | 'zen';
+
+export interface InstalledBrowser {
+  kind: BrowserKind;
+  name: string;
+  executable_path: string;
+  policy_path: string | null;
+  is_installed: boolean;
+}
 
 export interface ConnectedProfileInfo {
   profile_id: string;
