@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow';
-  import { setWindowVisibility, navigateSettings } from '$lib/ipc';
+  import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+  import { setWindowVisibility } from '$lib/ipc';
+  import { activeView, toggleView, showTimerView } from '$lib/stores/navigation';
   import { settings } from '$lib/stores/settings';
   import { isMac } from '$lib/utils/platform';
   import Tooltip from './Tooltip.svelte';
@@ -50,37 +51,12 @@
     };
   });
 
-  async function openSecondaryWindow(section: 'timer' | 'stats') {
-    const existing = await WebviewWindow.getByLabel('settings');
-    if (existing) {
-      await navigateSettings(section);
-      await existing.show();
-      await existing.unminimize();
-      await existing.setFocus();
-      return;
-    }
-    new WebviewWindow('settings', {
-      url: `/settings?section=${section}`,
-      title: 'Pomotroid — Settings',
-      width: 840,
-      height: 520,
-      // On macOS: native decorations + overlay titlebar for rounded corners and
-      // traffic light buttons. On other platforms: custom decorations-free window.
-      decorations: isMac,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      titleBarStyle: isMac ? ('Overlay' as any) : undefined,
-      hiddenTitle: isMac ? true : undefined,
-      resizable: false,
-      visible: false,
-    });
-  }
-
   function openSettings() {
-    return openSecondaryWindow('timer');
+    toggleView('settings');
   }
 
   function openStats() {
-    return openSecondaryWindow('stats');
+    toggleView('stats');
   }
 
   async function minimize() {
@@ -104,7 +80,13 @@
 
 {#snippet settingsBtn()}
   <Tooltip text={m.tooltip_settings()}>
-    <button class="btn-icon" onclick={openSettings} aria-label="Settings">
+    <button
+      class="btn-icon"
+      class:active={$activeView === 'settings'}
+      onclick={openSettings}
+      aria-label="Settings"
+      aria-pressed={$activeView === 'settings'}
+    >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <line
           x1="2"
@@ -164,7 +146,13 @@
 
 {#snippet statsBtn()}
   <Tooltip text={m.tooltip_statistics()}>
-    <button class="btn-icon" onclick={openStats} aria-label="Statistics">
+    <button
+      class="btn-icon"
+      class:active={$activeView === 'stats'}
+      onclick={openStats}
+      aria-label="Statistics"
+      aria-pressed={$activeView === 'stats'}
+    >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <rect x="2" y="9" width="3" height="5" rx="0.5" fill="currentColor" opacity="0.6" />
         <rect x="6.5" y="5" width="3" height="9" rx="0.5" fill="currentColor" opacity="0.8" />
@@ -322,6 +310,10 @@
       background 0.15s;
   }
 
+  .btn-icon.active {
+    color: var(--color-foreground);
+    background: color-mix(in oklch, var(--color-accent) 22%, transparent);
+  }
   .btn-icon:focus {
     outline: none;
   }

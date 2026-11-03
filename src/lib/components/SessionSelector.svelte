@@ -1,9 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-  import { isMac } from '$lib/utils/platform';
   import { focusSnapshot, focusProfiles } from '$lib/stores/focus';
-  import { selectFocusProfile, navigateSettings } from '$lib/ipc';
+  import { selectFocusProfile } from '$lib/ipc';
+  import { openSettingsSection, showTimerView } from '$lib/stores/navigation';
   import * as m from '$paraglide/messages.js';
 
   interface Props {
@@ -30,32 +29,15 @@
     try {
       await selectFocusProfile(id);
       isOpen = false;
+      showTimerView();
     } catch (err) {
       console.error('[SessionSelector] failed to select profile:', err);
     }
   }
 
-  async function openSettingsSessions() {
+  function openSettingsSessions() {
     isOpen = false;
-    const existing = await WebviewWindow.getByLabel('settings');
-    if (existing) {
-      await navigateSettings('timer');
-      await existing.show();
-      await existing.setFocus();
-      return;
-    }
-    new WebviewWindow('settings', {
-      url: '/settings?section=timer',
-      title: 'Pomotroid — Settings',
-      width: 840,
-      height: 520,
-      decorations: isMac,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      titleBarStyle: isMac ? ('Overlay' as any) : undefined,
-      hiddenTitle: isMac ? true : undefined,
-      resizable: false,
-      visible: false,
-    });
+    openSettingsSection('timer');
   }
 
   function handleKeydown(e: KeyboardEvent) {
