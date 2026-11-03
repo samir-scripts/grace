@@ -401,6 +401,17 @@ pub fn window_set_visibility(visible: bool, app: AppHandle) -> Result<(), String
     Ok(())
 }
 
+/// Set the main window size to the optimal layout for the target view.
+#[tauri::command]
+pub fn window_set_view_size(
+    view: String,
+    app: AppHandle,
+    view_state: State<'_, Arc<crate::window_view::WindowViewState>>,
+) -> Result<(), String> {
+    log::debug!("[window] set view size for view={view}");
+    crate::window_view::apply_view_size(&app, &view, &view_state)
+}
+
 // ---------------------------------------------------------------------------
 // CMD-07 — Audio commands
 // ---------------------------------------------------------------------------

@@ -9,6 +9,7 @@ pub mod themes;
 pub mod timer;
 pub mod tray;
 pub mod websocket;
+pub mod window_view;
 
 use std::sync::Arc;
 
@@ -32,6 +33,7 @@ use commands::{
     themes_list,
     timer_get_state, timer_reset, timer_restart_round, timer_skip, timer_toggle,
     window_set_visibility,
+    window_set_view_size,
     focus_apps_list,
     focus_app_icon,
     focus_snapshot_get,
@@ -166,6 +168,9 @@ pub fn run() {
             ));
             focus.set_app_handle(app.handle().clone());
             app.manage(Arc::clone(&focus));
+            let window_view_state = Arc::new(window_view::WindowViewState::new());
+            app.manage(Arc::clone(&window_view_state));
+
 
             // --- Timer controller (needs settings + AppHandle + TrayState + DB + Focus) ---
             let timer = timer::TimerController::new(
@@ -360,6 +365,7 @@ pub fn run() {
             let app_for_close = app.handle().clone();
             let db_for_pos = db.clone();
             let win_for_pos = main_window.clone();
+            let view_state_for_pos = Arc::clone(&window_view_state);
             main_window.on_window_event(move |event| {
                 match event {
                     tauri::WindowEvent::CloseRequested { api, .. } => {
@@ -385,14 +391,16 @@ pub fn run() {
                         }
                     }
                     tauri::WindowEvent::Resized(size) => {
-                        if let Ok(conn) = db_for_pos.lock() {
-                            let _ = settings::save_setting(&conn, "window_width", &size.width.to_string());
-                            let _ = settings::save_setting(&conn, "window_height", &size.height.to_string());
-                            // Also capture position, since some window managers shift the
-                            // window origin when resizing.
-                            if let Ok(pos) = win_for_pos.outer_position() {
-                                let _ = settings::save_setting(&conn, "window_x", &pos.x.to_string());
-                                let _ = settings::save_setting(&conn, "window_y", &pos.y.to_string());
+                        // Only persist window size while in the timer view so temporary
+                        // Settings/Statistics expanded layouts do not overwrite the user's timer size.
+                        if view_state_for_pos.is_timer_view() {
+                            if let Ok(conn) = db_for_pos.lock() {
+                                let _ = settings::save_setting(&conn, "window_width", &size.width.to_string());
+                                let _ = settings::save_setting(&conn, "window_height", &size.height.to_string());
+                                if let Ok(pos) = win_for_pos.outer_position() {
+                                    let _ = settings::save_setting(&conn, "window_x", &pos.x.to_string());
+                                    let _ = settings::save_setting(&conn, "window_y", &pos.y.to_string());
+                                }
                             }
                         }
                     }
@@ -422,6 +430,7 @@ pub fn run() {
             stats_get_heatmap,
             // Window
             window_set_visibility,
+            window_set_view_size,
             // Shortcuts
             shortcuts_reload,
             // Audio
