@@ -12,6 +12,13 @@ The Pomotroid browser companions enforce website blocking directly in your brows
 5. Click the extension icon or open extension Details > Extension options.
 6. Paste the **Pairing Token** from Pomotroid Settings > Sessions, and click **Save & Connect**.
 
+The unpacked Chrome companion uses the fixed ID `ddiojihepmbimcfoefnebpolgaljlcfn`.
+After upgrading from a path-derived unpacked ID, remove the old companion, load
+the new build, pair it again, and update any required browser profile in Sessions.
+Re-register the native host from Pomotroid so its allowed origin uses the new ID.
+This development public key does not include a private signing key; a published
+Chrome Web Store build requires a separately managed matching signing identity.
+
 ### Firefox
 1. Run `node scripts/build-browser-extensions.mjs` to generate `extensions/dist/firefox`.
 2. Open `about:debugging#/runtime/this-firefox` in Firefox.

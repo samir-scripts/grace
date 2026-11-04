@@ -224,6 +224,16 @@ if (api && api.runtime && api.runtime.onMessage) {
   });
 }
 
+if (api?.runtime?.onStartup) api.runtime.onStartup.addListener(() => { bootstrap(); });
+if (api?.runtime?.onInstalled) api.runtime.onInstalled.addListener(() => { bootstrap(); });
+if (api?.alarms) {
+  api.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === 'pomotroid-reconnect') connect();
+  });
+  api.alarms.create('pomotroid-reconnect', { periodInMinutes: 1 });
+}
+if (api?.tabs?.onActivated) api.tabs.onActivated.addListener(() => { connect(); });
+
 // Automated bootstrap with native messaging pairing fallback to stored config
 async function bootstrap() {
   const connectNative = (api && api.runtime && api.runtime.connectNative)

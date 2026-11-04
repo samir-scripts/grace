@@ -70,3 +70,13 @@ fn test_message_size_limit_rejection() {
     assert!(res.is_err());
     assert!(res.unwrap_err().to_string().contains("exceeds maximum allowed size"));
 }
+
+#[test]
+fn chrome_native_host_authorizes_valid_extension_identity() {
+    let id = pomotroid_lib::focus::native_messaging::DEFAULT_CHROME_EXT_ID;
+    assert_eq!(id.len(), 32);
+    assert!(id.bytes().all(|b| (b'a'..=b'p').contains(&b)));
+    let manifest = generate_chrome_manifest(Path::new("/tmp/pomotroid-native-host"), &[id]);
+    assert_eq!(manifest["allowed_origins"][0], format!("chrome-extension://{id}/"));
+    assert_eq!(id, pomotroid_lib::focus::enterprise_policy::CHROME_EXTENSION_ID);
+}

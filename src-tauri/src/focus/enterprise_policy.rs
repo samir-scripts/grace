@@ -7,7 +7,7 @@ use super::browser::BrowserKind;
 use super::browser_detector::detect_installed_browsers;
 
 pub const FIREFOX_EXTENSION_ID: &str = "focus@pomotroid.local";
-pub const CHROME_EXTENSION_ID: &str = "pomotroid-focus-companion";
+pub const CHROME_EXTENSION_ID: &str = super::native_messaging::DEFAULT_CHROME_EXT_ID;
 pub const CHROME_DEFAULT_UPDATE_URL: &str = "https://clients2.google.com/service/update2/crx";
 
 pub fn file_url_for_path(path: &Path) -> String {

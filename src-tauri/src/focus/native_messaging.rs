@@ -6,7 +6,7 @@ use serde_json::json;
 pub const MAX_MESSAGE_BYTES: usize = 1024 * 1024; // 1 MB
 pub const HOST_NAME: &str = "com.splode.pomotroid";
 pub const DEFAULT_FIREFOX_EXT_ID: &str = "focus@pomotroid.local";
-pub const DEFAULT_CHROME_EXT_ID: &str = "pomotroid-focus-companion";
+pub const DEFAULT_CHROME_EXT_ID: &str = "ddiojihepmbimcfoefnebpolgaljlcfn";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
