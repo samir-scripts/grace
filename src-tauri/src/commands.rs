@@ -1018,8 +1018,15 @@ pub fn focus_browser_extension_remove(
 #[tauri::command]
 pub fn focus_enforcement_retry(
     focus: State<'_, Arc<FocusController>>,
+    timer: State<'_, TimerController>,
 ) -> Result<(), String> {
-    focus.on_timer_started("work")
+    if focus.get_snapshot().enforcement.state == crate::focus::enforcer::protocol::EnforcementState::RecoveryRequired {
+        focus.execute_emergency_release()
+    } else if timer.get_snapshot().is_running {
+        Err("Timer is already running.".into())
+    } else {
+        timer.toggle()
+    }
 }
 
 #[cfg(test)]

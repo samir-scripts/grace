@@ -16,6 +16,8 @@
 - [x] [09-ui-emergency-exit](subplans/09-ui-emergency-exit.md)
 - [x] [10-e2e-system-tests](subplans/10-e2e-system-tests.md)
 
+- Focus startup follow-up: browser participants are checked before applications are closed; the Rust bridge is exercised with an isolated Chromium extension, and the macOS application monitor has an opt-in disposable GUI fixture. Native timer-window and other-platform end-to-end checks remain outstanding.
+
 ## Execution decisions
 
 - Existing uncommitted AGENTS.md migration is preserved; implementation uses feature/focus-sessions in this workspace.

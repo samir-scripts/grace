@@ -19,7 +19,7 @@
 </script>
 
 {#if enf.state === 'failed' || enf.state === 'recovery_required'}
-  <div class="notice-banner" class:danger={enf.state === 'recovery_required'}>
+  <div class="notice-banner" class:danger={enf.state === 'recovery_required'} role="status" aria-live="polite">
     <div class="notice-content">
       <svg
         class="icon warning-icon"
@@ -39,9 +39,13 @@
       </svg>
       <span class="text">
         {#if enf.state === 'recovery_required'}
-          Cleanup required for website blocking. Click Retry to restore access.
+          Blocking cleanup required. Click Retry to restore access.
+        {:else if enf.error_code === 'authorization_denied' || enf.error_code === 'authorization_required'}
+          Distraction blocking needs operating system permission. Check permissions, then retry.
+        {:else if enf.error_code === 'lease_lost'}
+          Distraction blocking disconnected and the timer paused. Reconnect, then retry.
         {:else}
-          Distraction blocking could not start. Ensure your browser extension is connected.
+          Distraction blocking could not start. Check the selected apps and browser extension, then retry.
         {/if}
       </span>
     </div>

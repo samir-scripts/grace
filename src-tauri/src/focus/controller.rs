@@ -603,6 +603,20 @@ mod tests {
     }
 
     #[test]
+    fn recovery_retry_can_release_and_clear_the_journal() {
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        let controller = controller_with_rules(enforcer.clone());
+        controller.on_timer_started("work").unwrap();
+        enforcer.fail_release.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert!(controller.execute_emergency_release().is_err());
+        enforcer.fail_release.store(false, std::sync::atomic::Ordering::SeqCst);
+        controller.execute_emergency_release().unwrap();
+        assert!(!controller.is_active());
+        assert!(!controller.is_locked());
+        assert!(controller.repository.get_run_journal(&controller.db.lock().unwrap()).unwrap().is_none());
+    }
+
+    #[test]
     fn test_break_acquire_retry_advances_round_once() {
         let enforcer = Arc::new(FailingEnforcer::new(false));
         let controller = controller_with_rules(enforcer.clone());

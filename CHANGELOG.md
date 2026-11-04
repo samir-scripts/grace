@@ -1,3 +1,9 @@
+## Unreleased
+
+### Bug Fixes
+
+- Focus session startup checks browser companions before closing blocked apps, and Retry starts the timer after protection is restored. Chrome companions reconnect after service-worker suspension and use a stable development identity.
+
 ## [v1.7.1] - 2026-05-11
 
 ### Bug Fixes
