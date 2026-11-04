@@ -232,3 +232,56 @@ async fn test_browser_bridge_fails_when_domains_non_empty_and_no_clients() {
     assert!(res.is_err(), "Non-empty domains must require at least one connected browser companion");
     bridge.shutdown().await;
 }
+
+#[tokio::test]
+async fn test_browser_bridge_requires_all_connected_participants_even_with_required_profile() {
+    let bridge = Arc::new(BrowserBridge::new_in_memory("token-dual".into(), 14225).await.unwrap());
+    bridge.set_required_profile("prof-req", BrowserKind::Chrome, true);
+
+    // Connect required client
+    let (mut ws_req, _) = connect_async("ws://127.0.0.1:14225/focus-browser").await.unwrap();
+    let hello_req = json!({
+        "type": "hello",
+        "version": 1,
+        "token": "token-dual",
+        "profile_id": "prof-req",
+        "browser": "chrome",
+        "install_type": "admin",
+        "may_disable": false
+    });
+    ws_req.send(Message::Text(hello_req.to_string().into())).await.unwrap();
+
+    // Connect unrequired client
+    let (mut ws_unreq, _) = connect_async("ws://127.0.0.1:14225/focus-browser").await.unwrap();
+    let hello_unreq = json!({
+        "type": "hello",
+        "version": 1,
+        "token": "token-dual",
+        "profile_id": "prof-unreq",
+        "browser": "zen",
+        "install_type": "admin",
+        "may_disable": false
+    });
+    ws_unreq.send(Message::Text(hello_unreq.to_string().into())).await.unwrap();
+
+    // Required client ACKs, but unrequired client never ACKs
+    tokio::spawn(async move {
+        while let Some(Ok(Message::Text(text))) = ws_req.next().await {
+            let data: serde_json::Value = serde_json::from_str(&text).unwrap();
+            if data["type"] == "policy" {
+                let rev = data["revision"].as_u64().unwrap();
+                let ack = json!({ "type": "ack", "revision": rev, "profile_id": "prof-req" });
+                ws_req.send(Message::Text(ack.to_string().into())).await.unwrap();
+            }
+        }
+    });
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    let b = bridge.clone();
+    let res = tokio::task::spawn_blocking(move || {
+        b.apply_blocking(&[], &["youtube.com".into()])
+    }).await.unwrap();
+
+    assert!(res.is_err(), "All participating browsers must ACK, even when one is explicitly marked required");
+    bridge.shutdown().await;
+}

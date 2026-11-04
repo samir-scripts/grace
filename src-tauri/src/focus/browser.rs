@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -312,7 +312,7 @@ async fn handle_socket(
     broadcast_tx: broadcast::Sender<String>,
 ) {
 
-    let mut authenticated_profile: Option<String> = None;
+    let mut authenticated_info: Option<(String, BrowserKind, String, bool)> = None;
 
     // First frame must be Hello with valid token within 5 seconds
     let hello_res = tokio::time::timeout(Duration::from_secs(5), socket.next()).await;
@@ -320,33 +320,39 @@ async fn handle_socket(
         Ok(Some(Ok(Message::Text(text)))) => {
             if let Ok(ClientMessage::Hello { version, token, profile_id, browser, install_type, may_disable }) = serde_json::from_str(&text) {
                 if version == BROWSER_PROTOCOL_VERSION && token == shared.token {
-                    authenticated_profile = Some(profile_id.clone());
-                    let mut clients = shared.connected_clients.lock().unwrap();
-                    clients.insert(profile_id.clone(), ConnectedClient {
-                        profile_id,
-                        browser,
-                        install_type,
-                        may_disable,
-                        last_seen: Instant::now(),
-                        last_acked_revision: 0,
-                        last_error_revision: None,
-                        last_error_code: None,
-                    });
+                    authenticated_info = Some((profile_id, browser, install_type, may_disable));
                 }
             }
         }
         _ => {}
     }
 
-    let Some(profile_id) = authenticated_profile else {
+    let Some((profile_id, browser, install_type, may_disable)) = authenticated_info else {
         let _ = socket.close().await;
         return;
     };
 
-    // Send current active policy if any
-    let active = shared.is_active.load(Ordering::SeqCst);
-    let rev = shared.current_revision.load(Ordering::SeqCst);
-    let domains = shared.current_domains.lock().unwrap().clone();
+    // Subscribe to broadcast BEFORE inserting client and taking policy snapshot
+    let mut rx = broadcast_tx.subscribe();
+
+    let (rev, active, domains) = {
+        let mut clients = shared.connected_clients.lock().unwrap();
+        clients.insert(profile_id.clone(), ConnectedClient {
+            profile_id: profile_id.clone(),
+            browser,
+            install_type,
+            may_disable,
+            last_seen: Instant::now(),
+            last_acked_revision: 0,
+            last_error_revision: None,
+            last_error_code: None,
+        });
+        let active = shared.is_active.load(Ordering::SeqCst);
+        let rev = shared.current_revision.load(Ordering::SeqCst);
+        let domains = shared.current_domains.lock().unwrap().clone();
+        (rev, active, domains)
+    };
+
     let initial_msg = ServerMessage::Policy {
         version: BROWSER_PROTOCOL_VERSION,
         revision: rev,
@@ -357,8 +363,6 @@ async fn handle_socket(
     if let Ok(json) = serde_json::to_string(&initial_msg) {
         let _ = socket.send(Message::Text(json.into())).await;
     }
-
-    let mut rx = broadcast_tx.subscribe();
     let (mut ws_sender, mut ws_receiver) = socket.split();
 
     let mut send_task = tokio::spawn(async move {
@@ -425,21 +429,29 @@ impl NativeEnforcer for BrowserBridge {
         }
 
         // 2. Process domain blocking
-        if !domains.is_empty() {
+        let (new_rev, target_participants) = {
             let clients = self.shared.connected_clients.lock().unwrap();
             let required = self.shared.required_profiles.lock().unwrap();
             let has_explicit_required = required.values().any(|(_, is_req)| *is_req);
-            if !has_explicit_required && clients.is_empty() {
+            if !domains.is_empty() && !has_explicit_required && clients.is_empty() {
                 self.shared.is_active.store(false, Ordering::SeqCst);
                 return Err(EnforcerError::HostsFileError(
                     "No browser companion connected to enforce website blocking rules.".into(),
                 ));
             }
-        }
 
-        let new_rev = self.shared.current_revision.fetch_add(1, Ordering::SeqCst) + 1;
-        *self.shared.current_domains.lock().unwrap() = domains.to_vec();
-        self.shared.is_active.store(true, Ordering::SeqCst);
+            let new_rev = self.shared.current_revision.fetch_add(1, Ordering::SeqCst) + 1;
+            *self.shared.current_domains.lock().unwrap() = domains.to_vec();
+            self.shared.is_active.store(true, Ordering::SeqCst);
+
+            let mut participants: HashSet<String> = clients.keys().cloned().collect();
+            for (req_id, (_, is_req)) in required.iter() {
+                if *is_req {
+                    participants.insert(req_id.clone());
+                }
+            }
+            (new_rev, participants)
+        };
 
         let msg = ServerMessage::Policy {
             version: BROWSER_PROTOCOL_VERSION,
@@ -451,7 +463,7 @@ impl NativeEnforcer for BrowserBridge {
         let json = serde_json::to_string(&msg).map_err(|e| EnforcerError::HostsFileError(e.to_string()))?;
         let _ = self.broadcast_tx.send(json);
 
-        // Wait up to 5 seconds for all required profiles to acknowledge
+        // Wait up to 5 seconds for all target participants to acknowledge
         let start = Instant::now();
         let timeout = Duration::from_secs(5);
 
@@ -469,29 +481,15 @@ impl NativeEnforcer for BrowserBridge {
                 }
             }
 
-            let required = self.shared.required_profiles.lock().unwrap();
             let mut all_acked = true;
-
-            let has_explicit_required = required.values().any(|(_, is_req)| *is_req);
-            if has_explicit_required {
-                for (req_id, (_, is_req)) in required.iter() {
-                    if *is_req {
-                        let has_acked = clients.get(req_id).map(|c| c.last_acked_revision >= new_rev).unwrap_or(false);
-                        if !has_acked {
-                            all_acked = false;
-                            break;
-                        }
-                    }
-                }
-            } else if !domains.is_empty() {
-                if clients.is_empty() {
-                    all_acked = false;
-                } else {
-                    for client in clients.values() {
-                        if client.last_acked_revision < new_rev {
-                            all_acked = false;
-                            break;
-                        }
+            if !domains.is_empty() && target_participants.is_empty() {
+                all_acked = false;
+            } else {
+                for p_id in &target_participants {
+                    let has_acked = clients.get(p_id).map(|c| c.last_acked_revision >= new_rev).unwrap_or(false);
+                    if !has_acked {
+                        all_acked = false;
+                        break;
                     }
                 }
             }

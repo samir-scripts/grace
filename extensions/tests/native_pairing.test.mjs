@@ -124,3 +124,34 @@ test('tryNativePairing supports Promise-returning storage (Gecko WebExtension st
   assert.ok(stored.profile_id);
   assert.equal(stored.is_native_paired, true);
 });
+
+test('tryNativePairing returns false when storage.set fails', async () => {
+  let messageListener = null;
+  const mockPort = {
+    postMessage: () => {},
+    onMessage: { addListener: (fn) => { messageListener = fn; } },
+    onDisconnect: { addListener: () => {} }
+  };
+
+  const failingStorage = {
+    get: async () => ({}),
+    set: async () => {
+      throw new Error('QuotaExceeded');
+    }
+  };
+
+  const pairingPromise = tryNativePairing({
+    connectNative: () => mockPort,
+    storage: failingStorage,
+    onPaired: () => {}
+  });
+
+  messageListener({
+    type: 'config',
+    token: 'token-fail',
+    port: 1421
+  });
+
+  const success = await pairingPromise;
+  assert.equal(success, false);
+});

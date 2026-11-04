@@ -16,18 +16,31 @@ async function getStorage(storage, keys) {
 }
 
 async function setStorage(storage, items) {
-  if (!storage || typeof storage.set !== 'function') return;
+  if (!storage || typeof storage.set !== 'function') {
+    throw new Error('storage.set is not a function');
+  }
+  let res;
+  let promiseAttempted = false;
   try {
-    const res = storage.set(items);
+    res = storage.set(items);
     if (res && typeof res.then === 'function') {
+      promiseAttempted = true;
       return await res;
     }
-  } catch {}
-  return new Promise((resolve) => {
+  } catch (err) {
+    if (promiseAttempted) throw err;
+  }
+  return new Promise((resolve, reject) => {
     try {
-      storage.set(items, () => resolve());
-    } catch {
-      resolve();
+      storage.set(items, () => {
+        const lastErr = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.lastError)
+          ? chrome.runtime.lastError
+          : null;
+        if (lastErr) reject(lastErr);
+        else resolve();
+      });
+    } catch (e) {
+      reject(e);
     }
   });
 }
@@ -63,7 +76,10 @@ export async function tryNativePairing({ connectNative, storage, onPaired }) {
             }
             resolve(true);
           } catch {
-            if (!resolved) resolve(false);
+            if (!resolved) {
+              resolved = true;
+              resolve(false);
+            }
           }
         }
       });
