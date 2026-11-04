@@ -7,6 +7,7 @@ use tokio_tungstenite::tungstenite::Message;
 
 use pomotroid_lib::focus::browser::{BrowserBridge, BrowserKind, ClientMessage, ServerMessage};
 use pomotroid_lib::focus::browser_detector::detect_installed_browsers;
+use pomotroid_lib::focus::enforcer::NativeEnforcer;
 use pomotroid_lib::focus::enterprise_policy::merge_firefox_policies;
 use pomotroid_lib::focus::native_messaging::{
     read_native_message, write_native_message, NativeInboundMessage, NativeOutboundMessage,
@@ -112,6 +113,59 @@ async fn test_e2e_browser_onboarding_lifecycle() {
     assert!(prof.is_required);
     assert!(prof.is_connected);
 
-    // Clean shutdown
+    // 5. Test blocking policy application and ACK for Zen
+    let (mut ws_tx, mut ws_rx) = ws.split();
+    let ack_task = tokio::spawn(async move {
+        while let Some(Ok(Message::Text(text))) = ws_rx.next().await {
+            let parsed: Result<ServerMessage, _> = serde_json::from_str(&text);
+            if let Ok(ServerMessage::Policy { revision, active, domains, .. }) = parsed {
+                if active && domains.contains(&"zen-distraction.com".to_string()) {
+                    let ack = ClientMessage::Ack {
+                        revision,
+                        profile_id: "zen-profile-e2e".into(),
+                    };
+                    ws_tx.send(Message::Text(serde_json::to_string(&ack).unwrap().into())).await.unwrap();
+                } else if active && domains.contains(&"error-trigger.com".to_string()) {
+                    let err = ClientMessage::Error {
+                        revision,
+                        profile_id: "zen-profile-e2e".into(),
+                        code: "dnr_syntax_error".into(),
+                    };
+                    ws_tx.send(Message::Text(serde_json::to_string(&err).unwrap().into())).await.unwrap();
+                } else if !active {
+                    let ack = ClientMessage::Ack {
+                        revision,
+                        profile_id: "zen-profile-e2e".into(),
+                    };
+                    ws_tx.send(Message::Text(serde_json::to_string(&ack).unwrap().into())).await.unwrap();
+                }
+            }
+        }
+    });
+
+    let b = bridge.clone();
+    tokio::task::spawn_blocking(move || {
+        b.apply_blocking(&[], &["zen-distraction.com".into()]).expect("apply_blocking should succeed with ACK");
+    }).await.unwrap();
+    assert!(bridge.health().is_ok());
+
+    // 6. Test that Zen reporting DNR error fails apply_blocking fast
+    let b = bridge.clone();
+    let start = std::time::Instant::now();
+    let err_res = tokio::task::spawn_blocking(move || {
+        b.apply_blocking(&[], &["error-trigger.com".into()])
+    }).await.unwrap();
+    assert!(err_res.is_err(), "Expected error when client reports DNR failure");
+    assert!(start.elapsed() < Duration::from_secs(2), "Expected immediate error, took {:?}", start.elapsed());
+    let err_text = err_res.unwrap_err().to_string();
+    assert!(err_text.contains("dnr_syntax_error"), "Error text should contain client code, got: {}", err_text);
+
+    // 7. Test policy release
+    let b = bridge.clone();
+    tokio::task::spawn_blocking(move || {
+        b.release_blocking().expect("release_blocking should succeed");
+    }).await.unwrap();
+
+    ack_task.abort();
     bridge.shutdown().await;
 }

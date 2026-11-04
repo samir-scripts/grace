@@ -224,6 +224,18 @@ test('Firefox extension connects and applies declarativeNetRequest dynamic rules
   assert.ok(manifest.permissions.includes('storage'));
   assert.equal(manifest.background.scripts[0], 'background.js');
   assert.equal(manifest.background.type, 'module');
+  assert.ok(manifest.declarative_net_request, 'declarative_net_request must be declared');
+  assert.equal(manifest.declarative_net_request.rule_resources[0].id, 'ruleset_1');
+  assert.equal(manifest.declarative_net_request.rule_resources[0].path, 'rules.json');
+  assert.equal(manifest.declarative_net_request.rule_resources[0].enabled, true);
+
+  const rulesPath = path.join(firefoxExtPath, 'rules.json');
+  assert.ok(fs.existsSync(rulesPath), 'rules.json must exist in firefox extension directory');
+  assert.deepEqual(JSON.parse(fs.readFileSync(rulesPath, 'utf8')), []);
+
+  const xpiPath = path.join(firefoxExtPath, 'focus@pomotroid.local.xpi');
+  assert.ok(fs.existsSync(xpiPath), 'focus@pomotroid.local.xpi must exist');
+  assert.ok(fs.statSync(xpiPath).size > 0, 'focus@pomotroid.local.xpi must be non-empty');
 
   // Verify policy compilation produces expected rules for Firefox
   const { rulesForPolicy, isUrlBlocked } = await import('../focus/policy.js');
