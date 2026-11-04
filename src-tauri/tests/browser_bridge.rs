@@ -127,3 +127,108 @@ async fn test_browser_bridge_detects_disconnect_for_required_profile() {
     assert!(bridge.health().is_err());
     bridge.shutdown().await;
 }
+
+#[tokio::test]
+async fn test_browser_bridge_fails_apply_on_client_error() {
+    let bridge = Arc::new(BrowserBridge::new_in_memory("token-123".into(), 14221).await.unwrap());
+    bridge.set_required_profile("prof-err-1", BrowserKind::Zen, true);
+
+    let (mut ws, _) = connect_async("ws://127.0.0.1:14221/focus-browser").await.unwrap();
+    // Send Hello
+    let hello = json!({
+        "type": "hello",
+        "version": 1,
+        "token": "token-123",
+        "profile_id": "prof-err-1",
+        "browser": "zen",
+        "install_type": "admin",
+        "may_disable": false
+    });
+    ws.send(Message::Text(hello.to_string().into())).await.unwrap();
+
+    // Client responds with Error instead of Ack
+    tokio::spawn(async move {
+        while let Some(Ok(Message::Text(text))) = ws.next().await {
+            let data: serde_json::Value = serde_json::from_str(&text).unwrap();
+            if data["type"] == "policy" {
+                let rev = data["revision"].as_u64().unwrap();
+                let err_msg = json!({
+                    "type": "error",
+                    "revision": rev,
+                    "profile_id": "prof-err-1",
+                    "code": "dnr_error"
+                });
+                ws.send(Message::Text(err_msg.to_string().into())).await.unwrap();
+            }
+        }
+    });
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    let b = bridge.clone();
+    let start = std::time::Instant::now();
+    let res = tokio::task::spawn_blocking(move || {
+        b.apply_blocking(&[], &["facebook.com".into()])
+    }).await.unwrap();
+
+    assert!(res.is_err(), "Expected apply_blocking to fail when client reports error");
+    assert!(start.elapsed() < Duration::from_secs(2), "apply_blocking should fail immediately on client error instead of timing out, took {:?}", start.elapsed());
+    let err_msg = res.unwrap_err().to_string();
+    assert!(err_msg.contains("dnr_error"), "Error should contain client error code, got: {}", err_msg);
+    bridge.shutdown().await;
+}
+
+#[tokio::test]
+async fn test_browser_bridge_heartbeat_does_not_forge_ack() {
+    let bridge = Arc::new(BrowserBridge::new_in_memory("token-hb-123".into(), 14222).await.unwrap());
+    bridge.set_required_profile("prof-hb-1", BrowserKind::Zen, true);
+
+    let (mut ws, _) = connect_async("ws://127.0.0.1:14222/focus-browser").await.unwrap();
+    let hello = json!({
+        "type": "hello",
+        "version": 1,
+        "token": "token-hb-123",
+        "profile_id": "prof-hb-1",
+        "browser": "zen",
+        "install_type": "admin",
+        "may_disable": false
+    });
+    ws.send(Message::Text(hello.to_string().into())).await.unwrap();
+
+    // Client responds ONLY with heartbeat reporting the new revision, never sending Ack
+    tokio::spawn(async move {
+        while let Some(Ok(Message::Text(text))) = ws.next().await {
+            let data: serde_json::Value = serde_json::from_str(&text).unwrap();
+            if data["type"] == "policy" {
+                let rev = data["revision"].as_u64().unwrap();
+                let hb_msg = json!({
+                    "type": "heartbeat",
+                    "revision": rev,
+                    "profile_id": "prof-hb-1"
+                });
+                ws.send(Message::Text(hb_msg.to_string().into())).await.unwrap();
+            }
+        }
+    });
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    let b = bridge.clone();
+    let res = tokio::task::spawn_blocking(move || {
+        b.apply_blocking(&[], &["facebook.com".into()])
+    }).await.unwrap();
+
+    // Because heartbeat should NOT satisfy the ack requirement, it must fail (timeout after 5s)
+    assert!(res.is_err(), "Heartbeat must not satisfy acknowledgment requirement");
+    bridge.shutdown().await;
+}
+
+#[tokio::test]
+async fn test_browser_bridge_fails_when_domains_non_empty_and_no_clients() {
+    let bridge = Arc::new(BrowserBridge::new_in_memory("token-no-client".into(), 14223).await.unwrap());
+    let b = bridge.clone();
+    let res = tokio::task::spawn_blocking(move || {
+        b.apply_blocking(&[], &["facebook.com".into()])
+    }).await.unwrap();
+
+    assert!(res.is_err(), "Non-empty domains must require at least one connected browser companion");
+    bridge.shutdown().await;
+}

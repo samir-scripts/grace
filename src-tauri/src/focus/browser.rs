@@ -112,6 +112,8 @@ struct ConnectedClient {
     may_disable: bool,
     last_seen: Instant,
     last_acked_revision: u64,
+    last_error_revision: Option<u64>,
+    last_error_code: Option<String>,
 }
 
 struct SharedState {
@@ -327,6 +329,8 @@ async fn handle_socket(
                         may_disable,
                         last_seen: Instant::now(),
                         last_acked_revision: 0,
+                        last_error_revision: None,
+                        last_error_code: None,
                     });
                 }
             }
@@ -377,18 +381,28 @@ async fn handle_socket(
                         if let Some(c) = clients.get_mut(&profile_id) {
                             c.last_seen = Instant::now();
                             c.last_acked_revision = revision;
+                            c.last_error_revision = None;
+                            c.last_error_code = None;
                             shared_for_recv.ack_condvar.notify_all();
                         }
                     }
                 }
-                ClientMessage::Heartbeat { revision, profile_id } => {
+                ClientMessage::Heartbeat { revision: _, profile_id } => {
                     if profile_id == profile_for_recv {
                         let mut clients = shared_for_recv.connected_clients.lock().unwrap();
                         if let Some(c) = clients.get_mut(&profile_id) {
                             c.last_seen = Instant::now();
-                            if revision == shared_for_recv.current_revision.load(Ordering::SeqCst) {
-                                c.last_acked_revision = revision;
-                            }
+                        }
+                    }
+                }
+                ClientMessage::Error { revision, profile_id, code } => {
+                    if profile_id == profile_for_recv {
+                        let mut clients = shared_for_recv.connected_clients.lock().unwrap();
+                        if let Some(c) = clients.get_mut(&profile_id) {
+                            c.last_seen = Instant::now();
+                            c.last_error_revision = Some(revision);
+                            c.last_error_code = Some(code);
+                            shared_for_recv.ack_condvar.notify_all();
                         }
                     }
                 }
@@ -411,6 +425,18 @@ impl NativeEnforcer for BrowserBridge {
         }
 
         // 2. Process domain blocking
+        if !domains.is_empty() {
+            let clients = self.shared.connected_clients.lock().unwrap();
+            let required = self.shared.required_profiles.lock().unwrap();
+            let has_explicit_required = required.values().any(|(_, is_req)| *is_req);
+            if !has_explicit_required && clients.is_empty() {
+                self.shared.is_active.store(false, Ordering::SeqCst);
+                return Err(EnforcerError::HostsFileError(
+                    "No browser companion connected to enforce website blocking rules.".into(),
+                ));
+            }
+        }
+
         let new_rev = self.shared.current_revision.fetch_add(1, Ordering::SeqCst) + 1;
         *self.shared.current_domains.lock().unwrap() = domains.to_vec();
         self.shared.is_active.store(true, Ordering::SeqCst);
@@ -431,15 +457,41 @@ impl NativeEnforcer for BrowserBridge {
 
         let mut clients = self.shared.connected_clients.lock().unwrap();
         loop {
+            // Check if any client reported an error for this revision
+            for (id, client) in clients.iter() {
+                if client.last_error_revision == Some(new_rev) {
+                    let err_code = client.last_error_code.as_deref().unwrap_or("unknown error");
+                    self.shared.is_active.store(false, Ordering::SeqCst);
+                    return Err(EnforcerError::HostsFileError(format!(
+                        "Browser extension '{}' reported an error applying blocking rules: {}",
+                        id, err_code
+                    )));
+                }
+            }
+
             let required = self.shared.required_profiles.lock().unwrap();
             let mut all_acked = true;
 
-            for (req_id, (_, is_req)) in required.iter() {
-                if *is_req {
-                    let has_acked = clients.get(req_id).map(|c| c.last_acked_revision >= new_rev).unwrap_or(false);
-                    if !has_acked {
-                        all_acked = false;
-                        break;
+            let has_explicit_required = required.values().any(|(_, is_req)| *is_req);
+            if has_explicit_required {
+                for (req_id, (_, is_req)) in required.iter() {
+                    if *is_req {
+                        let has_acked = clients.get(req_id).map(|c| c.last_acked_revision >= new_rev).unwrap_or(false);
+                        if !has_acked {
+                            all_acked = false;
+                            break;
+                        }
+                    }
+                }
+            } else if !domains.is_empty() {
+                if clients.is_empty() {
+                    all_acked = false;
+                } else {
+                    for client in clients.values() {
+                        if client.last_acked_revision < new_rev {
+                            all_acked = false;
+                            break;
+                        }
                     }
                 }
             }
