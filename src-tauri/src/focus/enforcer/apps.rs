@@ -34,7 +34,7 @@ impl Reconciler {
                 }
                 Some((first_seen, forced)) => {
                     let elapsed = now.saturating_sub(*first_seen);
-                    if *forced && elapsed >= Duration::from_secs(1) {
+                    if *forced && elapsed >= Duration::from_secs(3) {
                         return Err(EnforcerError::ProcessTerminationFailed(
                             "A blocked application did not exit after forced termination.".into(),
                         ));
@@ -80,15 +80,20 @@ impl ApplicationMonitor {
             let start = Instant::now();
             let mut policy = Reconciler::default();
             let mut ready = Some(ready_tx);
+            let mut failure_since = None;
             loop {
                 match policy.reconcile(backend.as_mut(), start.elapsed()) {
                     Ok(true) => {
+                        failure_since = None;
                         if let Some(sender) = ready.take() { let _ = sender.send(()); }
                     }
-                    Ok(false) => {}
+                    Ok(false) => { failure_since = None; }
                     Err(error) => {
-                        *error_worker.lock().unwrap() = Some(error.to_string());
-                        break;
+                        if ready.is_some() || failure_since.get_or_insert_with(Instant::now).elapsed() >= Duration::from_secs(2) {
+                            *error_worker.lock().unwrap() = Some(error.to_string());
+                            break;
+                        }
+                        log::warn!("[apps] retrying process reconciliation: {error}");
                     }
                 }
                 match stop_rx.recv_timeout(Duration::from_millis(250)) {
@@ -98,7 +103,7 @@ impl ApplicationMonitor {
             }
         }).map_err(|e| EnforcerError::ProcessTerminationFailed(e.to_string()))?;
         let mut monitor = Self { stop_tx, error, worker: Some(worker) };
-        if ready_rx.recv_timeout(Duration::from_secs(2)).is_err() {
+        if ready_rx.recv_timeout(Duration::from_secs(4)).is_err() {
             let message = monitor.error.lock().unwrap().clone()
                 .unwrap_or_else(|| "Timed out waiting for blocked applications to exit.".into());
             monitor.shutdown();
@@ -203,7 +208,7 @@ mod tests {
         let mut policy = Reconciler::default();
         policy.reconcile(&mut backend, Duration::ZERO).unwrap();
         policy.reconcile(&mut backend, Duration::from_millis(500)).unwrap();
-        assert!(policy.reconcile(&mut backend, Duration::from_secs(1)).is_err());
+        assert!(policy.reconcile(&mut backend, Duration::from_secs(3)).is_err());
     }
 
     #[test]
@@ -224,6 +229,37 @@ mod tests {
         monitor.stop().unwrap();
         inventory.lock().unwrap().push(process(43, 2));
         assert_eq!(*inventory.lock().unwrap(), [process(43, 2)]);
+    }
+
+    #[test]
+    fn monitor_retries_transient_failure_and_terminates_relaunches() {
+        struct Inventory(Arc<Mutex<(Vec<RunningProcess>, bool)>>);
+        impl ProcessBackend for Inventory {
+            fn snapshot(&mut self) -> Result<Vec<RunningProcess>, EnforcerError> {
+                Ok(self.0.lock().unwrap().0.clone())
+            }
+            fn request_exit(&mut self, process: &RunningProcess, _: bool) -> Result<(), EnforcerError> {
+                let mut state = self.0.lock().unwrap();
+                if state.1 {
+                    state.1 = false;
+                    return Err(EnforcerError::ProcessTerminationFailed("transient".into()));
+                }
+                state.0.retain(|entry| entry != process);
+                Ok(())
+            }
+        }
+        let inventory = Arc::new(Mutex::new((Vec::new(), true)));
+        let monitor = ApplicationMonitor::start_backend(Box::new(Inventory(inventory.clone()))).unwrap();
+        for pid in 1..=5 {
+            inventory.lock().unwrap().0.push(process(pid, pid as u64));
+            let deadline = Instant::now() + Duration::from_secs(2);
+            while !inventory.lock().unwrap().0.is_empty() && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            assert!(inventory.lock().unwrap().0.is_empty(), "relaunch {pid} remained running");
+        }
+        assert!(monitor.health().is_ok());
+        monitor.stop().unwrap();
     }
 
     #[test]
