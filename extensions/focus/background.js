@@ -1,16 +1,37 @@
 import { canonicalDomains, rulesForPolicy, isUrlBlocked } from './policy.js';
 import { tryNativePairing } from './native-pairing.js';
 
+const api = (typeof globalThis.browser !== 'undefined' && globalThis.browser.runtime)
+  ? globalThis.browser
+  : (typeof globalThis.chrome !== 'undefined' ? globalThis.chrome : null);
+
 let socket = null;
 let currentRevision = 0;
 let lastAckedRevision = 0;
 let heartbeatTimer = null;
 let reconnectTimer = null;
 
-async function getSelfInfo() {
-  if (typeof chrome !== 'undefined' && chrome.management && chrome.management.getSelf) {
+async function getStorage(keys) {
+  if (!api || !api.storage || !api.storage.local) return {};
+  try {
+    const res = api.storage.local.get(keys);
+    if (res && typeof res.then === 'function') {
+      return await res;
+    }
+  } catch {}
+  return new Promise((resolve) => {
     try {
-      const info = await chrome.management.getSelf();
+      api.storage.local.get(keys, (items) => resolve(items || {}));
+    } catch {
+      resolve({});
+    }
+  });
+}
+
+async function getSelfInfo() {
+  if (api && api.management && api.management.getSelf) {
+    try {
+      const info = await api.management.getSelf();
       return {
         install_type: info.installType || 'development',
         may_disable: info.mayDisable !== false
@@ -24,8 +45,16 @@ async function getSelfInfo() {
 
 function getBrowserKind() {
   if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.getURL('').startsWith('moz-extension://')) {
-    if (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().includes('zen')) {
-      return 'zen';
+    if (typeof navigator !== 'undefined' && navigator.userAgent) {
+      const ua = navigator.userAgent.toLowerCase();
+      if (ua.includes('zen')) {
+        return 'zen';
+      }
+    }
+    if (typeof navigator !== 'undefined' && navigator.userAgentData && navigator.userAgentData.brands) {
+      if (navigator.userAgentData.brands.some(b => b.brand && b.brand.toLowerCase().includes('zen'))) {
+        return 'zen';
+      }
     }
     return 'firefox';
   }
@@ -40,7 +69,7 @@ async function connect() {
     return;
   }
 
-  const { token, profile_id, port } = await chrome.storage.local.get(['token', 'profile_id', 'port']);
+  const { token, profile_id, port } = await getStorage(['token', 'profile_id', 'port']);
   if (!token || !profile_id) {
     console.log('[pomotroid-focus] Missing token or profile_id. Configure in extension options.');
     return;
@@ -105,7 +134,7 @@ function startHeartbeat(profile_id) {
     if (socket && socket.readyState === WebSocket.OPEN) {
       const hb = {
         type: 'heartbeat',
-        revision: currentRevision,
+        revision: lastAckedRevision,
         profile_id
       };
       socket.send(JSON.stringify(hb));
@@ -122,41 +151,45 @@ function stopHeartbeat() {
 
 async function applyPolicy(policy, profile_id) {
   const { revision, active, domains } = policy;
-  currentRevision = revision;
-
   try {
     if (active && domains && domains.length > 0) {
       const newRules = rulesForPolicy(domains);
-      const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
+      const existingRules = await api.declarativeNetRequest.getDynamicRules();
       const removeRuleIds = existingRules.map(r => r.id);
 
-      await chrome.declarativeNetRequest.updateDynamicRules({
+      await api.declarativeNetRequest.updateDynamicRules({
         removeRuleIds,
         addRules: newRules
       });
 
       // Redirect any currently open tabs matching blocked domains
-      if (chrome.tabs && chrome.tabs.query) {
-        const tabs = await chrome.tabs.query({});
+      if (api.tabs && api.tabs.query) {
+        const tabs = await api.tabs.query({});
         for (const tab of tabs) {
           if (tab.url && isUrlBlocked(tab.url, domains)) {
-            const blockedUrl = chrome.runtime.getURL('blocked.html?url=' + encodeURIComponent(tab.url));
-            chrome.tabs.update(tab.id, { url: blockedUrl }).catch(() => {});
+            const blockedUrl = api.runtime.getURL('blocked.html?url=' + encodeURIComponent(tab.url));
+            if (api.tabs.update) {
+              try {
+                const res = api.tabs.update(tab.id, { url: blockedUrl });
+                if (res && typeof res.catch === 'function') res.catch(() => {});
+              } catch {}
+            }
           }
         }
       }
     } else {
       // Clear all rules
-      const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
+      const existingRules = await api.declarativeNetRequest.getDynamicRules();
       const removeRuleIds = existingRules.map(r => r.id);
       if (removeRuleIds.length > 0) {
-        await chrome.declarativeNetRequest.updateDynamicRules({
+        await api.declarativeNetRequest.updateDynamicRules({
           removeRuleIds,
           addRules: []
         });
       }
     }
 
+    currentRevision = revision;
     lastAckedRevision = revision;
     if (socket && socket.readyState === WebSocket.OPEN) {
       const ack = {
@@ -173,34 +206,34 @@ async function applyPolicy(policy, profile_id) {
         type: 'error',
         revision,
         profile_id,
-        code: err.message || 'dnr_error'
+        code: (err && err.message) ? err.message : 'dnr_error'
       };
       socket.send(JSON.stringify(errorMsg));
     }
   }
 }
 
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === 'reconnect') {
-    if (socket) {
-      try { socket.close(); } catch {}
+if (api && api.runtime && api.runtime.onMessage) {
+  api.runtime.onMessage.addListener((msg) => {
+    if (msg.type === 'reconnect') {
+      if (socket) {
+        try { socket.close(); } catch {}
+      }
+      connect();
     }
-    connect();
-  }
-});
+  });
+}
 
 // Automated bootstrap with native messaging pairing fallback to stored config
 async function bootstrap() {
-  const connectNative = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.connectNative)
-    ? chrome.runtime.connectNative.bind(chrome.runtime)
-    : ((typeof browser !== 'undefined' && browser.runtime && browser.runtime.connectNative)
-      ? browser.runtime.connectNative.bind(browser.runtime)
-      : null);
+  const connectNative = (api && api.runtime && api.runtime.connectNative)
+    ? api.runtime.connectNative.bind(api.runtime)
+    : null;
 
   if (connectNative) {
     await tryNativePairing({
       connectNative,
-      storage: chrome.storage.local,
+      storage: api.storage ? api.storage.local : null,
       onPaired: () => {
         console.log('[pomotroid-focus] Paired automatically via native messaging.');
       }

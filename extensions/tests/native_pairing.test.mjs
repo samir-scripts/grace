@@ -83,3 +83,44 @@ test('tryNativePairing handles port disconnect gracefully', async () => {
   const success = await pairingPromise;
   assert.equal(success, false);
 });
+
+test('tryNativePairing supports Promise-returning storage (Gecko WebExtension storage)', { timeout: 1000 }, async () => {
+  let postedMessage = null;
+  let messageListener = null;
+
+  const mockPort = {
+    postMessage: (msg) => { postedMessage = msg; },
+    onMessage: { addListener: (fn) => { messageListener = fn; } },
+    onDisconnect: { addListener: () => {} }
+  };
+
+  const stored = {};
+  // Mock storage that only returns Promises and does not invoke callback
+  const mockPromiseStorage = {
+    get: async (keys) => {
+      return stored;
+    },
+    set: async (items) => {
+      Object.assign(stored, items);
+    }
+  };
+
+  const pairingPromise = tryNativePairing({
+    connectNative: () => mockPort,
+    storage: mockPromiseStorage,
+    onPaired: () => {}
+  });
+
+  messageListener({
+    type: 'config',
+    token: 'gecko-token-789',
+    port: 1421
+  });
+
+  const success = await pairingPromise;
+  assert.equal(success, true);
+  assert.equal(stored.token, 'gecko-token-789');
+  assert.equal(stored.port, 1421);
+  assert.ok(stored.profile_id);
+  assert.equal(stored.is_native_paired, true);
+});
