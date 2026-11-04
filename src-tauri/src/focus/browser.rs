@@ -125,6 +125,7 @@ struct SharedState {
     current_domains: Mutex<Vec<String>>,
     required_profiles: Mutex<HashMap<String, (BrowserKind, bool)>>,
     connected_clients: Mutex<HashMap<String, ConnectedClient>>,
+    active_participants: Mutex<HashSet<String>>,
     ack_condvar: Condvar,
     apps: Mutex<Option<ApplicationMonitor>>,
 }
@@ -185,6 +186,7 @@ impl BrowserBridge {
             current_domains: Mutex::new(Vec::new()),
             required_profiles: Mutex::new(required_profiles),
             connected_clients: Mutex::new(HashMap::new()),
+            active_participants: Mutex::new(HashSet::new()),
             ack_condvar: Condvar::new(),
             apps: Mutex::new(None),
         });
@@ -422,17 +424,20 @@ async fn handle_socket(
 
 impl NativeEnforcer for BrowserBridge {
     fn apply_blocking(&self, apps: &[AppTarget], domains: &[String]) -> Result<(), EnforcerError> {
-        // 1. Process application blocking
-        if !apps.is_empty() {
-            let monitor = ApplicationMonitor::start(apps.to_vec())?;
-            *self.shared.apps.lock().unwrap() = Some(monitor);
-        }
-
         // 2. Process domain blocking
         let (new_rev, target_participants) = {
             let clients = self.shared.connected_clients.lock().unwrap();
             let required = self.shared.required_profiles.lock().unwrap();
             let has_explicit_required = required.values().any(|(_, is_req)| *is_req);
+            if !domains.is_empty() {
+                if let Some((id, _)) = required.iter().find(|(id, (_, is_required))| {
+                    *is_required && !clients.contains_key(*id)
+                }) {
+                    return Err(EnforcerError::HostsFileError(format!(
+                        "Required browser companion '{id}' is not connected."
+                    )));
+                }
+            }
             if !domains.is_empty() && !has_explicit_required && clients.is_empty() {
                 self.shared.is_active.store(false, Ordering::SeqCst);
                 return Err(EnforcerError::HostsFileError(
@@ -450,6 +455,11 @@ impl NativeEnforcer for BrowserBridge {
                     participants.insert(req_id.clone());
                 }
             }
+            *self.shared.active_participants.lock().unwrap() = if domains.is_empty() {
+                HashSet::new()
+            } else {
+                participants.clone()
+            };
             (new_rev, participants)
         };
 
@@ -508,6 +518,11 @@ impl NativeEnforcer for BrowserBridge {
             let res = self.shared.ack_condvar.wait_timeout(clients, remaining).unwrap();
             clients = res.0;
         }
+        drop(clients);
+        if !apps.is_empty() {
+            let monitor = ApplicationMonitor::start(apps.to_vec())?;
+            *self.shared.apps.lock().unwrap() = Some(monitor);
+        }
 
         Ok(())
     }
@@ -521,6 +536,7 @@ impl NativeEnforcer for BrowserBridge {
         let new_rev = self.shared.current_revision.fetch_add(1, Ordering::SeqCst) + 1;
         *self.shared.current_domains.lock().unwrap() = Vec::new();
         self.shared.is_active.store(false, Ordering::SeqCst);
+        self.shared.active_participants.lock().unwrap().clear();
 
         let msg = ServerMessage::Policy {
             version: BROWSER_PROTOCOL_VERSION,
@@ -574,6 +590,13 @@ impl NativeEnforcer for BrowserBridge {
                     }
                     None => return Err(EnforcerError::LeaseLost),
                 }
+            }
+        }
+        for id in self.shared.active_participants.lock().unwrap().iter() {
+            match clients.get(id) {
+                Some(client) if client.last_seen.elapsed() <= Duration::from_secs(BROWSER_LEASE_SECS)
+                    && client.last_acked_revision >= current_rev => {}
+                _ => return Err(EnforcerError::LeaseLost),
             }
         }
 

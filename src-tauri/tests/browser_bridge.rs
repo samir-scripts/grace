@@ -234,6 +234,52 @@ async fn test_browser_bridge_fails_when_domains_non_empty_and_no_clients() {
 }
 
 #[tokio::test]
+async fn disconnected_unconfigured_companion_causes_lease_loss() {
+    let bridge = Arc::new(BrowserBridge::new_in_memory("lease-token".into(), 14239).await.unwrap());
+    let (mut ws, _) = connect_async("ws://127.0.0.1:14239/focus-browser").await.unwrap();
+    ws.send(Message::Text(json!({
+        "type": "hello", "version": 1, "token": "lease-token", "profile_id": "temporary",
+        "browser": "chrome", "install_type": "development", "may_disable": true
+    }).to_string().into())).await.unwrap();
+    let task = tokio::spawn(async move {
+        while let Some(Ok(Message::Text(text))) = ws.next().await {
+            let msg: serde_json::Value = serde_json::from_str(&text).unwrap();
+            if msg["type"] == "policy" {
+                let ack = json!({"type": "ack", "revision": msg["revision"], "profile_id": "temporary"});
+                ws.send(Message::Text(ack.to_string().into())).await.unwrap();
+            }
+        }
+    });
+    for _ in 0..100 {
+        if bridge.get_setup_info().profiles.iter().any(|p| p.is_connected) { break; }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let b = bridge.clone();
+    tokio::task::spawn_blocking(move || b.apply_blocking(&[], &["example.com".into()])).await.unwrap().unwrap();
+    task.abort();
+    for _ in 0..100 {
+        if bridge.get_setup_info().profiles.is_empty() { break; }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(bridge.health().is_err(), "disconnected participant must invalidate protection");
+    bridge.shutdown().await;
+}
+
+#[tokio::test]
+async fn mixed_rules_require_browser_before_inspecting_applications() {
+    let bridge = Arc::new(BrowserBridge::new_in_memory("preflight-token".into(), 14240).await.unwrap());
+    let app = pomotroid_lib::focus::model::AppTarget {
+        id: "test".into(), name: "Test".into(), identifier: String::new(), platform: "all".into(),
+    };
+    let b = bridge.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        b.apply_blocking(&[app], &["example.com".into()])
+    }).await.unwrap();
+    assert!(matches!(result, Err(pomotroid_lib::focus::enforcer::EnforcerError::HostsFileError(_))));
+    bridge.shutdown().await;
+}
+
+#[tokio::test]
 async fn test_browser_bridge_requires_all_connected_participants_even_with_required_profile() {
     let bridge = Arc::new(BrowserBridge::new_in_memory("token-dual".into(), 14225).await.unwrap());
     bridge.set_required_profile("prof-req", BrowserKind::Chrome, true);
