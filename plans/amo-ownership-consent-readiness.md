@@ -11,7 +11,7 @@ Evidence date: 2026-11-05 (UTC). This is an evidence-only prerequisite for a sep
 | `history_status` | `BLOCKED` | Listed/unlisted version history requires authenticated account evidence. |
 | `source_version_availability` | `UNVERIFIED` | Source version is not proof that the version is unused on AMO. |
 | `classification_status` | `BLOCKED` | Source and Mozilla taxonomy mapped below; protocol-field classification and enterprise treatment need authoritative clarification. |
-| `consent_status` | `UNVERIFIED` | Exact obligations and source gaps are the next evidence task. |
+| `consent_status` | `BLOCKED` | General Firefox rules are documented below; exact data classifications, applicable enterprise behavior, and compliant implementation remain unresolved. |
 | Overall | `BLOCKED` | Not permission to submit, sign, modify declarations, or merge. |
 
 ## Source baseline
@@ -119,4 +119,39 @@ No source path in the audited package was found transmitting a user's health inf
 > We are preparing an unlisted Firefox MV3 companion for a local desktop focus application. Before any submission, please clarify the applicable `data_collection_permissions` categories and consent for these synthetic flows: (1) an extension sends a constant native `{type:'connect'}` message and receives a generated local pairing token and port; (2) over authenticated localhost WebSocket it sends a generated persistent profile identifier, browser kind, install type and disableability, a derived HMAC proof, and revision/heartbeat/ACK values; (3) an error field may contain browser API exception text; (4) the desktop supplies user-selected blocked domains, and the extension compares open-tab URLs locally and redirects matching tabs to an extension page containing the URL in its local query string. No visited URL is deliberately included in the bridge protocol. Which fields are reportable, which exact categories apply, and does direction/local-only processing matter? If essential browser/install metadata is `technicalAndInteraction`, how can functionality remain available when the user opts out? Does a consumer application writing an enterprise policy on the user's own machine qualify for the enterprise consent exception? Please distinguish Firefox 115–139 from Firefox 140+ and policy-installed unlisted extensions.
 
 The owner should send this through an appropriate Mozilla support/reviewer channel and retain the dated response/reference. Do not send automatically or include real tokens, profile IDs, URLs, account details, or private logs. Until the classification and exception questions are answered, `classification_status` remains `BLOCKED`; no manifest declaration is authorized.
+
+
+## Firefox consent requirements and implementation gap
+
+### Browser-managed experience
+
+[Mozilla's built-in consent guidance](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/) states desktop Firefox 140+ supports the built-in data-collection experience. A required data category is presented in the installation prompt; a user who does not agree can cancel installation. Optional categories generally are not granted by default and can be requested via `permissions.request()` from a user-activated event. Users can change optional choices in the add-on's **Permissions and data** section in `about:addons`. `technicalAndInteraction` is special: it is optional, and the installation prompt can offer a choice for it.
+
+Mozilla says `browser.permissions.getAll()` can be feature-detected through the presence of its `data_collection` property. On updates, Firefox shows newly added required data permissions, except the special `none` type. These are documented Firefox behaviors, not observed results for this add-on or Zen. Policy installation can bypass the browser's built-in prompt, so the default install-time UI must not be assumed to appear in the actual packaging path.
+
+### Firefox 115–139 and custom disclosure
+
+The manifest's minimum remains `115.0`; Firefox desktop 115–139 predates the built-in experience. Mozilla's [older-version guidance](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/#data-collection-experience-on-older-Firefox-versions) says a data-collecting extension must either disable the collection on those versions or present a custom experience. Raising the minimum is another Mozilla-described option, but is not authorized by this task.
+
+When custom consent is required, [Mozilla policy §6.2.2](https://extensionworkshop.com/documentation/publish/add-on-policies/#user-consent-and-control) requires an unmissable, single-page, readable in-add-on experience immediately after installation, with all choices and consequences prominent; it specifies appropriate presentation on relevant updates as well. Avoid hidden options, reduced contrast and other deceptive patterns. Explain the actual data types, recipients and purposes, and the impact of accepting or declining. Provide separate personal and technical choices if both are transmitted.
+
+Before transmitting personal information, the user must affirmatively opt in; if the primary function cannot work without it, Mozilla requires a choice to accept or uninstall. For technical and interaction data, the user must be able to opt out during initial consent, and declining that transmission must not restrict add-on functionality. Do not decide whether this protocol meets those categories without the unresolved classification response. Mozilla's narrow [implicit-consent exception](https://extensionworkshop.com/documentation/publish/add-on-policies/#implicit-consent-for-self-evident-single-use-extension) requires all stated conditions, including AMO hosting and immediate user-initiated transmission, and excludes persistent identifiers. The ongoing heartbeat/profile-ID protocol must not be assumed eligible.
+
+### Enterprise-policy ambiguity
+
+Mozilla's [general policy §6.2](https://extensionworkshop.com/documentation/publish/add-on-policies/#user-consent-and-control) says extensions installed by enterprise policy **in an enterprise environment** may bypass asking for data-collection consent, and that Firefox's built-in experience bypasses the prompt by default. Its separate [enterprise development guidance](https://extensionworkshop.com/documentation/enterprise/enterprise-development/#enterprise-consent) says even `force_installed` or `normal_installed` enterprise extensions must implement disclosure/consent; it describes a `3rdparty` policy value read via `storage.managed` and requires the experience when that value is absent.
+
+These passages address different implementation details and do not establish that a consumer app writing a policy into a user's browser qualifies as an enterprise environment or supplies managed consent. The exact interaction of the built-in and custom experiences needs Mozilla clarification; no exemption is claimed. The current extension sources do not contain a `storage.managed` consent read. No managed-consent setting is proposed or authorized here.
+
+### Current code and required separate work
+
+`extensions/focus/background.js:269-300` calls `bootstrap()` on startup/install and immediately at module load. `native-pairing.js:48-56,104` opens the native host and sends `{type:'connect'}`; the host responds with local configuration. If pairing succeeds or stored configuration exists, `background.js:87-103,119-142` initiates the WebSocket authentication; authenticated metadata includes the persistent profile identifier and browser/install details. The options page offers pairing inputs, not an in-extension data-consent experience. The manifest contains no data-collection declaration.
+
+The first native request is a constant control message, not itself proven to be reportable personal data. Determine classification of every following transfer before calling any specific transfer unauthorized. If Mozilla confirms a pre-transfer consent obligation, a **separately approved implementation** must gate each covered transmission before it starts, preserve opt-out functionality required for technical data, and handle denial, later changes and upgrades. Pairing UI, macOS Accessibility permission, or a policy-backed installed flag do not establish consent.
+
+### Zen and acceptance gate
+
+Zen's behavior for built-in prompts, enterprise policy, version support and persistence is `UNVERIFIED`; Firefox documentation is not Zen evidence. In a separately approved disposable macOS guest with a genuinely Mozilla-signed add-on, verify Firefox and Zen independently: installed/policy-installed disclosure, accept and decline, no covered transfer before required consent, optional-data opt-out without loss of required functionality, restart persistence, upgrade, and withdrawal/reconsent wherever Mozilla's final classification requires them. Record actual browser versions and redacted observations. Do not use personal profiles, policy writes or process enforcement.
+
+**Readiness decision: `BLOCKED`.** Owner/role and full version history are not evidenced; field classifications and consumer-policy exception remain unresolved; any required consent implementation and installed Firefox/Zen behavior are unverified. This report does not authorize submission, a manifest declaration or version change, signing, or merge.
 
