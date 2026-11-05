@@ -6,9 +6,9 @@ Evidence date: 2026-11-05 (UTC). This is an evidence-only prerequisite for a sep
 
 | Gate | Status | Evidence |
 | --- | --- | --- |
-| `ownership_status` | `UNVERIFIED` | AMO access was reported; authority over the exact GUID has not been evidenced. |
+| `ownership_status` | `BLOCKED` | No authenticated evidence of an owner role for the exact GUID. See account-access boundary below. |
 | `release_authority` | `UNVERIFIED` | No authenticated owner/developer role record. |
-| `history_status` | `UNVERIFIED` | Listed/unlisted version history has not been inspected in an authenticated account. |
+| `history_status` | `BLOCKED` | Listed/unlisted version history requires authenticated account evidence. |
 | `source_version_availability` | `UNVERIFIED` | Source version is not proof that the version is unused on AMO. |
 | `classification_status` | `UNVERIFIED` | Source/policy mapping is the next evidence task. |
 | `consent_status` | `UNVERIFIED` | Exact obligations and source gaps are the next evidence task. |
@@ -56,3 +56,28 @@ f02c082fdf50080cd39026544fa6c19f93e5b69a369a8ee66b1704ca6133c2a3  scripts/build-
 - Pre-task Git inspection: branch `fix/focus-blocking-start`; index empty; 42 unstaged and 17 untracked paths. Preserve that pre-existing shared work. Commit only this task's two new evidence files, in separate logical batches.
 - Execution ruling: retain this dirty feature workspace, as the approved plan requires, rather than create a second worktree that omits uncommitted companion dependencies. Cost if wrong: source drift requires re-audit; hashes above detect it.
 - Execution ruling: this research changes no production code or behavior. Verify source anchors, hashes, citations and scope rather than manufacture runtime/source-text tests or rerun enforcement. Cost if wrong: documentation cannot prove browser acceptance; that gate remains explicitly blocked.
+
+## AMO authority and version-history evidence
+
+### Observed account-access boundary
+
+On 2026-11-05, browser session discovery found no managed tabs. Discovery of an existing Chrome relay session timed out after 10 seconds; no personal profile or cookies were inspected. A separately managed browser opened `https://addons.mozilla.org/developers/`, which resolved to `https://addons.mozilla.org/en-US/developers/` with title “Developer Hub :: Add-ons for Firefox”. Its “Submit or Manage Extensions” link points to Mozilla's account-login start route, not an authenticated add-on inventory.
+
+This proves only that the available managed session does not expose authenticated management evidence. It says nothing about the user's own AMO account, whether the ID is claimed, or which versions exist. No login credentials, account agreements, uploads, signing calls, role changes, or version reservations were supplied or performed.
+
+### Owner action needed
+
+1. Open [Developer Hub](https://addons.mozilla.org/developers/) and sign in personally. Do not send a password, API key/secret, cookies, or session export.
+2. Inspect the account's add-ons, including self-distributed/unlisted entries. Open the candidate's management record and match the **internal GUID** `focus@pomotroid.local`; the display name is insufficient.
+3. Record a redacted management URL/numeric AMO ID, exact GUID, effective role and date. Mozilla's [ownership guide](https://extensionworkshop.com/documentation/publish/add-on-ownership/) says both owners and developers can update/manage an add-on; only owners can add authors. An owner role proves ownership; a developer role proves release-management authority only. The guide documents “Edit Listing” and “Manage Authors & License”; inspect those views read-only and never click “Save Changes”.
+4. Inspect every accessible version and channel. Capture version string, listed/unlisted channel, submission/review/signing status where exposed, timestamp, and which older/deleted history is not visible. Include pending, rejected and disabled versions where present. The current versions-view label has not been observed in an authenticated session; use the account's actual navigation rather than a guessed endpoint.
+5. Provide a redacted record covering both GUID/role and history. Remove email addresses, personal profile IDs and unrelated add-ons. No upload is needed. If management/history is missing, record that limitation rather than infer an unused ID or version.
+
+Current result: no authenticated management record or version rows available; `source_version_availability` remains `UNVERIFIED` for `1.0.0`. No next version has been selected or written anywhere.
+
+### Owner-sendable support request if account inspection cannot resolve authority/history
+
+> We maintain the Pomotroid Focus Companion with Gecko ID `focus@pomotroid.local` and source version `1.0.0`. We need to establish rightful management authority and version history before any submission. Can you advise the verified owner/recovery route and how an authorized owner can inspect all listed/unlisted versions, including rejected, disabled, pending or deleted submissions? In particular, how can the owner establish whether `1.0.0` has already been consumed? We are not requesting reservation, signing, publication, an ID change or an account-role change. We can provide redacted authenticated account evidence privately through your approved process.
+
+Do not send this request automatically. An absent dashboard entry or public AMO 404 cannot establish uniqueness: Mozilla's [signing overview](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/#distributing-your-addon) states unlisted extensions cannot be publicly viewed/installed from AMO. [MDN's ID documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/browser_specific_settings#id) says AMO checks uniqueness at first signing; this task does not perform a signing experiment.
+
