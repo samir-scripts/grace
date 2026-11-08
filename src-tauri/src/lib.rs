@@ -59,7 +59,64 @@ use commands::{
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .menu(|app_handle| {
+            use tauri::menu::{Menu, MenuItem, MenuItemKind, PredefinedMenuItem};
+
+            let invalid_layout = || {
+                tauri::Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "unexpected macOS default menu layout: guarded Quit could not be installed",
+                ))
+            };
+            let menu = Menu::default(app_handle)?;
+            let root_items = menu.items()?;
+            let Some(MenuItemKind::Submenu(application_menu)) = root_items.first() else {
+                return Err(invalid_layout());
+            };
+            if application_menu.text()? != app_handle.package_info().name {
+                return Err(invalid_layout());
+            }
+            let application_items = application_menu.items()?;
+            let Some(MenuItemKind::Predefined(quit_item)) = application_items.last() else {
+                return Err(invalid_layout());
+            };
+            let quit_text = quit_item.text()?;
+            if quit_text != PredefinedMenuItem::quit(app_handle, None)?.text()? {
+                return Err(invalid_layout());
+            }
+
+            // Predefined macOS Quit calls terminate: directly, bypassing ExitRequested.
+            let guarded_quit = MenuItem::with_id(
+                app_handle,
+                "guarded-quit",
+                quit_text,
+                true,
+                Some("CmdOrCtrl+Q"),
+            )?;
+            application_menu.remove(quit_item)?;
+            application_menu.insert(&guarded_quit, application_items.len() - 1)?;
+            Ok(menu)
+        })
+        .on_menu_event(|app_handle, event| {
+            if event.id().as_ref() != "guarded-quit" {
+                return;
+            }
+            if let Some(focus) = app_handle.try_state::<Arc<focus::controller::FocusController>>() {
+                if focus.should_prevent_app_exit() {
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.unminimize();
+                        let _ = window.set_focus();
+                    }
+                    return;
+                }
+            }
+            app_handle.exit(0);
+        });
+    builder
         .plugin(
             LogBuilder::new()
                 .targets([Target::new(TargetKind::LogDir { file_name: None })])
