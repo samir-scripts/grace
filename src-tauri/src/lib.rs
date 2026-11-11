@@ -3,6 +3,7 @@ pub mod commands;
 pub mod db;
 pub mod notifications;
 pub mod focus;
+pub mod platform;
 pub mod settings;
 pub mod shortcuts;
 pub mod themes;
@@ -16,9 +17,12 @@ use std::sync::Arc;
 use log::LevelFilter;
 use tauri::Manager;
 use tauri_plugin_log::{Builder as LogBuilder, RotationStrategy, Target, TargetKind};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 use commands::{
+    appearance_publish,
     accessibility_trusted,
+    accessibility_request,
     tray_supported,
     app_version,
     check_update,
@@ -59,6 +63,19 @@ use commands::{
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    let main_window_config = {
+        let config = context
+            .config_mut()
+            .app
+            .windows
+            .iter_mut()
+            .find(|window| window.label == "main")
+            .expect("main window configuration not found");
+        let original = config.clone();
+        config.create = false;
+        original
+    };
     let builder = tauri::Builder::default();
     #[cfg(target_os = "macos")]
     let builder = builder
@@ -76,7 +93,9 @@ pub fn run() {
             let Some(MenuItemKind::Submenu(application_menu)) = root_items.first() else {
                 return Err(invalid_layout());
             };
-            if application_menu.text()? != app_handle.package_info().name {
+            let expected_pkg = app_handle.package_info().name.as_str();
+            let expected_product = app_handle.config().product_name.as_deref();
+            if !matches_macos_application_menu_title(&application_menu.text()?, expected_pkg, expected_product) {
                 return Err(invalid_layout());
             }
             let application_items = application_menu.items()?;
@@ -130,7 +149,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .setup(|app| {
+        .setup(move |app| {
             // Capture Rust panics to the log file before the process terminates.
             std::panic::set_hook(Box::new(|info| {
                 log::error!("PANIC: {info}");
@@ -144,6 +163,41 @@ pub fn run() {
             std::fs::create_dir_all(&app_data_dir)
                 .expect("failed to create app data directory");
 
+            let browser_bridge = match tauri::async_runtime::block_on(
+                focus::browser::BrowserBridge::new_persistent(
+                    &app_data_dir,
+                    focus::browser::BROWSER_PORT_DEFAULT,
+                ),
+            ) {
+                Ok(bridge) => Arc::new(bridge),
+                Err(error) => {
+                    log::error!("failed to initialize browser focus bridge: {error}");
+                    let handle = app.handle().clone();
+                    app.dialog()
+                        .message(format!(
+                            "Grace could not start its browser connection on 127.0.0.1:{}.\n\nThe port may be in use by another instance or application. Close it if appropriate, then reopen Grace.\n\nDetails: {error}",
+                            focus::browser::BROWSER_PORT_DEFAULT,
+                        ))
+                        .title("Grace could not start")
+                        .kind(MessageDialogKind::Error)
+                        .buttons(MessageDialogButtons::Ok)
+                        .show(move |_| {
+                            // tauri-runtime-wry 2.11 discards request_exit's code.
+                            // Clean up explicitly before returning a failure status.
+                            let cleanup_handle = handle.clone();
+                            if handle.run_on_main_thread(move || {
+                                cleanup_handle.cleanup_before_exit();
+                                std::process::exit(1);
+                            }).is_err() {
+                                std::process::exit(1);
+                            }
+                        });
+                    return Ok(());
+                }
+            };
+
+            tauri::WebviewWindowBuilder::from_config(app.handle(), &main_window_config)?.build()?;
+
             // --- Database ---
             let db = match db::open(&app_data_dir) {
                 Ok(d) => {
@@ -153,7 +207,7 @@ pub fn run() {
                         env!("APP_BUILD_SHA")
                     );
                     log::info!(
-                        "Pomotroid v{} — data dir: {}",
+                        "Grace v{} — data dir: {}",
                         env!("CARGO_PKG_VERSION"),
                         app_data_dir.display()
                     );
@@ -211,13 +265,6 @@ pub fn run() {
             }
 
             // --- Browser Bridge & Focus controller ---
-            let browser_bridge = Arc::new(
-                tauri::async_runtime::block_on(focus::browser::BrowserBridge::new_persistent(
-                    &app_data_dir,
-                    focus::browser::BROWSER_PORT_DEFAULT,
-                ))
-                .expect("failed to initialize browser focus bridge"),
-            );
             app.manage(Arc::clone(&browser_bridge));
 
             let focus = Arc::new(focus::controller::FocusController::new(
@@ -337,7 +384,7 @@ pub fn run() {
                         // auto-populate it with all standard window-management items.
                         unsafe {
                             let ns_app_class = AnyClass::get(
-                                std::ffi::CStr::from_bytes_with_nul_unchecked(b"NSApplication\0"),
+                                c"NSApplication",
                             );
                             if let Some(cls) = ns_app_class {
                                 let ns_app: *mut AnyObject =
@@ -450,17 +497,15 @@ pub fn run() {
                             }
                         }
                     }
-                    tauri::WindowEvent::Resized(size) => {
-                        // Only persist window size while in the timer view so temporary
-                        // Settings/Statistics expanded layouts do not overwrite the user's timer size.
-                        if view_state_for_pos.is_timer_view() && !view_state_for_pos.is_transitioning() {
-                            if let Ok(conn) = db_for_pos.lock() {
-                                let _ = settings::save_setting(&conn, "window_width", &size.width.to_string());
-                                let _ = settings::save_setting(&conn, "window_height", &size.height.to_string());
-                                if let Ok(pos) = win_for_pos.outer_position() {
-                                    let _ = settings::save_setting(&conn, "window_x", &pos.x.to_string());
-                                    let _ = settings::save_setting(&conn, "window_y", &pos.y.to_string());
-                                }
+                    // Persist timer dimensions only; temporary panel sizes must not replace them.
+                    tauri::WindowEvent::Resized(size)
+                        if view_state_for_pos.is_timer_view() && !view_state_for_pos.is_transitioning() => {
+                        if let Ok(conn) = db_for_pos.lock() {
+                            let _ = settings::save_setting(&conn, "window_width", &size.width.to_string());
+                            let _ = settings::save_setting(&conn, "window_height", &size.height.to_string());
+                            if let Ok(pos) = win_for_pos.outer_position() {
+                                let _ = settings::save_setting(&conn, "window_x", &pos.x.to_string());
+                                let _ = settings::save_setting(&conn, "window_y", &pos.y.to_string());
                             }
                         }
                     }
@@ -483,6 +528,7 @@ pub fn run() {
             settings_reset_defaults,
             // Themes
             themes_list,
+            appearance_publish,
             // Sessions
             sessions_clear,
             // Stats
@@ -503,6 +549,7 @@ pub fn run() {
             open_log_dir,
             get_log_dir,
             accessibility_trusted,
+            accessibility_request,
             tray_supported,
             app_version,
             // Updater
@@ -531,25 +578,58 @@ pub fn run() {
             focus_browser_extension_remove,
             focus_enforcement_retry,
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building tauri application")
         .run(|app_handle, event| {
-            match event {
-                tauri::RunEvent::ExitRequested { api, .. } => {
-                    if let Some(focus) = app_handle.try_state::<std::sync::Arc<crate::focus::controller::FocusController>>() {
-                        if focus.should_prevent_app_exit() {
-                            api.prevent_exit();
-                            if let Some(window) = app_handle.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.unminimize();
-                                let _ = window.set_focus();
-                            }
-                        } else {
-                            focus.shutdown_blocking();
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                if let Some(focus) = app_handle.try_state::<std::sync::Arc<crate::focus::controller::FocusController>>() {
+                    if focus.should_prevent_app_exit() {
+                        api.prevent_exit();
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
                         }
+                    } else {
+                        focus.shutdown_blocking();
                     }
                 }
-                _ => {}
             }
         });
+}
+
+pub fn matches_macos_application_menu_title(
+    actual: &str,
+    package_name: &str,
+    product_name: Option<&str>,
+) -> bool {
+    let actual_trimmed = actual.trim();
+    if actual_trimmed.eq_ignore_ascii_case(package_name.trim()) {
+        return true;
+    }
+    if let Some(product) = product_name {
+        if actual_trimmed.eq_ignore_ascii_case(product.trim()) {
+            return true;
+        }
+        if actual_trimmed.trim_end_matches('.').eq_ignore_ascii_case(product.trim().trim_end_matches('.')) {
+            return true;
+        }
+    }
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_matches_macos_application_menu_title() {
+        assert!(matches_macos_application_menu_title("Grace", "pomotroid", Some("Grace")));
+        assert!(matches_macos_application_menu_title("grace.", "pomotroid", Some("grace.")));
+        assert!(matches_macos_application_menu_title("grace", "pomotroid", Some("grace.")));
+        assert!(matches_macos_application_menu_title("pomotroid", "pomotroid", Some("Grace")));
+        assert!(matches_macos_application_menu_title("Pomotroid", "pomotroid", Some("Grace")));
+        assert!(!matches_macos_application_menu_title("File", "pomotroid", Some("Grace")));
+        assert!(!matches_macos_application_menu_title("Edit", "pomotroid", Some("grace.")));
+    }
 }

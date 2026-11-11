@@ -33,18 +33,26 @@ fn main() {
     println!("cargo:rerun-if-changed=../extensions/chrome");
     println!("cargo:rerun-if-changed=../extensions/firefox");
     println!("cargo:rerun-if-changed=../extensions/safari");
+    println!("cargo:rerun-if-changed=../extensions/signed");
+    println!("cargo:rerun-if-changed=../scripts/build-browser-extensions.mjs");
+    println!("cargo:rerun-if-changed=../scripts/gecko-signed-artifact.mjs");
 
     let dist_xpi = std::path::Path::new("../extensions/dist/firefox/focus@pomotroid.local.xpi");
     let dist_chrome = std::path::Path::new("../extensions/dist/chrome");
-    if !dist_xpi.exists() || !dist_chrome.exists() {
-        let status = Command::new("node")
-            .arg("scripts/build-browser-extensions.mjs")
-            .current_dir("..")
-            .status();
-        if let Ok(s) = status {
-            if !s.success() {
-                println!("cargo:warning=Failed to build browser extensions automatically via node");
-            }
+    let release = std::env::var("PROFILE").as_deref() == Ok("release");
+    if release || !dist_xpi.exists() || !dist_chrome.exists() {
+        let mut command = Command::new("node");
+        command.arg("scripts/build-browser-extensions.mjs").current_dir("..");
+        if release {
+            command.arg("--require-signed");
+        } else {
+            command.arg("--development");
+        }
+        let status = command.status();
+        if release {
+            assert!(status.is_ok_and(|s| s.success()), "Failed to build required signed browser extension");
+        } else if !status.is_ok_and(|s| s.success()) {
+            println!("cargo:warning=Failed to build browser extensions automatically via node");
         }
     }
 

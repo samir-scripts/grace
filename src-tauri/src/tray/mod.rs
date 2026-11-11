@@ -270,7 +270,7 @@ pub fn create_tray(app: &AppHandle, state: &Arc<TrayState>) {
 
     let tray = TrayIconBuilder::new()
         .icon(image)
-        .tooltip("Pomotroid")
+        .tooltip("grace.")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray_icon, event| {
