@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createHash, generateKeyPairSync, verify as verifySignature } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomUUID, verify as verifySignature } from 'node:crypto';
 import { zipSync, strToU8 } from 'fflate';
 import { loadCredentials, createChromeWebStoreClient, runChromeWebStoreCli } from '../../scripts/chrome-web-store.mjs';
 
@@ -12,7 +12,7 @@ const publicKey = generateKeyPairSync('rsa', { modulusLength: 2048 }).publicKey
 const extensionId = [...createHash('sha256').update(Buffer.from(publicKey, 'base64')).digest('hex').slice(0, 32)]
   .map(char => String.fromCharCode(97 + Number.parseInt(char, 16))).join('');
 const config = {
-  publisher_id: 'b2e04e9e-5cd3-47ac-8021-dff43c978f6c',
+  publisher_id: randomUUID(),
   extension_id: extensionId,
   public_key: publicKey,
   privacy_policy_url: 'https://grace.example/privacy',
