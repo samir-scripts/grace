@@ -1,144 +1,101 @@
-<div align="center">
-  <img alt="Pomotroid" src=".github/images/pomotroid-title.png" width="800px">
-</div>
-<div align="center">
-  <img alt="Pomotroid in action" src=".github/images/pomotroid-screens.png" width="800px">
-</div>
+# Grace
 
-<p align="center">Simple and visually-pleasing Pomodoro timer.</p>
+A simple, configurable, and visually pleasing Pomodoro timer and focus blocker.
+
+> **Fork notice:** Grace is an independent fork of [Pomotroid](https://github.com/Splode/pomotroid) by Christopher Murphy, licensed under the MIT License. It adds authenticated browser focus blocking, native application interception, emergency exit protections, and a 3-branch CI/CD development pipeline.
 
 ---
 
 - [Overview](#overview)
 - [Features](#features)
+- [Focus Sessions & Blocking](#focus-sessions--blocking)
 - [Statistics](#statistics)
 - [Themes](#themes)
 - [Install](#install)
+- [Branching & Development](#branching--development)
 - [WebSocket API](#websocket-api)
-- [Development](#development)
 - [License](#license)
+
+---
 
 ## Overview
 
-Pomotroid is a simple and configurable Pomodoro timer. It aims to provide a visually-pleasing and reliable way to track productivity using the Pomodoro Technique.
-
-Built with [Tauri 2](https://tauri.app), [Rust](https://www.rust-lang.org), and [Svelte 5](https://svelte.dev).
+Grace is an offline-first desktop Pomodoro timer built with **Tauri 2**, **Rust**, and **Svelte 5** (SvelteKit static SPA). It helps you maintain momentum with configurable intervals, seamless theme switching, detailed statistics, and strict distraction-blocking focus sessions.
 
 ## Features
 
-- **Configurable timer** — customise work duration, break durations, and the number of rounds per long break
-- **Statistics** — daily, weekly, and all-time session history with charts and a 52-week heatmap
-- **38 bundled themes** — including Dracula, Nord, Tokyo Night, Catppuccin, Gruvbox, Rose Piné, and more; auto-switches with your OS light/dark preference
-- **Custom themes** — drop a JSON file into the themes folder; applied instantly without a restart
-- **Localization** — 8 languages: English, Spanish, French, German, Japanese, Chinese (Simplified), Turkish, and Portuguese; auto-detects OS language
-- **Global shortcuts** — control the timer from anywhere, even when the window is hidden
-- **Custom audio** — replace the built-in alert sounds with your own files
-- **Tick sounds** — optional ticking during work and break rounds, independently toggleable
-- **Dynamic tray icon** — progress arc updates in real time; reflects round type and pause state
-- **Minimise / close to tray** — keep Pomotroid running in the background
-- **Desktop notifications** — native OS alerts on round transitions
-- **Compact mode** — a minimal set of controls appears when the window is resized small
-- **Always on top** — optionally keep the timer above other windows
-- **WebSocket server** — opt-in local server for stream overlays and external integrations
-- **Diagnostic logging** — rotating log file with a one-click shortcut to the log folder
+- **Configurable timer** — customize work duration, break durations, and rounds per long break
+- **Focus sessions & blocking** — block distracting websites and desktop apps with authenticated browser companions
+- **Emergency unlock options** — continuous 60-second emergency hold or a secure emergency passphrase
+- **Statistics** — daily breakdowns, weekly bar charts with streak tracking, and an all-time 52-week heatmap
+- **38 bundled themes** — Dracula, Nord, Tokyo Night, Catppuccin, Gruvbox, Rosé Pine, and more; auto-switches with OS light/dark mode
+- **Custom themes** — hot-reload user themes directly from the themes folder without restarting
+- **Localization** — 8 languages: English, Spanish, French, German, Japanese, Chinese (Simplified), Portuguese, and Turkish
+- **Global & local shortcuts** — control the timer from anywhere, even when hidden or unfocused
+- **Dynamic tray icon** — real-time progress arc, round status, and minimize-to-tray support
+- **Desktop notifications** — native notifications on round transitions
+- **Compact mode** — minimal dial and controls when the window is resized smaller than 300x300
+- **WebSocket server** — opt-in local server on `127.0.0.1` for stream overlays and external automation
 
-## Statistics
+## Focus Sessions & Blocking
 
-Pomotroid tracks every completed session and surfaces the data across three views: a daily summary with an hourly breakdown, a weekly bar chart with streak tracking, and an all-time 52-week heatmap.
+Grace includes an integrated focus blocker that coordinates desktop enforcement with browser companions:
 
-<div align="center">
-  <img alt="Pomotroid statistics window" src=".github/images/pomotroid-stats.png" width="800px">
-</div>
+- **Browser companion extensions:** Chrome, Firefox (AMO-signed companion `focus@pomotroid.local`), and Safari.
+- **Mutual HMAC authentication:** Companions connect via WebSockets on loopback with nonce verification and signed session leases.
+- **Native OS protection:** macOS guarded-Quit prevents accidental Command-Q escapes during locked work sessions.
+- **Emergency Exit:** Unlock an urgent session with an intentional 60-second physical key hold or a pre-configured 30+ character emergency passphrase.
 
 ## Themes
 
-Pomotroid ships with 38 themes and supports fully custom themes with live hot-reload.
-
-![Screenshots of Pomotroid using various themes](.github/images/pomotroid-themes-preview.png)
-
-See [THEMES.md](./THEMES.md) for the full theme list and instructions on creating your own.
+Grace ships with 38 bundled themes and supports user-defined JSON themes. See [THEMES.md](./THEMES.md) for details on colors and custom theme setup.
 
 ## Install
 
-### Download
+Download the latest pre-built binaries for **Windows** (`.exe` installer), **macOS** (universal `.dmg`), and **Linux** (`.deb`, `.AppImage`, `.rpm`) from the [Releases](https://github.com/samir-scripts/grace/releases) page.
 
-Download the latest release from the [releases](https://github.com/Splode/pomotroid/releases) page.
+## Branching & Development
 
-Available for **Windows** (installer + standalone exe), **macOS** (universal DMG), and **Linux** (`.deb` + AppImage).
+Grace uses a 3-branch pipeline:
 
-> **Note:** Pomotroid is currently unsigned. Depending on your OS security settings you may see a warning on first launch — this is expected and can be safely dismissed.
+- `dev` — Primary integration branch. Feature (`feat/*`) and bugfix (`fix/*`) pull requests target `dev`.
+- `stage` — Pre-release staging branch. Promoted from `dev` for cross-platform packaging and end-to-end testing.
+- `release` — Production branch. Merged from `stage` and tagged (`vX.Y.Z`) to trigger draft GitHub Releases.
 
-### Linux notes
-
-**System tray on GNOME:** GNOME does not display tray icons by default. To use the tray icon feature (Settings → System → Show in System Tray), install the [AppIndicator and KStatusNotifierItem Support](https://extensions.gnome.org/extension/615/appindicator-support/) extension, then log out and back in. On Fedora: `sudo dnf install gnome-shell-extension-appindicator`. On Debian/Ubuntu it is pre-installed. Other desktop environments (KDE Plasma, XFCE, Cinnamon, MATE) support tray icons natively with no extra steps.
-
-### Homebrew (macOS)
-
-```sh
-brew install --cask pomotroid
-```
-
-> The Homebrew cask is maintained separately and may lag behind the latest release. Check the [releases](https://github.com/Splode/pomotroid/releases) page for the most current version.
-
-## Custom Themes
-
-Pomotroid supports user-created themes with automatic hot-reload — no restart required. See [THEMES.md](./THEMES.md) for directory paths, the full color reference, and a step-by-step guide.
-
-## WebSocket API
-
-Pomotroid exposes an optional WebSocket server (disabled by default) for integration with external tools, stream overlays, and automation scripts.
-
-**Enable it** in Settings → Advanced → WebSocket Server, then connect to `ws://127.0.0.1:<port>` (default port: 1314).
-
-### Messages
-
-**Client → Server**
-
-| Message                  | Description                     |
-| ------------------------ | ------------------------------- |
-| `{ "type": "getState" }` | Request the current timer state |
-
-**Server → Client**
-
-| Event         | Payload             | Description                                      |
-| ------------- | ------------------- | ------------------------------------------------ |
-| `state`       | `TimerState` object | Response to `getState`                           |
-| `roundChange` | `TimerState` object | Fired whenever the timer advances to a new round |
-| `error`       | `{ message }`       | Protocol error                                   |
-
-`TimerState` fields: `elapsed_secs`, `total_secs`, `is_running`, `is_paused`, `round_type`, `work_round_number`, `work_rounds_total`.
-
-## Development
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for full setup instructions, project structure, and the release process.
-
-### Quick start
+### Setup and verification
 
 ```bash
 # Install dependencies
-npm install
+npm ci
 
-# Run in development mode (hot-reload)
+# Run development server
 npm run tauri dev
 
-# Build a production release
+# Run frontend typecheck and localization compilation
+npm run check
+
+# Run frontend and extension tests
+npm test
+
+# Run Rust unit and integration tests
+cargo test --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_commands_callable
+
+# Run Rust linter
+cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+# Build desktop release bundles
 npm run tauri build
 ```
 
-### Localization
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines and release procedures.
 
-UI strings live in `src/messages/<locale>.json` (en, es, fr, de, ja, zh, pt, tr). The compiled output in `src/paraglide/` is generated at build time and is not committed to the repository.
+## WebSocket API
 
-**During development**, the Paraglide Vite plugin compiles messages automatically whenever `npm run tauri dev` or `npm run tauri build` is run — no manual step required.
+Grace exposes an optional WebSocket server for integrations. Enable it in **Settings → Advanced → WebSocket Server** (default port: `1314`).
 
-**After adding or changing message keys**, regenerate the output explicitly so that `svelte-check` and your editor can pick up the new types:
-
-```bash
-npm run paraglide:compile
-```
-
-This is also run automatically as part of `npm run check`.
+- Client can send `{"type": "getState"}`.
+- Server broadcasts `state` and `roundChange` events with elapsed time, round type, and work round progress.
 
 ## License
 
-MIT &copy; [Christopher Murphy](https://github.com/Splode)
+MIT License. Copyright &copy; 2017–2026 Christopher Murphy (Pomotroid upstream) and Grace contributors.

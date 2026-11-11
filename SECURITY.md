@@ -24,14 +24,13 @@ Download both the package and its `.asc` signature file from the release page, t
 
 ```sh
 # Debian package
-gpg --verify pomotroid_<version>_amd64.deb.asc pomotroid_<version>_amd64.deb
+gpg --verify grace_<version>_amd64.deb.asc grace_<version>_amd64.deb
 
 # RPM package
-gpg --verify pomotroid-<version>-1.x86_64.rpm.asc pomotroid-<version>-1.x86_64.rpm
+gpg --verify grace-<version>-1.x86_64.rpm.asc grace-<version>-1.x86_64.rpm
 
 # AppImage
-gpg --verify pomotroid_<version>_amd64.AppImage.asc pomotroid_<version>_amd64.AppImage
-```
+gpg --verify grace_<version>_amd64.AppImage.asc grace_<version>_amd64.AppImage
 
 A `Good signature` message confirms the file is genuine and unmodified.
 

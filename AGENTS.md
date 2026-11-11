@@ -2,7 +2,7 @@
 
 ## Project and working approach
 
-Pomotroid is an offline-first, themeable Pomodoro desktop app: **Tauri 2 + Rust**, **SvelteKit + Svelte 5 + TypeScript**, and SQLite. The Electron/Vue implementation has been replaced. This is the repository's agent guide, migrated from CLAUDE.md and checked against the current source.
+Grace is an offline-first, themeable Pomodoro desktop app and focus blocker: **Tauri 2 + Rust**, **SvelteKit + Svelte 5 + TypeScript**, and SQLite. It is an independent fork of Pomotroid that adds authenticated browser focus blocking, native application interception, emergency exit safeguards, and a 3-branch CI/CD workflow (`dev`, `stage`, `release`).
 
 Before changing behavior, trace the route/component → typed IPC wrapper → Rust command → owning module. Reuse existing patterns, keep changes narrow, and verify the affected desktop behavior. Frontend-only rendering cannot prove native IPC, tray, audio, or window behavior.
 
@@ -105,6 +105,12 @@ Built-in themes are JSON in `static/themes/`; custom themes live in `{app_data_d
 
 Paraglide configuration lives in `project.inlang/settings.json`; **message sources are `src/messages/{locale}.json`**. Run `npm run paraglide:compile` after message changes to regenerate `src/paraglide/`. Import messages from `$paraglide/messages.js`; use `setLocale()` from `src/lib/locale.svelte.ts` for reactive locale changes rather than Paraglide's setter directly. Treat generated output as generated, not hand-maintained source.
 
+## Secrets and signing
+
+- Keep real keys and credentials out of assistant and tool output, logs, errors, screenshots, clipboard, command-line arguments, artifacts, reports and tests. Use placeholders in examples; sanitize script output and errors before displaying or retaining them. Do not dump environments, credential files or credential-bearing HTTP responses; use redacted presence checks.
+- Never stage, commit or push real secrets on any branch, including ignored, force-added or already tracked files. Before any commit, inspect tracked and staged **file names** and use `git check-ignore` to confirm secret files are ignored; resolve any exposure before proceeding without printing values.
+- Store AMO signing credentials only in an owner-readable ignored `.env.amo.local` (mode `0600` or stricter) or a secure environment secret store. `scripts/sign-firefox.mjs` reads those sources; do not put credentials in its arguments. Verify signing source archives exclude environment files and other secrets before submission.
+
 ## Preserve the application aesthetic
 
 The timer dial is the visual focus. Extend the existing compact desktop design rather than introducing a generic dashboard or a new design system.
@@ -143,9 +149,11 @@ npm run tauri build          # Production desktop build
 npm run dev                  # Frontend-only Vite; native IPC unavailable
 npm run build                # Static frontend production build
 npm run check                # Paraglide compile + SvelteKit sync + Svelte/TS checks
+npm test                     # Frontend unit + browser extension test suites
 npm run paraglide:compile    # Regenerate localization output
 npm run format               # Prettier --write . (repository-wide; avoid unrelated churn)
-cargo test --manifest-path src-tauri/Cargo.toml
+cargo test --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_commands_callable
+cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 ```
 
-Rust unit/integration tests exist in the source modules; there is no npm test script. For frontend changes run `npm run check`; for Rust changes run relevant Rust tests and exercise the changed native path. For UI changes capture/inspect the affected surface, including compact mode and themes. Builds and unit tests alone do not prove native window/tray/audio behavior. For documentation-only changes verify referenced paths, script names and architectural claims; do not claim an app run that was not performed.
+Development follows a 3-branch pipeline: PRs merge to `dev`, promote to `stage` for cross-platform artifact testing, and tag releases on `release`. Rust unit/integration tests exist in `src-tauri/src` and `src-tauri/tests`. Run `npm run check` and `npm test` for frontend/extension changes; for Rust changes run `cargo test --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_commands_callable` and `cargo clippy`.
