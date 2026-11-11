@@ -295,7 +295,7 @@ pub fn generate_chrome_external_config(crx_path: Option<&Path>) -> serde_json::V
     if let Some(path) = crx_path {
         json!({
             "external_crx": path.to_string_lossy(),
-            "external_version": "1.0.0"
+            "external_version": "1.1.0"
         })
     } else {
         json!({

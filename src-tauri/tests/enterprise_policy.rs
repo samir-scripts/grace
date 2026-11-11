@@ -121,7 +121,7 @@ fn test_generate_chrome_external_extension_json() {
     let crx_path = std::path::Path::new("/tmp/focus.crx");
     let local_config = generate_chrome_external_config(Some(crx_path));
     assert_eq!(local_config["external_crx"], "/tmp/focus.crx");
-    assert_eq!(local_config["external_version"], "1.0.0");
+    assert_eq!(local_config["external_version"], "1.1.0");
 }
 
 #[test]
