@@ -1,28 +1,37 @@
 {
-  "name": "pomotroid",
+  "name": "grace",
   "version": "1.7.1",
-  "description": "A simple and visually-pleasing Pomodoro timer",
+  "description": "grace. \u2014 an offline-first Pomodoro timer and focus blocker (fork of Pomotroid)",
   "author": {
     "email": "flyweight@pm.me",
     "name": "Christopher Murphy",
     "url": "https://github.com/splode"
   },
-  "homepage": "https://github.com/Splode/pomotroid",
+  "homepage": "https://github.com/samir-scripts/grace",
   "license": "MIT",
-  "repository": "github:splode/pomotroid",
+  "repository": "github:samir-scripts/grace",
   "type": "module",
   "scripts": {
     "extensions:build": "node scripts/build-browser-extensions.mjs",
-    "predev": "npm run extensions:build",
-    "prebuild": "npm run extensions:build",
+    "predev": "npm run extensions:build -- --development",
+    "prebuild": "node scripts/build-browser-extensions.mjs --require-signed",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
     "check": "npm run paraglide:compile && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "npm run paraglide:compile && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "test:unit": "node --test src/lib/utils/theme.test.mjs src/lib/stores/navigation.test.mjs",
+    "test:extensions": "node --test extensions/tests/appearance.test.mjs extensions/tests/policy.test.mjs extensions/tests/policies.test.mjs extensions/tests/bridge-auth.test.mjs extensions/tests/background-auth.test.mjs extensions/tests/consent.test.mjs extensions/tests/native_pairing.test.mjs extensions/tests/unsigned-gecko-package.test.mjs extensions/tests/signed-gecko-package.test.mjs extensions/tests/sign-firefox.test.mjs",
+    "test:motion": "node --test tests/motion.test.mjs",
+    "test:stats-layout": "node --test tests/stats-layout.test.mjs",
+    "test:browser-setup": "node --test tests/browser-setup.test.mjs",
+    "test": "npm run test:unit && npm run test:extensions && npm run test:motion && npm run test:stats-layout && npm run test:browser-setup",
+    "test:guest-focus": "python3 -m unittest discover -s scripts/guest-focus -p 'test_*.py' && node --test scripts/guest-focus/browser-probe.test.mjs",
+    "guest:focus": "python3 scripts/guest-focus/runner.py",
     "format": "prettier --write .",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "extensions:sign:firefox": "node scripts/sign-firefox.mjs"
   },
   "dependencies": {
     "@inlang/paraglide-js": "^2.19.0",
@@ -38,12 +47,15 @@
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@tauri-apps/cli": "^2",
     "@types/node": "^25.9.3",
+    "fflate": "0.8.2",
     "playwright": "^1.64.1",
     "prettier": "^3.8.4",
     "prettier-plugin-svelte": "^4.1.1",
     "svelte": "^5.56.3",
     "svelte-check": "^4.6.0",
     "typescript": "~6.0.3",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "web-ext": "10.8.0",
+    "ws": "^8.18.3"
   }
 }

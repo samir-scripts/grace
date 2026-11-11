@@ -11,3 +11,8 @@ thumbs.db
 .svelte-kit/
 build/
 extensions/dist/
+
+# Local credentials
+.env
+.env.*
+!.env.example
