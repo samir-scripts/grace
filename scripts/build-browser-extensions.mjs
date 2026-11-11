@@ -7,8 +7,12 @@ import { assertSafeExtensionTree } from './extension-source-guard.mjs';
 const rootDir = process.cwd();
 const sharedDir = path.join(rootDir, 'extensions', 'focus');
 const distDir = path.join(rootDir, 'extensions', 'dist');
-assertSafeExtensionTree(sharedDir);
 const browsers = ['chrome', 'firefox', 'safari'];
+assertSafeExtensionTree(sharedDir);
+for (const browser of browsers) {
+  const browserSourceDir = path.join(rootDir, 'extensions', browser);
+  if (fs.existsSync(browserSourceDir)) assertSafeExtensionTree(browserSourceDir);
+}
 
 const args = process.argv.slice(2);
 if (args.some(arg => !['--require-signed', '--development'].includes(arg))) throw new Error('Unknown extension build option');
@@ -137,6 +141,9 @@ for (const browser of browsers) {
     const xpiPath = path.join(browserDist, 'focus@pomotroid.local.xpi');
     if (signedBytes) fs.writeFileSync(xpiPath, signedBytes);
     else createZipFromDirectory(browserDist, xpiPath);
+  } else if (browser === 'chrome') {
+    const zipPath = path.join(distDir, 'chrome.zip');
+    createZipFromDirectory(browserDist, zipPath);
   }
 }
 
