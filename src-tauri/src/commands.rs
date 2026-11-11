@@ -403,7 +403,7 @@ pub fn window_set_visibility(visible: bool, app: AppHandle) -> Result<(), String
 
 /// Set the main window size to the optimal layout for the target view.
 #[tauri::command]
-pub fn window_set_view_size(
+pub async fn window_set_view_size(
     view: String,
     animate: Option<bool>,
     app: AppHandle,
@@ -418,7 +418,7 @@ pub fn window_set_view_size(
             .map(|s| s.animations_enabled)
             .unwrap_or(true)
     });
-    crate::window_view::apply_view_size(&app, &view, &view_state, effective_animate)
+    crate::window_view::apply_view_size(&app, &view, &view_state, effective_animate).await
 }
 
 // ---------------------------------------------------------------------------
@@ -625,6 +625,49 @@ pub fn accessibility_trusted() -> bool {
         true
     }
 }
+/// Requests macOS Accessibility access after an explicit user action.
+#[tauri::command]
+pub fn accessibility_request() -> bool {
+    #[cfg(target_os = "macos")]
+    unsafe {
+        use std::ffi::c_void;
+        #[link(name = "ApplicationServices", kind = "framework")]
+        extern "C" {
+            static kAXTrustedCheckOptionPrompt: *const c_void;
+            fn AXIsProcessTrustedWithOptions(options: *const c_void) -> bool;
+        }
+        #[link(name = "CoreFoundation", kind = "framework")]
+        extern "C" {
+            static kCFBooleanTrue: *const c_void;
+            fn CFDictionaryCreate(
+                allocator: *const c_void,
+                keys: *const *const c_void,
+                values: *const *const c_void,
+                count: isize,
+                key_callbacks: *const c_void,
+                value_callbacks: *const c_void,
+            ) -> *const c_void;
+            fn CFRelease(value: *const c_void);
+        }
+        let options = CFDictionaryCreate(
+            std::ptr::null(),
+            &kAXTrustedCheckOptionPrompt,
+            &kCFBooleanTrue,
+            1,
+            std::ptr::null(),
+            std::ptr::null(),
+        );
+        if options.is_null() {
+            return false;
+        }
+        let trusted = AXIsProcessTrustedWithOptions(options);
+        CFRelease(options);
+        trusted
+    }
+    #[cfg(not(target_os = "macos"))]
+    { true }
+}
+
 
 /// Returns whether the system tray is supported on this platform/install.
 /// On Linux, probes for libayatana-appindicator3 / libappindicator3 at runtime.
@@ -902,8 +945,7 @@ pub fn focus_browser_profile_require(
     is_required: bool,
     bridge: State<'_, Arc<crate::focus::browser::BrowserBridge>>,
 ) -> Result<(), String> {
-    bridge.set_required_profile(&profile_id, browser, is_required);
-    Ok(())
+    bridge.set_required_profile(&profile_id, browser, is_required)
 }
 
 
@@ -971,13 +1013,16 @@ pub fn focus_browser_extension_install(
             crate::focus::browser::BrowserKind::Firefox | crate::focus::browser::BrowserKind::Zen => {
                 let xpi_candidate1 = base_dir.join("firefox/focus@pomotroid.local.xpi");
                 let xpi_candidate2 = base_dir.join("focus@pomotroid.local.xpi");
-                if xpi_candidate1.exists() {
+                let source_xpi = if xpi_candidate1.exists() {
                     xpi_candidate1
                 } else if xpi_candidate2.exists() {
                     xpi_candidate2
                 } else {
                     return Err("Firefox extension package (focus@pomotroid.local.xpi) was not found in application resources.".into());
-                }
+                };
+                let app_data = app.path().app_data_dir()
+                    .map_err(|e| format!("Failed to resolve app data directory: {e}"))?;
+                crate::focus::enterprise_policy::stage_gecko_xpi_to_dir(&source_xpi, &app_data)?
             }
             crate::focus::browser::BrowserKind::Chrome => {
                 let chrome_candidate1 = base_dir.join("chrome");
@@ -1070,3 +1115,9 @@ mod tests {
     }
 }
 
+
+#[tauri::command]
+pub fn appearance_publish(app: AppHandle, colors: std::collections::HashMap<String, String>, animations_enabled: bool) -> Result<(), String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    crate::focus::native_messaging::publish_appearance(&dir, colors, animations_enabled)
+}
