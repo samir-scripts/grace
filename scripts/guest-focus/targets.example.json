@@ -1,0 +1,15 @@
+{
+  "blocked": [
+    "https://example.com/",
+    "https://youtube.com/",
+    "https://www.youtube.com/",
+    "https://instagram.com/",
+    "https://m.instagram.com/",
+    "https://reddit.com/",
+    "https://old.reddit.com/"
+  ],
+  "allowed": [
+    "https://example.org/",
+    "https://example.org/?next=https://reddit.com/r/all"
+  ]
+}

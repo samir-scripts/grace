@@ -1,0 +1,131 @@
+{
+  "zen": {
+    "version": "1.24.1b",
+    "url": "https://github.com/zen-browser/desktop/releases/download/1.24.1b/zen.macos-universal.dmg"
+  },
+  "discord": {
+    "url": "https://discord.com/api/download?platform=osx"
+  },
+  "preferences": {
+    "browser.startup.page": 0
+  },
+  "extensions": [
+    {
+      "id": "{894284df-aca5-4603-b3b0-43c179c1cf85}",
+      "name": "Permanent Inspect Element",
+      "version": "0.1.1",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/4376690/permanent_inspect2024-0.1.1.xpi",
+      "sha256": "a08cab4d28b8d1d7b263bc7d7546f0479022c297aef4b157c3eea6beb4b9a567",
+      "enabled": true,
+      "competing_blocker": false
+    },
+    {
+      "id": "{74145f27-f039-47ce-a470-a662b129930a}",
+      "name": "ClearURLs",
+      "version": "1.27.3",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/4432106/clearurls-1.27.3.xpi",
+      "sha256": "54926b6e4274d5935a5fc0daa6320f1d371e3d2f1a5877467ca3ab22a65c4f20",
+      "enabled": true,
+      "competing_blocker": true
+    },
+    {
+      "id": "{84e74ef9-4b30-4bca-aca6-61df277054fe}",
+      "name": "Color Picker",
+      "version": "1.0.0.1",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/4109304/color_picker_for_firefox-1.0.0.1.xpi",
+      "sha256": "0cecfec7563d987445f6a8aea836ee78ae841f2a24f9f33f5f73f8527640effc",
+      "enabled": false,
+      "competing_blocker": false
+    },
+    {
+      "id": "firefox@tampermonkey.net",
+      "name": "Tampermonkey",
+      "version": "5.5.0",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/4797143/tampermonkey-5.5.0.xpi",
+      "sha256": "190031c78dbc5696114835601f2c8e6b855ad1e134df5df278f8fc158c065908",
+      "enabled": true,
+      "competing_blocker": true
+    },
+    {
+      "id": "CanvasBlocker@kkapsner.de",
+      "name": "CanvasBlocker",
+      "version": "1.12",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/4691016/canvasblocker-1.12.xpi",
+      "sha256": "0698d92c4bd2d190b2f4025613bf4bd3dba40910d58ab4cf1b32f36637a244c9",
+      "enabled": true,
+      "competing_blocker": false
+    },
+    {
+      "id": "myallychou@gmail.com",
+      "name": "Unhook - Remove YouTube Recommended & Shorts",
+      "version": "1.6.9",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/4733035/youtube_recommended_videos-1.6.9.xpi",
+      "sha256": "46bbf40b781ace323771ff193c5de2785b410d5d883641f8f07c393a8f96d69c",
+      "enabled": true,
+      "competing_blocker": true
+    },
+    {
+      "id": "jid1-MnnxcxisBPnSXQ@jetpack",
+      "name": "Privacy Badger",
+      "version": "2026.9.15",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/5032646/privacy_badger17-2026.9.15.xpi",
+      "sha256": "97cd8911e3486da34a532a7c7f2806cd6d0cfa117a1fbe5e8747042a94442d62",
+      "enabled": true,
+      "competing_blocker": true
+    },
+    {
+      "id": "showdex@tize.io",
+      "name": "Showdex",
+      "version": "1.4.2",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/5028381/showdex-1.4.2.xpi",
+      "sha256": "f7c6effdb85df25cdf4c34ca8658ff05baba20c883fe188d469e3f5e552845af",
+      "enabled": true,
+      "competing_blocker": false
+    },
+    {
+      "id": "leechblockng@proginosko.com",
+      "name": "LeechBlock NG",
+      "version": "1.8",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/5063822/leechblock_ng-1.8.xpi",
+      "sha256": "4548328caa620ea53bfb71b01bfa59527cef5e18ad9926d7691d8600d8ac6e13",
+      "enabled": true,
+      "competing_blocker": true
+    },
+    {
+      "id": "@react-devtools",
+      "name": "React Developer Tools",
+      "version": "8.0.0",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/5018049/react_devtools-8.0.0.xpi",
+      "sha256": "ad429f0b0db914a0505591f70160005d7c3e1a7865128c3bfa46392d28be34be",
+      "enabled": true,
+      "competing_blocker": false
+    },
+    {
+      "id": "password-manager-firefox-extension@apple.com",
+      "name": "iCloud Passwords",
+      "version": "3.4.0",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/5070185/icloud_passwords-3.4.0.xpi",
+      "sha256": "0cffb1716a9eff72e44a592bdef05e32d102d68253fdc508e5e6bdb5880ecbef",
+      "enabled": true,
+      "competing_blocker": false
+    },
+    {
+      "id": "{3c6bf0cc-3ae2-42fb-9993-0d33104fdcaf}",
+      "name": "'Improve YouTube!' \ud83c\udfa7 (for YouTube & Videos)",
+      "version": "4.2402",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/5201248/youtube_addon-4.2402.xpi",
+      "sha256": "2fad9d5e3248e448eddbe8bf19f1aa08e59a37aeb14c4c92f0cd44410758c360",
+      "enabled": false,
+      "competing_blocker": false
+    },
+    {
+      "id": "uBlock0@raymondhill.net",
+      "name": "uBlock Origin",
+      "version": "1.76.0",
+      "url": "https://addons.mozilla.org/firefox/downloads/file/5225273/ublock_origin-1.76.0.xpi",
+      "sha256": "6f20ff6749193599548770539103069c20948dfcd3e61c3089a67da7bfc3be39",
+      "enabled": true,
+      "competing_blocker": true
+    }
+  ]
+}
