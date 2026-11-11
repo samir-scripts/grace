@@ -75,6 +75,8 @@ fn extension_installed_from_policy(kind: BrowserKind, path: Option<&Path>) -> bo
 }
 
 fn compute_policy_path(kind: BrowserKind, exec_path: &Path) -> Option<PathBuf> {
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let _ = exec_path;
     match kind {
         BrowserKind::Firefox => {
             #[cfg(target_os = "macos")]
@@ -85,7 +87,7 @@ fn compute_policy_path(kind: BrowserKind, exec_path: &Path) -> Option<PathBuf> {
             }
             #[cfg(target_os = "linux")]
             {
-                return Some(PathBuf::from("/etc/firefox/policies/policies.json"));
+                Some(PathBuf::from("/etc/firefox/policies/policies.json"))
             }
             #[cfg(target_os = "windows")]
             {
@@ -93,6 +95,7 @@ fn compute_policy_path(kind: BrowserKind, exec_path: &Path) -> Option<PathBuf> {
                     return Some(parent.join("distribution").join("policies.json"));
                 }
             }
+            #[cfg(not(target_os = "linux"))]
             None
         }
         BrowserKind::Zen => {
@@ -104,7 +107,7 @@ fn compute_policy_path(kind: BrowserKind, exec_path: &Path) -> Option<PathBuf> {
             }
             #[cfg(target_os = "linux")]
             {
-                return Some(PathBuf::from("/etc/zen/policies/policies.json"));
+                Some(PathBuf::from("/etc/zen/policies/policies.json"))
             }
             #[cfg(target_os = "windows")]
             {
@@ -112,6 +115,7 @@ fn compute_policy_path(kind: BrowserKind, exec_path: &Path) -> Option<PathBuf> {
                     return Some(parent.join("distribution").join("policies.json"));
                 }
             }
+            #[cfg(not(target_os = "linux"))]
             None
         }
         BrowserKind::Chrome => {
