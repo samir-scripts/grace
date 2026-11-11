@@ -1,11 +1,32 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { verifySignedGeckoArtifact } from './gecko-signed-artifact.mjs';
+import { assertSafeExtensionTree } from './extension-source-guard.mjs';
 
 const rootDir = process.cwd();
 const sharedDir = path.join(rootDir, 'extensions', 'focus');
 const distDir = path.join(rootDir, 'extensions', 'dist');
+assertSafeExtensionTree(sharedDir);
 const browsers = ['chrome', 'firefox', 'safari'];
+
+const args = process.argv.slice(2);
+if (args.some(arg => !['--require-signed', '--development'].includes(arg))) throw new Error('Unknown extension build option');
+const development = args.includes('--development');
+if (development && args.includes('--require-signed')) throw new Error('--development and --require-signed are mutually exclusive');
+const signedDir = path.join(rootDir, 'extensions', 'signed', 'firefox');
+const artifactPath = path.join(signedDir, 'focus@pomotroid.local.xpi');
+const provenancePath = path.join(signedDir, 'provenance.json');
+const hasArtifact = fs.existsSync(artifactPath);
+const hasProvenance = fs.existsSync(provenancePath);
+if (!development && (hasArtifact !== hasProvenance || (!hasArtifact && args.includes('--require-signed')))) {
+  throw new Error('Signed Gecko artifact required with provenance');
+}
+const signedBytes = !development && hasArtifact ? verifySignedGeckoArtifact({
+  artifactPath, provenancePath, sharedDir,
+  manifestPath: path.join(rootDir, 'extensions', 'firefox', 'manifest.json')
+}) : null;
+if (!signedBytes) console.log('Unsigned Gecko development package; not persistent-installation evidence' + (development ? ' (--development: signed artifact ignored)' : ''));
 
 function createZipFromDirectory(sourceDir, targetZipPath) {
   function getFiles(dir, base = '') {
@@ -98,6 +119,7 @@ function createZipFromDirectory(sourceDir, targetZipPath) {
 
 for (const browser of browsers) {
   const browserDist = path.join(distDir, browser);
+  fs.rmSync(browserDist, { recursive: true, force: true });
   fs.mkdirSync(browserDist, { recursive: true });
 
   // Copy shared files
@@ -113,7 +135,8 @@ for (const browser of browsers) {
 
   if (browser === 'firefox') {
     const xpiPath = path.join(browserDist, 'focus@pomotroid.local.xpi');
-    createZipFromDirectory(browserDist, xpiPath);
+    if (signedBytes) fs.writeFileSync(xpiPath, signedBytes);
+    else createZipFromDirectory(browserDist, xpiPath);
   }
 }
 
