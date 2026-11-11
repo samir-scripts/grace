@@ -1,6 +1,6 @@
-# Pomotroid Themes
+# Grace Themes
 
-Pomotroid ships with 38 built-in themes and supports an unlimited number of user-created custom themes. Custom themes are hot-reloaded — no restart required.
+Grace ships with 38 built-in themes and supports an unlimited number of user-created custom themes. Custom themes are hot-reloaded — no restart required.
 
 ## Built-in themes
 

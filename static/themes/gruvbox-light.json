@@ -9,7 +9,7 @@
     "--color-background-lightest": "#bdae93",
     "--color-foreground": "#3c3836",
     "--color-foreground-darker": "#665c54",
-    "--color-foreground-darkest": "#928374",
+    "--color-foreground-darkest": "#665c54",
     "--color-accent": "#b57614"
   }
 }

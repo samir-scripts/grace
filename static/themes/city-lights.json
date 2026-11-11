@@ -8,8 +8,8 @@
     "--color-background-light": "#28313a",
     "--color-background-lightest": "#718CA1",
     "--color-foreground": "#b7c5d3",
-    "--color-foreground-darker": "#718CA1",
-    "--color-foreground-darkest": "#718CA1",
+    "--color-foreground-darker": "#8fa4b5",
+    "--color-foreground-darkest": "#8fa4b5",
     "--color-accent": "#EBBF83"
   }
 }
