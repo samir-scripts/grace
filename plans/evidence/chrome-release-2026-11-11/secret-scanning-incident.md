@@ -17,7 +17,9 @@ The owner received a GitHub alert identifying an OpenVSX Access Token in `extens
 - Focused API-helper tests passed 11/11 after the change.
 - No affected credential was identified, so there is no key to rotate for this alert. Rotating the extension's public signing identity would change its ID and break installation/pairing, and rotating an unrelated service-account key would not remediate this identifier match.
 - Secret scanning remains enabled. No history rewrite or pattern suppression was used.
-- GitHub alert validity/status still needs inspection and false-positive closure through an authenticated account. No claim that the alert has been closed is made here.
+- Authenticated inspection found GitHub alert #1 with validity Unknown and two locations: the test publisher_id and the production release configuration publisher_id. Both matched the Google publisher identifier.
+- A scoped independent scan of 2,978 reachable text blobs found zero matches for the recognized credential formats checked. It skipped 239 binary/large blobs and cannot rule out other formats, unreachable history, or local-file exposure.
+- Automatic approval review rejected closing the alert because explicit dismissal authorization was missing. Owner approval was requested. The alert remains open; no closure or rotation is claimed.
 
 ## Sources
 

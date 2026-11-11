@@ -85,7 +85,7 @@ test('OAuth and API failures omit provider response bodies and secret values', a
 });
 
 test('HTTPS requests abort after the configured timeout and redact network errors', async () => {
-  let aborted = false;
+  let signalAborted = false;
   const client = createChromeWebStoreClient({
     config,
     credentials: { clientId: 'private-client', clientSecret: 'private-secret', refreshToken: 'private-refresh' },
@@ -95,8 +95,10 @@ test('HTTPS requests abort after the configured timeout and redact network error
         reject(new Error('missing abort signal'));
         return;
       }
+      const pendingRequest = setTimeout(() => reject(new Error('mock request did not abort')), 1000);
       init.signal.addEventListener('abort', () => {
-        aborted = true;
+        clearTimeout(pendingRequest);
+        signalAborted = init.signal.aborted;
         reject(new Error('private-secret socket details'));
       }, { once: true });
     })
@@ -106,7 +108,7 @@ test('HTTPS requests abort after the configured timeout and redact network error
     assert.equal(error.message.includes('private-secret'), false);
     return true;
   });
-  assert.equal(aborted, true);
+  assert.equal(signalAborted, true);
 });
 
 test('credential file requires restrictive permissions and never falls back to incomplete environment credentials', t => {
