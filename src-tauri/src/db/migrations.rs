@@ -177,6 +177,11 @@ const MIGRATION_8: &str = "
 
     INSERT INTO schema_version VALUES (8);
 ";
+const MIGRATION_9: &str = "
+    INSERT OR IGNORE INTO settings (key, value) VALUES ('dnd_enabled', 'false');
+    INSERT INTO schema_version VALUES (9);
+";
+
 
 
 /// Apply any pending migrations. Each migration is wrapped in a transaction
@@ -231,6 +236,12 @@ pub fn run(conn: &Connection) -> Result<()> {
         conn.execute_batch(&format!("BEGIN; {MIGRATION_8} COMMIT;"))?;
         log::info!("[db/migrations] MIGRATION_8 complete");
     }
+    if version < 9 {
+        log::info!("[db/migrations] applying MIGRATION_9: seed dnd_enabled setting");
+        conn.execute_batch(&format!("BEGIN; {MIGRATION_9} COMMIT;"))?;
+        log::info!("[db/migrations] MIGRATION_9 complete");
+    }
+
 
     Ok(())
 }
@@ -316,7 +327,7 @@ mod tests {
         let v: i64 = conn
             .query_row("SELECT MAX(version) FROM schema_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 8);
+        assert_eq!(v, 9);
     }
 
     #[test]

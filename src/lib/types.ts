@@ -26,6 +26,7 @@ export interface Settings {
   min_to_tray: boolean;
   min_to_tray_on_close: boolean;
   notifications_enabled: boolean;
+  dnd_enabled: boolean;
   always_on_top: boolean;
   break_always_on_top: boolean;
   volume: number; // 0.0–1.0
@@ -171,17 +172,17 @@ export type BrowserKind = 'chrome' | 'firefox' | 'safari' | 'zen';
 export interface InstalledBrowser {
   kind: BrowserKind;
   name: string;
+  catalog_id: string | null;
   executable_path: string;
   policy_path: string | null;
   is_installed: boolean;
   is_extension_installed: boolean;
+  is_default?: boolean;
 }
 
 export interface ConnectedProfileInfo {
   profile_id: string;
-  browser: BrowserKind;
-  install_type: string;
-  may_disable: boolean;
+  browser: BrowserKind | null;
   is_required: boolean;
   is_connected: boolean;
   last_seen_secs_ago: number;

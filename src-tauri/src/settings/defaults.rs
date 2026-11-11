@@ -26,6 +26,7 @@ pub const DEFAULTS: &[(&str, &str)] = &[
     ("verbose_logging", "false"),
     ("check_for_updates", "true"),
     ("global_shortcuts_enabled", "false"),
+    ("dnd_enabled", "false"),
     ("short_breaks_enabled", "true"),
     ("long_breaks_enabled", "true"),
     ("local_shortcut_toggle", " "),
