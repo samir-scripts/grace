@@ -39,3 +39,21 @@ test('isUrlBlocked matches apex and subdomains only', () => {
   assert.equal(isUrlBlocked('https://example.com/?q=reddit.com', domains), false);
   assert.equal(isUrlBlocked('https://reddit.com.evil.com/', domains), false);
 });
+
+test('common blocked sites match hostnames, not lookalikes or query text', () => {
+  const domains = ['youtube.com', 'instagram.com', 'reddit.com'];
+  for (const url of [
+    'https://YOUTUBE.COM/watch?v=123',
+    'https://www.instagram.com/reels/?q=1',
+    'https://old.reddit.com/r/all?sort=new'
+  ]) {
+    assert.equal(isUrlBlocked(url, domains), true, url);
+  }
+  for (const url of [
+    'https://notyoutube.com/',
+    'https://instagram.com.evil.com/',
+    'https://example.com/?next=https://reddit.com/r/all'
+  ]) {
+    assert.equal(isUrlBlocked(url, domains), false, url);
+  }
+});

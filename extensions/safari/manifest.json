@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Pomotroid Focus Companion",
-  "version": "1.0.0",
-  "description": "Enforces distraction blocking during Pomotroid focus sessions in Safari.",
+  "name": "grace. Focus Companion",
+  "version": "1.1.0",
+  "description": "Enforces distraction blocking during grace. focus sessions in Safari.",
   "permissions": [
     "storage",
     "declarativeNetRequest",

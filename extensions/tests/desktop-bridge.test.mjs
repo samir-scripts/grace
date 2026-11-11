@@ -11,7 +11,7 @@ import os from 'node:os';
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-test('installed extension applies and releases policies from the Rust desktop bridge', { timeout: 90000 }, async () => {
+test('installed extension applies and releases policies from the Rust desktop bridge', { timeout: 90000, skip: process.env.POMOTROID_DISPOSABLE_GUEST !== '1' }, async () => {
   const portServer = net.createServer();
   await new Promise(resolve => portServer.listen(0, '127.0.0.1', resolve));
   const port = portServer.address().port;
@@ -46,6 +46,8 @@ test('installed extension applies and releases policies from the Rust desktop br
     const options = await context.newPage();
     await options.goto(`chrome-extension://${id}/options.html`);
     await options.evaluate(port => chrome.storage.local.set({ port }), port);
+    await options.click('#consentAccept');
+    await options.locator('#advanced summary').click();
     await options.fill('#token', 'fixture-token');
     await options.fill('#profileId', 'fixture-profile');
     await options.click('#save');

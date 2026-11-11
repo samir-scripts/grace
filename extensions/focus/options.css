@@ -1,0 +1,15 @@
+@font-face { font-family: Mona; src: url('MonaSansVF.woff2') format('woff2'); font-weight: 200 900; }
+:root { color-scheme: light dark; --background: #f5f3ef; --background-light: #ffffff; --foreground: #29282b; --foreground-darker: #66636a; --hover: #e7e4df; --selected: #ddd9d3; --border: #827c86; --separator: #e1ded8; --button: #38333c; --button-text: #ffffff; --status-error: #a5363b; --status-success: #286e4c; --status-warning: #865c19; }
+@media (prefers-color-scheme: dark) { :root { --background: #242229; --background-light: #302e36; --foreground: #f0edf2; --foreground-darker: #bdb8c1; --hover: #44414a; --selected: #504b56; --border: #9b939f; --separator: #45414b; --button: #eee9ef; --button-text: #28242c; --status-error: #f1a5a5; --status-success: #a8d9b9; --status-warning: #e8cd91; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--background); color: var(--foreground); font: 400 15px/1.55 Mona, sans-serif; }
+main { width: min(100% - 40px, 600px); margin: 0 auto; padding: 56px 0 32px; }
+header { margin-bottom: 38px; } .eyebrow { color: var(--foreground-darker); font-size: 11px; font-weight: 750; letter-spacing: .13em; }
+h1 { font-size: clamp(28px, 6vw, 38px); line-height: 1.1; letter-spacing: -.04em; margin: 14px 0; } h2 { font-size: 19px; margin: 0; letter-spacing: -.02em; }
+p { color: var(--foreground-darker); margin: 12px 0; } header p { font-size: 16px; }
+section, details { border-top: 1px solid var(--separator); padding: 24px 0; } .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.connection, .badge { color: var(--foreground-darker); font-size: 12px; font-weight: 650; } .connection[data-connected='true'] { color: var(--status-success); }
+.consent-status { color: var(--foreground); font-weight: 650; } .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+button, input { font: inherit; } button { cursor: pointer; border: 1px solid var(--button); border-radius: 7px; padding: 10px 15px; background: var(--button); color: var(--button-text); font-size: 13px; font-weight: 700; } button:hover { outline: 1px solid var(--foreground); outline-offset: 1px; } button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--foreground); outline-offset: 3px; }
+.secondary { background: var(--background); color: var(--foreground); border-color: var(--border); } summary { cursor: pointer; font-weight: 700; } .details-body { padding-top: 12px; } label { display: block; font-size: 13px; font-weight: 700; margin: 16px 0 6px; } input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--background-light); color: var(--foreground); } #save { margin-top: 16px; } #status { font-size: 13px; } footer { border-top: 1px solid var(--separator); padding-top: 20px; } .text-button { border: 0; padding: 0; background: var(--background); color: var(--foreground-darker); font-weight: 600; }
+[hidden] { display: none !important; } @media (max-width: 420px) { main { padding-top: 36px; } .actions button { width: 100%; } }

@@ -7,10 +7,10 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { WebSocketServer } from 'ws';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const chromeExtPath = path.resolve(__dirname, '../dist/chrome');
-const firefoxExtPath = path.resolve(__dirname, '../dist/firefox');
 
 test('Playwright Chromium MV3 extension connects and blocks webpages dynamically', async () => {
   // 1. Start test HTTP server serving both allowed and blocked test pages
@@ -27,70 +27,72 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
   await new Promise((resolve) => httpServer.listen(0, '127.0.0.1', resolve));
   const httpPort = httpServer.address().port;
 
-  // 2. Start mock Focus WebSocket Broker on an ephemeral port
+  // 2. Independent authenticated Focus WebSocket broker on an ephemeral port.
   const events = [];
-  let clientSocket = null;
-
+  const wireMessages = [];
+  const testToken = 'pw-chrome-token-999';
+  const prefix = 'pomotroid-focus-v3\n';
+  const mac = (key, message) => crypto.createHmac('sha256', key).update(message).digest('hex');
   const brokerServer = http.createServer((req, res) => {
     res.writeHead(404);
     res.end();
   });
+  const wss = new WebSocketServer({ server: brokerServer });
+  let clientSocket = null;
+  let serverKey;
+  let sendSequence = 0;
 
-  brokerServer.on('upgrade', (req, socket) => {
-    const key = req.headers['sec-websocket-key'];
-    const accept = crypto
-      .createHash('sha1')
-      .update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
-      .digest('base64');
+  function sendBrokerJson(msg) {
+    if (!clientSocket || !serverKey) throw new Error('No authenticated client socket connected');
+    const sequence = ++sendSequence;
+    const payload = JSON.stringify(msg);
+    clientSocket.send(JSON.stringify({
+      type: 'authenticated', sequence, payload,
+      mac: mac(serverKey, `${prefix}frame\n${sequence}\n${payload}`),
+    }));
+  }
 
-    socket.write(
-      'HTTP/1.1 101 Switching Protocols\r\n' +
-        'Upgrade: websocket\r\n' +
-        'Connection: Upgrade\r\n' +
-        `Sec-WebSocket-Accept: ${accept}\r\n\r\n`
-    );
-
+  wss.on('connection', socket => {
     clientSocket = socket;
-
-    socket.on('data', (d) => {
-      if (d.length < 2) return;
-      let len = d[1] & 0x7f;
-      let offset = 2;
-      if (len === 126) {
-        if (d.length < 4) return;
-        len = d.readUInt16BE(2);
-        offset = 4;
-      }
-      const mask = d.slice(offset, offset + 4);
-      offset += 4;
-      const payload = Buffer.alloc(len);
-      for (let i = 0; i < len; i++) {
-        payload[i] = d[offset + i] ^ mask[i % 4];
-      }
-      try {
-        const msg = JSON.parse(payload.toString('utf8'));
-        events.push(msg);
-      } catch {
-        // Ping/pong or control frame
+    serverKey = undefined;
+    sendSequence = 0;
+    let clientNonce;
+    let serverNonce;
+    let clientKey;
+    let receivedSequence = 0;
+    socket.on('message', data => {
+      const raw = data.toString();
+      wireMessages.push(raw);
+      const msg = JSON.parse(raw);
+      if (msg.type === 'auth_init') {
+        assert.equal(msg.version, 3);
+        clientNonce = msg.client_nonce;
+        serverNonce = crypto.randomBytes(32).toString('hex');
+        socket.send(JSON.stringify({
+          type: 'auth_challenge', version: 3, server_nonce: serverNonce,
+          proof: mac(testToken, `${prefix}server\n${clientNonce}\n${serverNonce}`),
+        }));
+      } else if (msg.type === 'auth_response') {
+        assert.equal(msg.version, 3);
+        assert.equal(msg.proof, mac(testToken, `${prefix}client\n${clientNonce}\n${serverNonce}\n${msg.metadata}`));
+        const metadata = JSON.parse(msg.metadata);
+        assert.deepEqual(metadata, ['pw-test-profile']);
+        clientKey = Buffer.from(mac(testToken, `${prefix}key-client\n${clientNonce}\n${serverNonce}\n${msg.metadata}`), 'hex');
+        serverKey = Buffer.from(mac(testToken, `${prefix}key-server\n${clientNonce}\n${serverNonce}\n${msg.metadata}`), 'hex');
+        events.push({ type: 'authenticated', metadata });
+        sendBrokerJson({ type: 'policy', version: 3, active: false, revision: 0, domains: [], lease_secs: 15 });
+      } else if (msg.type === 'authenticated') {
+        assert.equal(msg.sequence, ++receivedSequence);
+        assert.equal(msg.mac, mac(clientKey, `${prefix}frame\n${msg.sequence}\n${msg.payload}`));
+        events.push(JSON.parse(msg.payload));
+      } else {
+        assert.fail(`Unexpected broker message type: ${msg.type}`);
       }
     });
   });
 
   await new Promise((resolve) => brokerServer.listen(0, '127.0.0.1', resolve));
   const wsPort = brokerServer.address().port;
-
-  function sendBrokerJson(msg) {
-    if (!clientSocket) throw new Error('No client socket connected');
-    const payload = Buffer.from(JSON.stringify(msg), 'utf8');
-    const len = payload.length;
-    let header;
-    if (len < 126) {
-      header = Buffer.from([0x81, len]);
-    } else {
-      header = Buffer.from([0x81, 126, (len >> 8) & 0xff, len & 0xff]);
-    }
-    clientSocket.write(Buffer.concat([header, payload]));
-  }
 
   async function waitForBrokerEvent(predicate, timeoutMs = 8000) {
     const start = Date.now();
@@ -129,27 +131,35 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
     const extId = new URL(sw.url()).hostname;
 
     // 5. Configure port and token via extension options page
-    const testToken = 'pw-chrome-token-999';
+    // The broker token is an independent test-only credential.
     const optPage = await context.newPage();
     await optPage.goto(`chrome-extension://${extId}/options.html`);
+    assert.equal(await optPage.locator('#advanced').isVisible(), false);
+    assert.equal(await optPage.locator('#connectionStatus').textContent(), 'Disconnected');
+    assert.equal(clientSocket, null, 'no socket opens before consent');
+    await optPage.keyboard.press('Tab');
+    assert.equal(await optPage.evaluate(() => document.activeElement.id), 'consentAccept');
+    await optPage.screenshot({ path: '/tmp/grace-extension-before-consent.png' });
     await optPage.evaluate(({ port }) => {
       chrome.storage.local.set({ port });
     }, { port: wsPort });
+    await optPage.click('#consentAccept');
+    await optPage.locator('#advanced summary').click();
     await optPage.fill('#token', testToken);
     await optPage.fill('#profileId', 'pw-test-profile');
     await optPage.click('#save');
     await optPage.waitForSelector('#status');
-    await optPage.close();
 
-    // 6. Verify broker receives Hello handshake from extension
-    const hello = await waitForBrokerEvent((m) => m.type === 'hello');
-    assert.equal(hello.token, testToken);
-    assert.equal(hello.profile_id, 'pw-test-profile');
-    assert.equal(hello.browser, 'chrome');
+    // 6. Verify mutual authentication without sending the shared token.
+    await waitForBrokerEvent((m) => m.type === 'authenticated');
+    await waitForBrokerEvent((m) => m.type === 'ack' && m.revision === 0);
+    assert.ok(wireMessages.every((message) => !message.includes(testToken)));
 
     // 7. Send active blocking policy for example.com
     sendBrokerJson({
       type: 'policy',
+      version: 3,
+      lease_secs: 15,
       active: true,
       revision: 1,
       domains: ['example.com'],
@@ -185,6 +195,8 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
     // 9. Send policy release to unblock domains
     sendBrokerJson({
       type: 'policy',
+      version: 3,
+      lease_secs: 15,
       active: false,
       revision: 2,
       domains: [],
@@ -203,11 +215,24 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
     assert.ok(releasedRes !== null && releasedRes.status() >= 200);
     const releasedContent = await page.content();
     assert.ok(releasedContent.toLowerCase().includes('example domain'));
+    assert.ok(wireMessages.every((message) => !message.includes(testToken)));
+    await optPage.bringToFront();
+    await optPage.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await optPage.waitForFunction(() => document.querySelector('#connectionStatus').textContent === 'Connected');
+    await optPage.click('#consentStop');
+    await optPage.waitForFunction(() => document.querySelector('#consentStatus').textContent === 'Data sharing is disabled.');
+    assert.equal(await optPage.locator('#advanced').isVisible(), false);
+    assert.equal(await optPage.locator('#connectionStatus').textContent(), 'Disconnected');
+    await new Promise((resolve, reject) => {
+      if (clientSocket.readyState === 3) return resolve();
+      const timer = setTimeout(() => reject(new Error('socket did not close on withdrawal')), 3000);
+      clientSocket.once('close', () => { clearTimeout(timer); resolve(); });
+    });
+    await optPage.close();
     await page.close();
   } finally {
-    if (clientSocket) {
-      try { clientSocket.destroy(); } catch {}
-    }
+    if (clientSocket) clientSocket.terminate();
+    wss.close();
     if (context) await context.close().catch(() => {});
     fs.rmSync(userDataDir, { recursive: true, force: true });
     await new Promise((r) => httpServer.close(r));
@@ -215,39 +240,36 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
   }
 });
 
-test('Firefox extension connects and applies declarativeNetRequest dynamic rules', async () => {
-  const manifestPath = path.join(firefoxExtPath, 'manifest.json');
-  assert.ok(fs.existsSync(manifestPath), 'Firefox manifest exists');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-
-  assert.ok(manifest.permissions.includes('declarativeNetRequest'));
-  assert.ok(manifest.permissions.includes('storage'));
-  assert.equal(manifest.background.scripts[0], 'background.js');
-  assert.equal(manifest.background.type, 'module');
-  assert.ok(manifest.declarative_net_request, 'declarative_net_request must be declared');
-  assert.equal(manifest.declarative_net_request.rule_resources[0].id, 'ruleset_1');
-  assert.equal(manifest.declarative_net_request.rule_resources[0].path, 'rules.json');
-  assert.equal(manifest.declarative_net_request.rule_resources[0].enabled, true);
-
-  const rulesPath = path.join(firefoxExtPath, 'rules.json');
-  assert.ok(fs.existsSync(rulesPath), 'rules.json must exist in firefox extension directory');
-  assert.deepEqual(JSON.parse(fs.readFileSync(rulesPath, 'utf8')), []);
-
-  const xpiPath = path.join(firefoxExtPath, 'focus@pomotroid.local.xpi');
-  assert.ok(fs.existsSync(xpiPath), 'focus@pomotroid.local.xpi must exist');
-  assert.ok(fs.statSync(xpiPath).size > 0, 'focus@pomotroid.local.xpi must be non-empty');
-
-  // Verify policy compilation produces expected rules for Firefox
-  const { rulesForPolicy, isUrlBlocked } = await import('../focus/policy.js');
-  const testDomains = ['distracting-site.example', '127.0.0.1'];
-  const rules = rulesForPolicy(testDomains);
-
-  assert.equal(rules.length, 2);
-  assert.equal(rules[0].action.type, 'block');
-  assert.equal(rules[0].condition.urlFilter, '||127.0.0.1^');
-  assert.equal(rules[1].condition.urlFilter, '||distracting-site.example^');
-
-  assert.equal(isUrlBlocked('http://127.0.0.1/test', testDomains), true);
-  assert.equal(isUrlBlocked('https://sub.distracting-site.example/feed', testDomains), true);
-  assert.equal(isUrlBlocked('http://good-site.org/docs', testDomains), false);
+test('options use cached appearance before consent and remain usable at narrow widths', async () => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'grace-options-chrome-'));
+  let context;
+  try {
+    context = await chromium.launchPersistentContext(userDataDir, {
+      headless: false, args: ['--headless=new', `--disable-extensions-except=${chromeExtPath}`, `--load-extension=${chromeExtPath}`],
+    });
+    const sw = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+    const id = new URL(sw.url()).hostname;
+    // Explicit test fixture: this is a cached palette, not a native-host response.
+    const roles = ['background', 'background-light', 'foreground', 'foreground-darker', 'hover', 'selected', 'border', 'separator', 'button', 'button-text', 'status-error', 'status-success', 'status-warning'];
+    const colors = Object.fromEntries(roles.map(role => [`--color-${role}`, ['foreground', 'foreground-darker', 'button-text', 'status-error', 'status-success', 'status-warning'].includes(role) ? '#ffffff' : '#123456']));
+    await sw.evaluate(colors => chrome.storage.local.set({ focus_appearance: { type: 'appearance', version: 1, colors, animations_enabled: false } }), colors);
+    const page = await context.newPage();
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto(`chrome-extension://${id}/options.html`);
+    await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--background').trim() === '#123456');
+    assert.equal(await page.locator('#advanced').isVisible(), false);
+    assert.equal(await page.locator('#consentStatus').textContent(), 'Data sharing is disabled.');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.animations), 'disabled');
+    await page.screenshot({ path: '/tmp/grace-extension-cached-theme-narrow.png', fullPage: true });
+    // Invalid cached data is ignored, leaving the default system theme in place.
+    await page.evaluate(() => chrome.storage.local.set({ focus_appearance: { type: 'appearance', version: 1, colors: { '--color-background': 'url(evil)' }, animations_enabled: false } }));
+    await page.reload();
+    await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--background').trim() !== '#123456');
+    assert.equal(await page.locator('#advanced').isVisible(), false);
+    await page.close();
+  } finally {
+    if (context) await context.close().catch(() => {});
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  }
 });

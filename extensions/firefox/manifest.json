@@ -1,18 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "Pomotroid Focus Companion",
-  "version": "1.0.0",
-  "description": "Enforces distraction blocking during Pomotroid focus sessions.",
+  "name": "grace. Focus Companion",
+  "version": "1.1.0",
+  "description": "Enforces distraction blocking during grace. focus sessions.",
   "permissions": [
     "storage",
     "declarativeNetRequest",
     "tabs",
-    "management",
     "nativeMessaging"
   ],
   "host_permissions": [
     "*://*/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' ws://127.0.0.1:*;"
+  },
   "background": {
     "scripts": ["background.js"],
     "type": "module"
@@ -33,7 +35,10 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "focus@pomotroid.local",
-      "strict_min_version": "115.0"
+      "strict_min_version": "115.0",
+      "data_collection_permissions": {
+        "required": ["authenticationInfo", "personallyIdentifyingInfo"]
+      }
     }
   }
 }

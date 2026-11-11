@@ -56,6 +56,29 @@ test('tryNativePairing successfully connects and saves config to storage', async
   assert.equal(pairedResult.token, 'auto-paired-token-456');
 });
 
+test('paired native port stays open until sharing is stopped', async () => {
+  let receive;
+  let closed = 0;
+  const controller = new AbortController();
+  const port = {
+    postMessage() {},
+    disconnect() { closed++; },
+    onMessage: { addListener(fn) { receive = fn; } },
+    onDisconnect: { addListener() {} }
+  };
+  const pending = tryNativePairing({
+    connectNative: () => port,
+    storage: { get: async () => ({}), set: async () => {} },
+    signal: controller.signal,
+    keepOpen: true,
+  });
+  await receive({ type: 'config', token: 'test-only-token', port: 1421 });
+  assert.equal(await pending, true);
+  assert.equal(closed, 0);
+  controller.abort();
+  assert.equal(closed, 1);
+});
+
 test('tryNativePairing returns false when connectNative is missing', async () => {
   const success = await tryNativePairing({
     connectNative: null,
@@ -154,4 +177,75 @@ test('tryNativePairing returns false when storage.set fails', async () => {
 
   const success = await pairingPromise;
   assert.equal(success, false);
+});
+
+test('native disconnect reports a redacted reason without changing credentials', async () => {
+  let disconnect;
+  const events = [];
+  const stored = { token: 'DO_NOT_LOG_TOKEN' };
+  const before = { ...stored };
+  const port = {
+    error: { message: 'No such native application com.splode.pomotroid' },
+    postMessage() {},
+    onMessage: { addListener() {} },
+    onDisconnect: { addListener(fn) { disconnect = fn; } }
+  };
+  const pending = tryNativePairing({
+    connectNative: () => port,
+    storage: { get: async () => stored, set: async items => Object.assign(stored, items) },
+    onDiagnostic: event => events.push(event)
+  });
+  disconnect();
+  assert.equal(await pending, false);
+  assert.deepEqual(stored, before);
+  assert.equal(events.at(-1)?.reason, 'host_not_found');
+  assert.equal(JSON.stringify(events).includes('DO_NOT_LOG_TOKEN'), false);
+});
+
+test('native storage failure reports a redacted reason without pairing', async () => {
+  let receive;
+  let pairedCalls = 0;
+  const events = [];
+  const port = {
+    postMessage() {},
+    onMessage: { addListener(fn) { receive = fn; } },
+    onDisconnect: { addListener() {} }
+  };
+  const pending = tryNativePairing({
+    connectNative: () => port,
+    storage: { get: async () => ({}), set: async () => { throw new Error('quota'); } },
+    onPaired: () => { pairedCalls++; },
+    onDiagnostic: event => events.push(event)
+  });
+  await receive({ type: 'config', token: 'DO_NOT_LOG_TOKEN', port: 1421 });
+  assert.equal(await pending, false);
+  assert.equal(events.at(-1)?.reason, 'storage_write_failed');
+  assert.equal(pairedCalls, 0);
+  assert.equal(JSON.stringify(events).includes('DO_NOT_LOG_TOKEN'), false);
+});
+
+test('withdrawal aborts native pairing and ignores a late configuration', async () => {
+  const controller = new AbortController();
+  let receive;
+  let disconnected = false;
+  let paired = false;
+  const port = {
+    postMessage() {},
+    disconnect() { disconnected = true; },
+    onMessage: { addListener(fn) { receive = fn; } },
+    onDisconnect: { addListener() {} },
+  };
+  const stored = {};
+  const pending = tryNativePairing({
+    connectNative: () => port,
+    storage: { get: async () => stored, set: async data => Object.assign(stored, data) },
+    onPaired: () => { paired = true; },
+    signal: controller.signal,
+  });
+  controller.abort();
+  assert.equal(await pending, false);
+  await receive({ type: 'config', token: 'late-secret', port: 1421 });
+  assert.equal(disconnected, true);
+  assert.equal(paired, false);
+  assert.deepEqual(stored, {});
 });

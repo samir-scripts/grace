@@ -2,72 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Pomotroid Focus Companion Settings</title>
+  <title>grace. Focus Companion</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      background: #1e1e2e;
-      color: #cdd6f4;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      padding: 32px;
-      max-width: 480px;
-      margin: 0 auto;
-    }
-    h1 { font-size: 20px; margin-bottom: 8px; }
-    p { color: #a6adc8; font-size: 14px; margin-bottom: 24px; }
-    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-    input[type="text"] {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 10px 12px;
-      background: #313244;
-      border: 1px solid #45475a;
-      border-radius: 6px;
-      color: #cdd6f4;
-      font-size: 14px;
-      margin-bottom: 16px;
-    }
-    button {
-      background: #89b4fa;
-      color: #11111b;
-      font-weight: 600;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    button:hover { background: #b4befe; }
-    .status { margin-top: 16px; font-size: 13px; color: #a6e3a1; }
-    .auto-badge {
-      display: none;
-      background: rgba(166, 227, 161, 0.15);
-      border: 1px solid #a6e3a1;
-      color: #a6e3a1;
-      padding: 10px 14px;
-      border-radius: 6px;
-      font-size: 13px;
-      margin-bottom: 20px;
-    }
-  </style>
+  <link rel="stylesheet" href="options.css">
 </head>
 <body>
-  <h1>Pomotroid Focus Companion</h1>
-  <p>Connect this browser extension to Pomotroid on your computer.</p>
-
-  <div id="autoPairedBadge" class="auto-badge">
-    ✓ Automatically paired with Pomotroid on this computer via Native Messaging.
-  </div>
-  
-  <label for="token">Pairing Token</label>
-  <input type="text" id="token" placeholder="Paste pairing token from Pomotroid Settings">
-
-  <label for="profileId">Browser Profile ID</label>
-  <input type="text" id="profileId" placeholder="Profile Identifier (e.g. personal-chrome)">
-
-  <button id="save">Save & Connect</button>
-  <div id="status" class="status"></div>
-
-  <script src="options.js"></script>
+  <main>
+    <header><span class="eyebrow">grace. / focus companion</span><h1>A little space to focus.</h1><p>Connect this browser to grace. on your computer to protect your focus sessions.</p></header>
+    <section aria-labelledby="consent-title">
+      <div class="section-heading"><h2 id="consent-title">Connect your browser</h2><span id="connectionStatus" class="connection" role="status">Checking connection…</span></div>
+      <p>Before you accept, the extension can read grace’s local appearance settings to match its theme; this does not pair the browser or share browsing data. After you accept, this extension connects to grace. on this computer automatically at startup and reconnect. It shares a persistent browser-profile identifier, pairing authentication proofs, policy acknowledgements, and recurring connection checks. Pairing credentials are stored locally. Visited URLs stay in the browser. Browser or device details and error reports are not sent.</p>
+      <p>Declining or stopping sharing disconnects the companion. Protected sessions cannot start or continue without their required browser. Existing blocking rules can remain until a later authenticated release. Disabling or uninstalling this extension removes its protection.</p>
+      <p id="consentStatus" class="consent-status" role="status" aria-live="polite"></p>
+      <div class="actions"><button type="button" id="consentAccept">Accept &amp; connect</button><button type="button" class="secondary" id="consentDecline">Keep disconnected</button><button type="button" class="secondary" id="consentStop">Stop sharing and disconnect</button></div>
+    </section>
+    <details id="advanced" hidden><summary>Advanced pairing</summary><div class="details-body">
+      <p>Use these settings if automatic pairing is unavailable.</p>
+      <div id="autoPairedBadge" class="badge" hidden>Automatically paired with grace. on this computer.</div>
+      <label for="token">Pairing token</label><input type="text" id="token" placeholder="Paste token from grace. settings" autocomplete="off">
+      <label for="profileId">Browser profile ID</label><input type="text" id="profileId" placeholder="e.g. personal-chrome" autocomplete="off">
+      <button id="save">Save pairing</button><p id="status" role="status" aria-live="polite"></p>
+    </div></details>
+    <footer><button type="button" class="text-button" id="consentUninstall">Uninstall extension</button></footer>
+  </main>
+  <script type="module" src="options.js"></script>
 </body>
 </html>

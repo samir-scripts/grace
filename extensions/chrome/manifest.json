@@ -1,16 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Pomotroid Focus Companion",
-  "version": "1.0.0",
+  "name": "grace. Focus Companion",
+  "version": "1.1.0",
   "minimum_chrome_version": "116",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApLkBE4/ZTkyVy2ymxu4bK/7cr+SXRZQmTyuqEqOH9xUOq3bv41NO/VjzSepRoF1ee4E5D2pZunEVJa/E+Tmi76Nrl80TtJ9eeqLRqB2fF2YoT7Gh1+UPonUBhmCrFj31/Qtca/+CW1KZ2C+gmPFP8vuATNmBeAvt3uUy7DreHhTSKAIQtmehnGO7J1TdH3vfUHFEemkxKHjuOQVaVvHFi8VdAkMRP7kqIVx3qQJ2b+G3zD1IpC13+cukozi0ofmGZeou2vPwRBEcL+eSMGH6wDa3graSaf8xEuLIw6NaP6sS8x5KI9qX2mtY/pRszHdBVKpphm3AGDy/p8ZeJdGmGQIDAQAB",
-  "description": "Enforces distraction blocking during Pomotroid focus sessions.",
+  "description": "Enforces distraction blocking during grace. focus sessions.",
   "permissions": [
     "alarms",
     "storage",
     "declarativeNetRequest",
     "tabs",
-    "management",
     "nativeMessaging"
   ],
   "host_permissions": [
