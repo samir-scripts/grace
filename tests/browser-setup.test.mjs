@@ -98,3 +98,22 @@ test('resolved themes give distinct readable badges and German text fits', async
     assert.ok(await installed.isVisible());
   } finally { await page.close(); }
 });
+
+test('Chrome displays unpacked setup guidance only when installed and not active', async () => {
+  const page = await browser.newPage({ viewport: { width: 330, height: 700 } });
+  try {
+    await page.goto(url);
+    const chrome = page.locator('.browser-card').nth(0);
+    const firefox = page.locator('.browser-card').nth(1);
+    await chrome.locator('.badge.active').waitFor();
+    assert.equal(await chrome.locator('.chrome-unpacked-hint').count(), 0, 'guidance hidden while active');
+    assert.equal(await firefox.locator('.chrome-unpacked-hint').count(), 0, 'guidance absent on Firefox');
+    await page.evaluate(() => window.__browserSetupTest.disconnect());
+    await page.locator('.btn-refresh').click();
+    await page.waitForFunction(() => !document.querySelector('.browser-card .badge.active'));
+    const hint = chrome.locator('.chrome-unpacked-hint');
+    await hint.waitFor({ timeout: 2000 });
+    assert.ok((await hint.textContent()).includes('chrome://extensions'));
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  } finally { await page.close(); }
+});

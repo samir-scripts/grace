@@ -196,6 +196,7 @@
   "browser_installing": "Instalando…",
   "browser_removing": "Removendo…",
   "browser_install_success": "Extensão instalada! Reinicie o navegador se necessário.",
+  "browser_chrome_unpacked_hint": "Para concluir a configuração: em chrome://extensions, ative o Modo do desenvolvedor e clique em Carregar sem compactação apontando para extensions/dist/chrome.",
   "browser_remove_success": "Extensão removida com sucesso.",
   "browser_locked_hint": "As extensões não podem ser alteradas durante uma sessão de foco ativa.",
   "browser_connected_profiles": "Perfis de navegador conectados",

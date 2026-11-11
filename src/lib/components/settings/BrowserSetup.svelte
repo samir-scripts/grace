@@ -214,6 +214,9 @@
                 <span class="badge active"><span class="connection-dot" aria-hidden="true"></span>{m.browser_status_active()}</span>
               {/if}
             </span>
+            {#if browser.kind === 'chrome' && browser.is_installed && !isActive(browser.kind)}
+              <p class="chrome-unpacked-hint">{m.browser_chrome_unpacked_hint()}</p>
+            {/if}
           </div>
         </div>
 
@@ -475,6 +478,14 @@
     gap: 8px;
     align-items: center;
   }
+  .chrome-unpacked-hint {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--color-foreground-darker);
+    margin: 4px 0 0;
+    word-break: break-word;
+  }
+
 
   .badge {
     display: inline-flex;

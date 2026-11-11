@@ -219,6 +219,7 @@
   "browser_installing": "Installing…",
   "browser_removing": "Removing…",
   "browser_install_success": "Extension installed! Restart your browser if needed.",
+  "browser_chrome_unpacked_hint": "To complete setup: in chrome://extensions, enable Developer mode and click Load unpacked pointing to extensions/dist/chrome.",
   "browser_remove_success": "Extension removed successfully.",
   "browser_locked_hint": "Extensions cannot be changed while a focus session is active.",
   "browser_connected_profiles": "Connected Browser Profiles",

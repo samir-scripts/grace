@@ -196,6 +196,7 @@
   "browser_installing": "正在安装…",
   "browser_removing": "正在移除…",
   "browser_install_success": "扩展已安装！如有需要请重启浏览器。",
+  "browser_chrome_unpacked_hint": "要完成设置：在 chrome://extensions 中启用开发者模式，然后点击“加载已解压的扩展程序”并指向 extensions/dist/chrome。",
   "browser_remove_success": "扩展已成功移除。",
   "browser_locked_hint": "专注会话期间无法更改扩展程序。",
   "browser_connected_profiles": "已连接的浏览器配置文件",

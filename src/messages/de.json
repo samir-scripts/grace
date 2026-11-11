@@ -199,6 +199,7 @@
   "browser_installing": "Wird installiert…",
   "browser_removing": "Wird entfernt…",
   "browser_install_success": "Erweiterung installiert! Starten Sie Ihren Browser ggf. neu.",
+  "browser_chrome_unpacked_hint": "Um die Einrichtung abzuschließen: Aktivieren Sie in chrome://extensions den Entwicklermodus und laden Sie extensions/dist/chrome entpackt.",
   "browser_remove_success": "Erweiterung erfolgreich entfernt.",
   "browser_locked_hint": "Erweiterungen können während einer aktiven Fokussitzung nicht geändert werden.",
   "browser_connected_profiles": "Verbundene Browser-Profile",

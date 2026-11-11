@@ -196,6 +196,7 @@
   "browser_installing": "Yükleniyor…",
   "browser_removing": "Kaldırılıyor…",
   "browser_install_success": "Uzantı yüklendi! Gerekirse tarayıcınızı yeniden başlatın.",
+  "browser_chrome_unpacked_hint": "Kurulumu tamamlamak için: chrome://extensions adresinde Geliştirici modunu etkinleştirin ve extensions/dist/chrome dizinini göstererek Paketlenmemiş öğe yükle'ye tıklayın.",
   "browser_remove_success": "Uzantı başarıyla kaldırıldı.",
   "browser_locked_hint": "Etkin bir odaklanma oturumu sırasında uzantılar değiştirilemez.",
   "browser_connected_profiles": "Bağlı Tarayıcı Profilleri",

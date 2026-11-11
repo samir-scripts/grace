@@ -196,6 +196,7 @@
   "browser_installing": "インストール中…",
   "browser_removing": "削除中…",
   "browser_install_success": "拡張機能がインストールされました！必要に応じてブラウザを再起動してください。",
+  "browser_chrome_unpacked_hint": "設定を完了するには：chrome://extensions でデベロッパーモードを有効にし、extensions/dist/chrome を指定して「パッケージ化されていない拡張機能を読み込む」をクリックします。",
   "browser_remove_success": "拡張機能を削除しました。",
   "browser_locked_hint": "集中セッション中は拡張機能を変更できません。",
   "browser_connected_profiles": "接続済みブラウザプロファイル",

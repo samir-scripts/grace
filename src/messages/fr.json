@@ -196,6 +196,7 @@
   "browser_installing": "Installation en cours…",
   "browser_removing": "Suppression en cours…",
   "browser_install_success": "Extension installée ! Redémarrez votre navigateur si nécessaire.",
+  "browser_chrome_unpacked_hint": "Pour terminer la configuration : dans chrome://extensions, activez le mode développeur et cliquez sur Charger l'extension non empaquetée pointant vers extensions/dist/chrome.",
   "browser_remove_success": "Extension supprimée avec succès.",
   "browser_locked_hint": "Les extensions ne peuvent pas être modifiées pendant une session de concentration active.",
   "browser_connected_profiles": "Profils de navigateur connectés",

@@ -196,6 +196,7 @@
   "browser_installing": "Instalando…",
   "browser_removing": "Eliminando…",
   "browser_install_success": "¡Extensión instalada! Reinicia tu navegador si es necesario.",
+  "browser_chrome_unpacked_hint": "Para completar la configuración: en chrome://extensions, activa el modo de desarrollador y haz clic en Cargar descomprimida señalando a extensions/dist/chrome.",
   "browser_remove_success": "Extensión eliminada correctamente.",
   "browser_locked_hint": "No se pueden cambiar las extensiones durante una sesión de concentración activa.",
   "browser_connected_profiles": "Perfiles de navegador conectados",
