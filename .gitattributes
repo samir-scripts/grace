@@ -1,0 +1,2 @@
+# Signed Gecko payload correspondence requires exact source bytes on every OS.
+extensions/focus/** -text

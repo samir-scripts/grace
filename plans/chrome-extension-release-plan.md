@@ -58,13 +58,13 @@ Draft extension ID: `cgibenlmgmblmalggjalnoaikjkdnoid`. Public-key derivation ch
 - `npm run check`: zero errors/warnings. A fixture union-type error found in the first integrated check was corrected.
 - Required Rust suite: 166 library tests plus integration suites passed, with configured native ignores/filter retained. Clippy passed.
 - `npm run build` and production macOS arm64 `npm run tauri build`: passed. No Windows/Linux build or GUI acceptance is claimed.
-- CI quality/release gates now install the Chromium test browser and run the dedicated Chromium integration suite. Those workflow changes have not run on GitHub yet.
+- CI quality/release gates now install the Chromium test browser and run the dedicated Chromium integration suite. Subsequent CI execution and failures are recorded in the continuation below.
 - Independent Terra review found Linux `google-chrome-stable` launch compatibility. The fallback now retries that executable after `google-chrome` fails; registration runs only once. Regression failed before the fix and the latest UI suite passed 10/10.
 
 ## Remaining release gates
 
-- A compatible public desktop release-candidate download for each OS is still needed for store reviewers. No changes were committed, pushed, merged, tagged or released in the Grace repository.
-- Publisher public contact/address and final privacy certifications require owner review in the dashboard. No contact/address was invented. Trusted testers are not assigned yet.
+- A compatible public desktop release-candidate download for each OS is still needed for store reviewers. Preparation is committed and pushed to `codex/chrome-public-release`; no merge, tag or public release has occurred.
+- The owner-supplied public contact and trusted tester are saved. Privacy certifications are saved. Contact verification remains pending; no address was invented.
 - Store-installed restricted testing, then all-platform packaged native acceptance and review approval remain open; the old macOS guest input blocker is unchanged.
 - Chrome-only connection guidance now distinguishes missing native host, incompatible native protocol, unavailable host and unauthenticated/disconnected focus connection. It probes only after consent, never returns or logs credentials, aborts on withdrawal and keeps connected claims tied to authenticated background state. Native Config adds protocol_version=3; existing Firefox ignores the additive field. Unit red/green checks passed 5/5, and independent review found no actionable issue. Actual packaged failure-mode acceptance is still required.
 
@@ -78,7 +78,7 @@ Draft extension ID: `cgibenlmgmblmalggjalnoaikjkdnoid`. Public-key derivation ch
 - Existing SSH repository access works; GitHub CLI has no API authentication. Build-only CI will run from a codex feature branch after committing the related preparation/acceptance work. No tag, merge, public extension publication or release workflow is authorized by this continuation.
 - Existing owned Chrome Tart guest and baseline remain stopped. Tart executable is `.superpowers/sdd/safe-gecko-network-prototype-plan/tart.app/Contents/MacOS/tart`. Prior guest payload predates production identity; transfer current package with fresh provenance before native checks.
 
-- Security alert follow-up: owner reported OpenVSX token detection at API-helper test line 15. Source and independent review identify the public Chrome publisher UUID, not a credential. Replaced test metadata with runtime `randomUUID()`, focused tests passed 11/11. No affected key was found; no rotation claimed. See `evidence/chrome-release-2026-11-11/secret-scanning-incident.md`. GitHub authentication is needed to inspect/close the alert and read the failed CI logs.
+- Security alert follow-up: owner reported OpenVSX token detection at API-helper test line 15. Source and independent review identify the public Chrome publisher UUID, not a credential. Replaced test metadata with runtime `randomUUID()`, focused tests passed 11/11. No affected key was found; no rotation claimed. See `evidence/chrome-release-2026-11-11/secret-scanning-incident.md`. Authenticated inspection and the closure outcome are recorded below.
 
 - Cross-platform CI run 43066210538 stopped in extension tests: Node 22 cancelled the timeout mock and six following tests because AbortSignal.timeout is unreferenced and the mock had no active I/O. Fixed the test with a referenced mock-request timer, cleared on abort, and an explicit aborted-signal assertion. No production timeout or gate was weakened. Focused tests passed 11/11; rerun pending.
 - Public contact set to the owner-supplied address, currently unverified; Google verification email requested. Trusted tester account saved. Publisher display name remains unchanged after automatic review rejected an unrequested identity change.
@@ -88,3 +88,7 @@ Draft extension ID: `cgibenlmgmblmalggjalnoaikjkdnoid`. Public-key derivation ch
 - Native guest input still returns noWindowsAvailable for clicks after activation/rebinding. Keyboard attempts did not establish guest interaction. Owned clone stopped; baseline and other guests stayed stopped. No new native acceptance pass is claimed.
 
 - CI run 43068794933 passed frontend and Chromium checks, then exposed 13 Linux-only Clippy diagnostics in platform-specific application catalog/monitor code and browser policy paths. Helpers/imports are now compiled only on their supported platforms (or in tests); Linux tail expressions and unused executable argument handling were corrected without warning suppressions. macOS focused monitor/catalog/browser-detector tests and Clippy passed. Linux CI rerun is the remaining proof.
+
+- CI run 43070532439 at source 74b1f78 passed the entire Ubuntu quality gate, including frontend/extension tests, Chromium integration, Clippy and required Rust tests. Windows packaging failed during signed Gecko source correspondence; Linux and macOS production builds are still running. The integrity check remains enabled while the platform checkout difference is investigated. Independent Terra review found no supported-platform regression in 094789b.
+
+- Windows failure reproduced in a disposable checkout with `core.autocrlf=true`: 12 of 13 signed shared source files changed from LF to CRLF, and the strict archive verifier failed. `.gitattributes` now preserves exact `extensions/focus/**` bytes with `-text`. The same checkout then matched all 13 Git blobs and passed the unchanged verifier. Focused signed-Gecko/Chrome packaging tests passed 23/23; required-signed package build passed. A fresh Windows CI build is still required.

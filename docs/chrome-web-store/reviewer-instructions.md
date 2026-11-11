@@ -1,6 +1,6 @@
 # Chrome Web Store Reviewer Instructions
 
-**Status:** The Chrome Web Store item is an unpublished private draft with ID `cgibenlmgmblmalggjalnoaikjkdnoid`. Its production extension package has been uploaded to the draft, but it has not been submitted for review or publicly released. Restricted testers are not assigned. Compatible Grace downloads for review are pending CI production and publication.
+**Status:** The Chrome Web Store item is an unpublished private draft with ID `cgibenlmgmblmalggjalnoaikjkdnoid`. Its production extension package has been uploaded to the draft, but it has not been submitted for review or publicly released. The owner-supplied trusted tester is assigned. Compatible Grace downloads for review are pending CI production and publication.
 
 ## Compatible Grace builds
 
@@ -16,9 +16,9 @@ The existing local macOS build is not a public reviewer artifact. Windows and Li
 
 - Use Google Chrome desktop 116 or later on macOS, Windows, or Linux.
 - Install the Grace release candidate matching the review OS. Keep Grace and Chrome on the same computer.
-- The companion is an unpublished private draft. A Chrome Web Store install link and restricted tester access will be supplied after the owner assigns testers and CI artifacts are published. The item is not publicly installable now.
+- The companion is an unpublished private draft. A Chrome Web Store install link and restricted tester access will be supplied after CI artifacts are published and private distribution is approved. The item is not publicly installable now.
 - The extension version is 1.1.0 and uses native protocol version 3. It requires Grace with the matching native host and protocol.
-- No Grace account or publisher credentials are required. For private draft installation, use the invited Google account once access is assigned. Use only disposable local test profiles and credentials.
+- No Grace account or publisher credentials are required. For private draft installation, use the invited Google account once the private item becomes installable. Use only disposable local test profiles and credentials.
 
 ## Suggested review flow
 

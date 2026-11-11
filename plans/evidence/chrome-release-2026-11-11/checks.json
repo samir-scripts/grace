@@ -72,5 +72,28 @@
     "status": "passed",
     "preconsent_browser_check": "passed",
     "native_serialization": "protocol_version=3"
+  },
+  "ci_43070532439": {
+    "source_revision": "74b1f78018aa6d705351ebbd0fbcf2af6505379d",
+    "quality_gate": "passed",
+    "includes": [
+      "npm_check",
+      "npm_test",
+      "chromium_integration",
+      "linux_clippy",
+      "required_rust_tests"
+    ],
+    "windows_build": "failed",
+    "windows_failure": "Signed Gecko archive/source payload mismatch during prebuild; investigation pending",
+    "linux_build": "in_progress",
+    "macos_universal_build": "in_progress"
+  },
+  "windows_checkout_regression": {
+    "before": "failed: CRLF conversion changed 12 of 13 signed sources",
+    "fix": "extensions/focus/** -text",
+    "after": "passed: all 13 source files byte-identical and strict verification passed with core.autocrlf=true",
+    "packaging_tests_passed": 23,
+    "required_signed_build": "passed",
+    "windows_ci": "pending"
   }
 }
