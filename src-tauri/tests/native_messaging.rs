@@ -27,6 +27,7 @@ fn test_native_message_read_write_framing() {
             assert_eq!(token, "test-token-xyz");
             assert_eq!(port, 1421);
         }
+        other => panic!("Unexpected message: {other:?}"),
     }
 }
 
@@ -79,4 +80,34 @@ fn chrome_native_host_authorizes_valid_extension_identity() {
     let manifest = generate_chrome_manifest(Path::new("/tmp/pomotroid-native-host"), &[id]);
     assert_eq!(manifest["allowed_origins"][0], format!("chrome-extension://{id}/"));
     assert_eq!(id, pomotroid_lib::focus::enterprise_policy::CHROME_EXTENSION_ID);
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn native_host_diagnostics_preserve_framing_and_secrets() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let home = std::env::temp_dir().join(format!("pomotroid-host-{}", uuid::Uuid::new_v4()));
+    let config_dir = home.join("Library/Application Support/com.splode.pomotroid");
+    std::fs::create_dir_all(&config_dir).unwrap();
+    std::fs::write(config_dir.join("focus_browser_config.json"),
+        r#"{"token":"DO_NOT_LOG_TOKEN","port":1421,"profiles":[]}"#).unwrap();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_pomotroid-native-host"))
+        .env("HOME", &home)
+        .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
+        .spawn().unwrap();
+    let mut frame = Vec::new();
+    write_native_message(&mut frame, &NativeInboundMessage::Connect).unwrap();
+    child.stdin.take().unwrap().write_all(&frame).unwrap();
+    let output = child.wait_with_output().unwrap();
+    std::fs::remove_dir_all(home).unwrap();
+    assert!(output.status.success());
+    let mut cursor = Cursor::new(&output.stdout);
+    assert_eq!(read_native_message::<NativeOutboundMessage>(&mut cursor).unwrap(),
+        NativeOutboundMessage::Config { token: "DO_NOT_LOG_TOKEN".into(), port: 1421 });
+    assert_eq!(cursor.position() as usize, output.stdout.len());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("config_sent"));
+    assert!(!stderr.contains("DO_NOT_LOG_TOKEN"));
 }

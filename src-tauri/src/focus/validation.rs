@@ -34,14 +34,14 @@ pub fn normalize_domain(input: &str) -> Result<String, ValidationError> {
     }
 
     // Strip http:// or https:// if present
-    if let Some(stripped) = raw.strip_prefix("http://") {
-        raw = stripped;
-    } else if let Some(stripped) = raw.strip_prefix("https://") {
-        raw = stripped;
+    if raw.get(..7).is_some_and(|prefix| prefix.eq_ignore_ascii_case("http://")) {
+        raw = &raw[7..];
+    } else if raw.get(..8).is_some_and(|prefix| prefix.eq_ignore_ascii_case("https://")) {
+        raw = &raw[8..];
     }
 
     // Strip path, query, fragment
-    if let Some(idx) = raw.find(|c| c == '/' || c == '?' || c == '#' || c == ':') {
+    if let Some(idx) = raw.find(['/', '?', '#', ':']) {
         raw = &raw[..idx];
     }
     raw = raw.trim();
@@ -74,7 +74,8 @@ pub fn normalize_domain(input: &str) -> Result<String, ValidationError> {
     // Convert via IDNA domain_to_ascii
     match idna::domain_to_ascii(&lower) {
         Ok(ascii) => {
-            if ascii.is_empty() || !ascii.contains('.') || ascii.starts_with('.') || ascii.ends_with('.') || ascii.contains("..") {
+            if ascii.is_empty() || !ascii.contains('.') || ascii.starts_with('.') || ascii.ends_with('.') || ascii.contains("..")
+                || !ascii.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'.') {
                 return Err(ValidationError::InvalidDomain(lower));
             }
             Ok(ascii)
@@ -127,6 +128,24 @@ mod tests {
         assert!(normalize_domain("invalid..domain").is_err());
         assert!(normalize_domain("nodots").is_err());
         assert!(normalize_domain("").is_err());
+    }
+
+    #[test]
+    fn normalizes_site_urls() {
+        for (input, expected) in [
+            ("HTTPS://WWW.YouTube.COM/watch?v=123", "youtube.com"),
+            ("https://WWW.Instagram.COM/reels/?q=1", "instagram.com"),
+            ("https://old.Reddit.COM/r/all?sort=new", "old.reddit.com"),
+        ] {
+            assert_eq!(normalize_domain(input).unwrap(), expected, "{input}");
+        }
+    }
+
+    #[test]
+    fn rejects_pattern_syntax() {
+        for input in ["*.youtube.com", r".*youtube\.com$", "/youtube.com/i"] {
+            assert!(normalize_domain(input).is_err(), "accepted {input}");
+        }
     }
 
     #[test]

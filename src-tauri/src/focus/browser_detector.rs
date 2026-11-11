@@ -9,10 +9,14 @@ use super::browser::BrowserKind;
 pub struct InstalledBrowser {
     pub kind: BrowserKind,
     pub name: String,
+    #[serde(default)]
+    pub catalog_id: Option<String>,
     pub executable_path: PathBuf,
     pub policy_path: Option<PathBuf>,
     pub is_installed: bool,
     pub is_extension_installed: bool,
+    #[serde(default)]
+    pub is_default: bool,
 }
 
 pub fn browsers_from_catalog(apps: &[InstalledApplication]) -> Vec<InstalledBrowser> {
@@ -26,6 +30,8 @@ pub fn browsers_from_catalog(apps: &[InstalledApplication]) -> Vec<InstalledBrow
             Some((BrowserKind::Firefox, "Mozilla Firefox"))
         } else if app.identifier == "app.zen-browser.zen" || app.identifier == "org.mozilla.zen" || app.identifier.eq_ignore_ascii_case("zen.exe") {
             Some((BrowserKind::Zen, "Zen Browser"))
+        } else if app.identifier == "com.apple.Safari" || app.identifier.eq_ignore_ascii_case("safari.exe") {
+            Some((BrowserKind::Safari, "Safari"))
         } else {
             None
         };
@@ -42,10 +48,12 @@ pub fn browsers_from_catalog(apps: &[InstalledApplication]) -> Vec<InstalledBrow
                     browsers.push(InstalledBrowser {
                         kind: k,
                         name: if app.name.is_empty() { default_name.into() } else { app.name.clone() },
+                        catalog_id: Some(app.id.clone()),
                         executable_path: exec_path,
                         policy_path,
                         is_installed: true,
                         is_extension_installed,
+                        is_default: false,
                     });
                 }
             }
@@ -133,10 +141,12 @@ pub fn detect_installed_browsers() -> Vec<InstalledBrowser> {
                     detected.push(InstalledBrowser {
                         kind,
                         name: name.to_string(),
+                        catalog_id: None,
                         executable_path: path,
                         policy_path,
                         is_installed: true,
                         is_extension_installed,
+                        is_default: false,
                     });
                     break;
                 }
@@ -155,6 +165,10 @@ pub fn detect_installed_browsers() -> Vec<InstalledBrowser> {
         check_fallback(BrowserKind::Zen, "Zen Browser", &[
             "/Applications/Zen Browser.app",
             "/Applications/Zen.app",
+        ]);
+        check_fallback(BrowserKind::Safari, "Safari", &[
+            "/System/Applications/Safari.app",
+            "/Applications/Safari.app",
         ]);
     }
 
@@ -180,6 +194,11 @@ pub fn detect_installed_browsers() -> Vec<InstalledBrowser> {
         BrowserKind::Safari => 3,
     });
 
+    let default_kind = get_default_browser();
+    for b in &mut detected {
+        b.is_default = Some(b.kind) == default_kind;
+    }
+
     detected
 }
 
@@ -191,6 +210,59 @@ pub fn validate_url_for_launch(url: &str) -> Result<(), String> {
         return Err("Only http and https URLs are allowed".into());
     }
     Ok(())
+}
+
+pub fn get_default_browser() -> Option<BrowserKind> {
+    #[cfg(target_os = "macos")]
+    unsafe {
+        use std::ffi::c_void;
+        #[link(name = "CoreServices", kind = "framework")]
+        extern "C" {
+            fn LSCopyDefaultHandlerForURLScheme(scheme: *const c_void) -> *const c_void;
+        }
+        #[link(name = "CoreFoundation", kind = "framework")]
+        extern "C" {
+            fn CFStringCreateWithCString(alloc: *const c_void, c_str: *const u8, encoding: u32) -> *const c_void;
+            fn CFStringGetCString(the_string: *const c_void, buffer: *mut u8, buffer_size: isize, encoding: u32) -> bool;
+            fn CFRelease(cf: *const c_void);
+        }
+        let scheme = CFStringCreateWithCString(std::ptr::null(), c"https".as_ptr().cast(), 0x08000100 /* kCFStringEncodingUTF8 */);
+        if scheme.is_null() {
+            return None;
+        }
+        let handler = LSCopyDefaultHandlerForURLScheme(scheme);
+        CFRelease(scheme);
+        if handler.is_null() {
+            return None;
+        }
+        let mut buf = [0u8; 256];
+        let ok = CFStringGetCString(handler, buf.as_mut_ptr(), buf.len() as isize, 0x08000100);
+        CFRelease(handler);
+        if !ok {
+            return None;
+        }
+        let handler_str = std::ffi::CStr::from_bytes_until_nul(&buf).ok()?.to_str().ok()?;
+        match handler_str {
+            id if id.eq_ignore_ascii_case("com.google.chrome") => Some(BrowserKind::Chrome),
+            id if id.eq_ignore_ascii_case("org.mozilla.firefox") => Some(BrowserKind::Firefox),
+            id if id.eq_ignore_ascii_case("app.zen-browser.zen") || id.eq_ignore_ascii_case("org.mozilla.zen") => Some(BrowserKind::Zen),
+            id if id.eq_ignore_ascii_case("com.apple.safari") => Some(BrowserKind::Safari),
+            _ => None,
+        }
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let output = std::process::Command::new("xdg-settings").args(["get", "default-web-browser"]).output().ok()?;
+        let s = String::from_utf8_lossy(&output.stdout).to_lowercase();
+        if s.contains("chrome") { Some(BrowserKind::Chrome) }
+        else if s.contains("firefox") { Some(BrowserKind::Firefox) }
+        else if s.contains("zen") { Some(BrowserKind::Zen) }
+        else { None }
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        None
+    }
 }
 
 pub fn launch_browser(browser: BrowserKind, url: Option<&str>) -> Result<(), String> {

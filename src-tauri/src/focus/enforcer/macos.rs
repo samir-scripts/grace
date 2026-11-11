@@ -4,6 +4,12 @@ use super::EnforcerError;
 
 pub struct MacOSEnforcer;
 
+impl Default for MacOSEnforcer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MacOSEnforcer {
     pub fn new() -> Self {
         Self

@@ -4,6 +4,12 @@ use super::model::{FocusPreferences, FocusProfile, FocusRunJournal};
 
 pub struct FocusRepository;
 
+impl Default for FocusRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FocusRepository {
     pub fn new() -> Self {
         Self

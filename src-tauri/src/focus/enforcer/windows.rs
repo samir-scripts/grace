@@ -127,6 +127,12 @@ mod application {
 pub(super) use application::ApplicationBackend;
 
 pub struct WindowsEnforcer;
+impl Default for WindowsEnforcer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WindowsEnforcer {
     pub fn new() -> Self { Self }
     pub fn flush_dns(&self) -> Result<(), super::EnforcerError> {

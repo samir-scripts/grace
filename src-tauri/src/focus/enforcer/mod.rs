@@ -52,6 +52,12 @@ pub struct SystemEnforcer {
     hosts_applied: Arc<AtomicBool>,
 }
 
+impl Default for SystemEnforcer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SystemEnforcer {
     pub fn new() -> Self {
         let is_active = Arc::new(AtomicBool::new(false));
@@ -157,6 +163,12 @@ pub struct MockEnforcer {
     pub is_active: AtomicBool,
     pub blocked_domains: std::sync::Mutex<Vec<String>>,
     pub blocked_apps: std::sync::Mutex<Vec<AppTarget>>,
+}
+
+impl Default for MockEnforcer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MockEnforcer {

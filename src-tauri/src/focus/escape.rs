@@ -49,6 +49,12 @@ pub struct EscapeHandler {
     passphrases: Mutex<HashMap<String, PassphraseAttempt>>,
 }
 
+impl Default for EscapeHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EscapeHandler {
     pub fn new() -> Self {
         Self {

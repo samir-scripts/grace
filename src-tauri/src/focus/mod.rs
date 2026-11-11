@@ -1,5 +1,6 @@
 pub mod app_catalog;
 pub mod browser;
+mod browser_auth;
 pub mod browser_detector;
 pub mod controller;
 pub mod enforcer;

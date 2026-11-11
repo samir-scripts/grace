@@ -140,3 +140,98 @@ fn test_atomic_write_to_directory() {
 
     fs::remove_dir_all(temp_dir).unwrap();
 }
+
+#[test]
+fn test_macos_gecko_plist_merges_without_overwriting_foreign_entries() {
+    use pomotroid_lib::focus::enterprise_policy::{
+        merge_macos_gecko_plist, unmerge_macos_gecko_plist,
+    };
+
+    let existing = json!({
+        "EnterprisePoliciesEnabled": false,
+        "DisableAppUpdate": true,
+        "ExtensionSettings": {
+            "uBlock0@raymondhill.net": {
+                "installation_mode": "normal_installed"
+            }
+        },
+        "NSWindow Frame MainWindow": "0 0 1000 700 0 0 1440 900"
+    });
+
+    let xpi_path = std::path::Path::new("/tmp/pomotroid_focus.xpi");
+    let merged = merge_macos_gecko_plist(&existing, xpi_path);
+
+    assert_eq!(merged["EnterprisePoliciesEnabled"], true);
+    assert_eq!(merged["DisableAppUpdate"], true);
+    assert_eq!(merged["NSWindow Frame MainWindow"], "0 0 1000 700 0 0 1440 900");
+    assert_eq!(
+        merged["ExtensionSettings"]["uBlock0@raymondhill.net"]["installation_mode"],
+        "normal_installed"
+    );
+    assert_eq!(
+        merged["ExtensionSettings"]["focus@pomotroid.local"]["installation_mode"],
+        "force_installed"
+    );
+    assert_eq!(
+        merged["ExtensionSettings"]["focus@pomotroid.local"]["install_url"],
+        "file:///tmp/pomotroid_focus.xpi"
+    );
+
+    let unmerged = unmerge_macos_gecko_plist(&merged);
+    assert_eq!(unmerged["EnterprisePoliciesEnabled"], true);
+    assert_eq!(unmerged["DisableAppUpdate"], true);
+    assert_eq!(unmerged["NSWindow Frame MainWindow"], "0 0 1000 700 0 0 1440 900");
+    assert_eq!(
+        unmerged["ExtensionSettings"]["uBlock0@raymondhill.net"]["installation_mode"],
+        "normal_installed"
+    );
+    assert_eq!(unmerged["ExtensionSettings"].get("focus@pomotroid.local"), None);
+}
+
+#[test]
+fn test_macos_gecko_plist_unmerges_empty_when_only_focus_installed() {
+    use pomotroid_lib::focus::enterprise_policy::{
+        merge_macos_gecko_plist, unmerge_macos_gecko_plist,
+    };
+
+    let xpi_path = std::path::Path::new("/tmp/pomotroid_focus.xpi");
+    let merged = merge_macos_gecko_plist(&json!({}), xpi_path);
+    assert_eq!(merged["EnterprisePoliciesEnabled"], true);
+    assert_eq!(
+        merged["ExtensionSettings"]["focus@pomotroid.local"]["installation_mode"],
+        "force_installed"
+    );
+
+    let unmerged = unmerge_macos_gecko_plist(&merged);
+    assert_eq!(unmerged, json!({}));
+}
+
+#[test]
+fn test_stage_gecko_xpi_to_dir_preserves_bytes_verbatim_and_canonicalizes_url() {
+    use pomotroid_lib::focus::enterprise_policy::{file_url_for_path, stage_gecko_xpi_to_dir};
+
+    let temp_root = std::env::temp_dir().join(format!("pomotroid-test-xpi-{}", uuid::Uuid::new_v4()));
+    let source_dir = temp_root.join("nested/dev/dist");
+    let target_app_data = temp_root.join("app_data");
+    fs::create_dir_all(&source_dir).unwrap();
+    fs::create_dir_all(&target_app_data).unwrap();
+
+    let fake_xpi = source_dir.join("focus@pomotroid.local.xpi");
+    let test_bytes = b"PK\x03\x04fixture-signed-xpi-bytes-stream";
+    fs::write(&fake_xpi, test_bytes).unwrap();
+
+    let staged_path = stage_gecko_xpi_to_dir(&fake_xpi, &target_app_data).unwrap();
+    assert!(staged_path.exists());
+    assert_eq!(
+        staged_path,
+        fs::canonicalize(target_app_data.join("browser-extensions/firefox/focus@pomotroid.local.xpi")).unwrap()
+    );
+    assert_eq!(fs::read(&staged_path).unwrap(), test_bytes);
+
+    let staged_url = file_url_for_path(&staged_path);
+    assert!(staged_url.starts_with("file://"));
+    assert!(!staged_url.contains(".."));
+    assert!(staged_url.ends_with("focus@pomotroid.local.xpi"));
+
+    fs::remove_dir_all(temp_root).unwrap();
+}

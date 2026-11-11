@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tauri::{AppHandle, Emitter};
 
 use crate::db::DbState;
@@ -29,6 +30,9 @@ pub struct FocusController {
     db: DbState,
     app_handle: Mutex<Option<AppHandle>>,
     transition: Mutex<()>,
+    dnd_active: AtomicBool,
+    reset_pending: AtomicBool,
+    reset_generation: AtomicU64,
     engine: Mutex<Option<crate::timer::engine::EngineHandle>>,
 }
 
@@ -105,6 +109,9 @@ impl FocusController {
             db,
             app_handle: Mutex::new(None),
             transition: Mutex::new(()),
+            dnd_active: AtomicBool::new(false),
+            reset_pending: AtomicBool::new(false),
+            reset_generation: AtomicU64::new(0),
             engine: Mutex::new(None),
         }
     }
@@ -122,7 +129,9 @@ impl FocusController {
     }
 
     pub fn get_snapshot(&self) -> FocusSnapshot {
-        self.state_machine.lock().unwrap().snapshot()
+        let mut snapshot = self.state_machine.lock().unwrap().snapshot();
+        snapshot.is_locked |= self.reset_pending();
+        snapshot
     }
 
     pub fn is_active(&self) -> bool {
@@ -130,7 +139,29 @@ impl FocusController {
     }
 
     pub fn is_locked(&self) -> bool {
-        self.state_machine.lock().unwrap().is_locked()
+        self.reset_pending() || self.state_machine.lock().unwrap().is_locked()
+    }
+
+    pub(crate) fn reset_pending(&self) -> bool {
+        self.reset_pending.load(Ordering::SeqCst)
+    }
+
+    pub(crate) fn reset_generation(&self) -> u64 {
+        self.reset_generation.load(Ordering::SeqCst)
+    }
+
+    pub(crate) fn capture_start_generation(&self) -> Result<u64, String> {
+        let _transition = self.transition.lock().unwrap();
+        if self.reset_pending() {
+            return Err("Timer reset is still completing.".into());
+        }
+        Ok(self.reset_generation())
+    }
+
+    pub(crate) fn finish_emergency_reset(&self) {
+        let _transition = self.transition.lock().unwrap();
+        self.reset_pending.store(false, Ordering::SeqCst);
+        self.emit_changed();
     }
 
     pub fn should_hide_on_window_close(&self, min_to_tray_on_close: bool) -> bool {
@@ -159,6 +190,9 @@ impl FocusController {
         }
     }
     pub fn check_timer_command(&self, action: TimerAction) -> Result<(), String> {
+        if self.reset_pending() {
+            return Err("Timer reset is still completing.".into());
+        }
         if !self.is_locked() {
             return Ok(());
         }
@@ -317,6 +351,7 @@ impl FocusController {
 
     pub fn set_emergency_passphrase(&self, passphrase: &str) -> Result<(), String> {
         let hash = hash_passphrase(passphrase).map_err(|e| e.to_string())?;
+        let _transition = self.transition.lock().unwrap();
         let conn = self.db.lock().map_err(|e| e.to_string())?;
         let mut prefs = self.repository.get_preferences(&conn).unwrap_or_default();
         prefs.emergency_passphrase_hash = Some(hash);
@@ -325,6 +360,7 @@ impl FocusController {
     }
 
     pub fn clear_emergency_passphrase(&self) -> Result<(), String> {
+        let _transition = self.transition.lock().unwrap();
         let conn = self.db.lock().map_err(|e| e.to_string())?;
         let mut prefs = self.repository.get_preferences(&conn).unwrap_or_default();
         prefs.emergency_passphrase_hash = None;
@@ -351,27 +387,42 @@ impl FocusController {
     }
 
     pub fn submit_emergency_passphrase(&self, passphrase: &str) -> Result<bool, String> {
-        let conn = self.db.lock().map_err(|e| e.to_string())?;
-        let prefs = self.repository.get_preferences(&conn).map_err(|e| e.to_string())?;
-        let hash = prefs.emergency_passphrase_hash.ok_or_else(|| "No emergency passphrase configured".to_string())?;
+        let _transition = self.transition.lock().unwrap();
+        let hash = {
+            let conn = self.db.lock().map_err(|e| e.to_string())?;
+            let prefs = self.repository.get_preferences(&conn).map_err(|e| e.to_string())?;
+            prefs.emergency_passphrase_hash.ok_or_else(|| "No emergency passphrase configured".to_string())?
+        };
 
         let attempt_id = self.escape_handler.submit_passphrase_first(passphrase, &hash).map_err(|e| e.to_string())?;
         let confirmed = self.escape_handler.submit_passphrase_confirm(&attempt_id, passphrase).map_err(|e| e.to_string())?;
         if confirmed {
-            self.execute_emergency_release()?;
+            self.execute_emergency_release_locked()?;
         }
         Ok(confirmed)
     }
 
     pub fn execute_emergency_release(&self) -> Result<(), String> {
         let _transition = self.transition.lock().unwrap();
+        self.execute_emergency_release_locked()
+    }
+
+    fn execute_emergency_release_locked(&self) -> Result<(), String> {
+        let engine = self.engine.lock().unwrap().clone();
+        if engine.is_some() {
+            self.reset_pending.store(true, Ordering::SeqCst);
+            self.reset_generation.fetch_add(1, Ordering::SeqCst);
+        }
         let mut candidate = self.state_machine.lock().unwrap().clone();
-        candidate.handle_emergency_released().map_err(|e| e.to_string())?;
-        let result = self.commit_enforcement_transition(candidate);
+        let result = candidate.handle_emergency_released().map_err(|e| e.to_string())
+            .and_then(|()| self.commit_enforcement_transition(candidate));
         if result.is_ok() {
-            if let Some(engine) = self.engine.lock().unwrap().as_ref() {
-                engine.send(crate::timer::engine::TimerCommand::Reset);
+            if let Some(engine) = engine {
+                engine.send(crate::timer::engine::TimerCommand::ResetCycle);
             }
+        } else {
+            self.reset_pending.store(false, Ordering::SeqCst);
+            self.emit_changed();
         }
         result
     }
@@ -380,6 +431,23 @@ impl FocusController {
 
     pub fn on_timer_started(&self, round_type: &str) -> Result<(), String> {
         let _transition = self.transition.lock().unwrap();
+        self.on_timer_started_locked(round_type)
+    }
+
+    pub(crate) fn start_timer(&self, round_type: &str, generation: u64, start: impl FnOnce()) -> Result<(), String> {
+        let _transition = self.transition.lock().unwrap();
+        if generation != self.reset_generation() {
+            return Err("Timer reset changed the current round. Try again.".into());
+        }
+        self.on_timer_started_locked(round_type)?;
+        start();
+        Ok(())
+    }
+
+    fn on_timer_started_locked(&self, round_type: &str) -> Result<(), String> {
+        if self.reset_pending() {
+            return Err("Timer reset is still completing.".into());
+        }
         let mut candidate = self.state_machine.lock().unwrap().clone();
         if candidate.snapshot().status == super::state::FocusStatus::RecoveryRequired {
             return Err("Blocking cleanup is required before starting the timer.".into());
@@ -420,6 +488,14 @@ impl FocusController {
                     }
                     self.enforcer.apply_blocking(&profile.blocked_apps, &profile.blocked_domains)
                         .map_err(|e| e.to_string())?;
+                    if let Ok(conn) = self.db.lock() {
+                        if let Ok(settings) = crate::settings::load(&conn) {
+                            if settings.dnd_enabled {
+                                let enabled = crate::platform::dnd::set_dnd(true).unwrap_or(false);
+                                self.dnd_active.store(enabled, Ordering::Relaxed);
+                            }
+                        }
+                    }
                 }
                 candidate.set_enforcement(EnforcementStatus {
                     state: EnforcementState::Active,
@@ -431,6 +507,7 @@ impl FocusController {
                 if was_blocking || previous.enforcement.state == EnforcementState::RecoveryRequired {
                     self.enforcer.release_blocking().map_err(|e| e.to_string())?;
                 }
+                self.restore_dnd();
                 let conn = self.db.lock().map_err(|e| e.to_string())?;
                 self.repository.clear_run_journal(&conn).map_err(|e| e.to_string())?;
                 candidate.set_enforcement(EnforcementStatus::default());
@@ -440,6 +517,7 @@ impl FocusController {
 
         if let Err(error) = result {
             let cleanup_ok = should_block && self.enforcer.release_blocking().is_ok();
+            log::warn!("[focus] transition_failed action={} cleanup_ok={cleanup_ok}", if should_block { "apply" } else { "release" });
             let mut failed = if original.snapshot().status == super::state::FocusStatus::Idle {
                 original
             } else {
@@ -462,6 +540,12 @@ impl FocusController {
         Ok(())
     }
 
+    fn restore_dnd(&self) {
+        if self.dnd_active.load(Ordering::Relaxed) && crate::platform::dnd::set_dnd(false).unwrap_or(false) {
+            self.dnd_active.store(false, Ordering::Relaxed);
+        }
+    }
+
     pub fn check_enforcement_health(&self) -> Result<(), String> {
         let _transition = self.transition.lock().unwrap();
         let snapshot = self.get_snapshot();
@@ -469,6 +553,9 @@ impl FocusController {
             return Ok(());
         }
         if let Err(error) = self.enforcer.renew_lease() {
+            if let Some(engine) = self.engine.lock().unwrap().as_ref() {
+                engine.send(crate::timer::engine::TimerCommand::Pause);
+            }
             let released = self.enforcer.release_blocking().is_ok();
             self.state_machine.lock().unwrap().set_enforcement(EnforcementStatus {
                 state: if released { EnforcementState::Failed } else { EnforcementState::RecoveryRequired },
@@ -476,6 +563,9 @@ impl FocusController {
                 ..Default::default()
             });
             self.emit_changed();
+            if released {
+                self.restore_dnd();
+            }
             return Err(error.to_string());
         }
         Ok(())
@@ -489,18 +579,20 @@ impl FocusController {
             let Some(controller) = controller.upgrade() else { break };
             if let Err(error) = controller.check_enforcement_health() {
                 log::error!("[focus] enforcement lost: {error}");
-                engine.send(crate::timer::engine::TimerCommand::Pause);
             }
         }).expect("failed to start focus supervisor");
     }
 
-    pub fn on_round_completed(&self, completed_round: &str, next_round: &str, is_last_round: bool) -> Result<(), String> {
+    pub fn on_round_completed(&self, next_round: &str, cycle_finished: bool) -> Result<(), String> {
         let _transition = self.transition.lock().unwrap();
+        if self.reset_pending() {
+            return Err("Timer reset is still completing.".into());
+        }
         let mut candidate = self.state_machine.lock().unwrap().clone();
         if !candidate.is_active() {
             return Ok(());
         }
-        if is_last_round && completed_round == "long-break" {
+        if cycle_finished {
             // Full cycle complete!
             candidate.handle_cycle_finished().map_err(|e| e.to_string())?;
         } else {
@@ -582,6 +674,53 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires a disposable guest: native DND behavior is part of enforcement cleanup"]
+    fn lease_loss_cannot_overtake_timer_start_command() {
+        use crate::timer::engine::{self, TimerCommand, TimerEvent};
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        assert_eq!(std::env::var("POMOTROID_DISPOSABLE_GUEST").as_deref(), Ok("1"));
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        enforcer.fail_renew.store(true, std::sync::atomic::Ordering::SeqCst);
+        let controller = Arc::new(controller_with_rules(enforcer));
+        let (engine, events) = engine::spawn(60, Duration::from_secs(1));
+        *controller.engine.lock().unwrap() = Some(engine.clone());
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (proceed_tx, proceed_rx) = mpsc::channel();
+        let (start_done_tx, start_done_rx) = mpsc::channel();
+        let start_controller = controller.clone();
+        let start_engine = engine.clone();
+        std::thread::spawn(move || {
+            let result = start_controller.start_timer("work", start_controller.reset_generation(), || {
+                entered_tx.send(()).unwrap();
+                proceed_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+                start_engine.send(TimerCommand::Start);
+            });
+            let _ = start_done_tx.send(result);
+        });
+        entered_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        let (health_started_tx, health_started_rx) = mpsc::channel();
+        let (health_done_tx, health_done_rx) = mpsc::channel();
+        let health_controller = controller.clone();
+        std::thread::spawn(move || {
+            let gate_held = health_controller.transition.try_lock().is_err();
+            health_started_tx.send(gate_held).unwrap();
+            let _ = health_done_tx.send(health_controller.check_enforcement_health());
+        });
+        let gate_held = health_started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        let premature = health_done_rx.recv_timeout(Duration::from_secs(1));
+        proceed_tx.send(()).unwrap();
+        assert!(start_done_rx.recv_timeout(Duration::from_secs(10)).unwrap().is_ok());
+        assert!(gate_held, "timer start did not hold the transition gate");
+        assert!(matches!(premature, Err(mpsc::RecvTimeoutError::Timeout)), "lease loss overtook timer start");
+        assert!(health_done_rx.recv_timeout(Duration::from_secs(10)).unwrap().is_err());
+        assert!(matches!(events.recv_timeout(Duration::from_secs(2)), Ok(TimerEvent::Started { .. })));
+        assert!(matches!(events.recv_timeout(Duration::from_secs(2)), Ok(TimerEvent::Paused { .. })));
+        engine.send(TimerCommand::Shutdown);
+    }
+
+    #[test]
     fn test_start_failure_does_not_enter_work() {
         let controller = controller_with_rules(Arc::new(FailingEnforcer::new(true)));
         assert!(controller.on_timer_started("work").is_err());
@@ -595,11 +734,16 @@ mod tests {
     fn test_release_failure_preserves_recovery_state() {
         let enforcer = Arc::new(FailingEnforcer::new(false));
         let controller = controller_with_rules(enforcer.clone());
+        let (engine, events) = crate::timer::engine::spawn(60, std::time::Duration::from_secs(10));
+        *controller.engine.lock().unwrap() = Some(engine.clone());
         controller.on_timer_started("work").unwrap();
         enforcer.fail_release.store(true, std::sync::atomic::Ordering::SeqCst);
         assert!(controller.execute_emergency_release().is_err());
         assert_eq!(controller.get_snapshot().status, super::super::state::FocusStatus::RecoveryRequired);
+        assert!(!controller.reset_pending());
+        assert!(events.recv_timeout(std::time::Duration::from_millis(30)).is_err());
         assert!(controller.repository.get_run_journal(&controller.db.lock().unwrap()).unwrap().is_some());
+        engine.send(crate::timer::engine::TimerCommand::Shutdown);
     }
 
     #[test]
@@ -622,9 +766,9 @@ mod tests {
         let controller = controller_with_rules(enforcer.clone());
         controller.set_unblock_during_breaks(true).unwrap();
         controller.on_timer_started("work").unwrap();
-        controller.on_round_completed("work", "short-break", false).unwrap();
+        controller.on_round_completed("short-break", false).unwrap();
         enforcer.fail_apply.store(true, std::sync::atomic::Ordering::SeqCst);
-        assert!(controller.on_round_completed("short-break", "work", false).is_err());
+        assert!(controller.on_round_completed("work", false).is_err());
         assert!(!controller.get_snapshot().blocking_active);
         enforcer.fail_apply.store(false, std::sync::atomic::Ordering::SeqCst);
         controller.on_timer_started("work").unwrap();
@@ -638,7 +782,7 @@ mod tests {
         let enforcer = Arc::new(MockEnforcer::new());
         let controller = controller_with_rules(enforcer.clone());
         controller.on_timer_started("work").unwrap();
-        controller.on_round_completed("work", "short-break", false).unwrap();
+        controller.on_round_completed("short-break", false).unwrap();
         assert!(enforcer.is_active.load(std::sync::atomic::Ordering::SeqCst));
         controller.set_unblock_during_breaks(true).unwrap();
         assert!(!enforcer.is_active.load(std::sync::atomic::Ordering::SeqCst));
@@ -654,9 +798,12 @@ mod tests {
         engine.send(crate::timer::engine::TimerCommand::Start);
         assert!(matches!(events.recv_timeout(std::time::Duration::from_secs(1)).unwrap(), crate::timer::engine::TimerEvent::Started { .. }));
         controller.execute_emergency_release().unwrap();
+        assert!(controller.is_locked(), "reset must finish before unlocking");
+        assert!(controller.capture_start_generation().is_err(), "generation capture must wait for reset");
+        assert!(controller.start_timer("work", controller.reset_generation(), || {}).is_err(), "start must wait for timer reset");
         let event = events.recv_timeout(std::time::Duration::from_secs(1));
         engine.send(crate::timer::engine::TimerCommand::Shutdown);
-        assert!(matches!(event, Ok(crate::timer::engine::TimerEvent::Reset)));
+        assert!(matches!(event, Ok(crate::timer::engine::TimerEvent::ResetCycle)));
     }
 
     #[test]

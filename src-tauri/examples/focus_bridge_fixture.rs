@@ -1,12 +1,14 @@
 use std::io::{self, BufRead, Write};
 use std::sync::Arc;
-use pomotroid_lib::focus::browser::BrowserBridge;
+use pomotroid_lib::focus::browser::{BrowserBridge, BrowserKind};
 use pomotroid_lib::focus::enforcer::NativeEnforcer;
 
 #[tokio::main]
 async fn main() {
+    assert_eq!(std::env::var("POMOTROID_DISPOSABLE_GUEST").as_deref(), Ok("1"), "native browser enforcement fixture requires a disposable guest");
     let port: u16 = std::env::args().nth(1).unwrap().parse().unwrap();
     let bridge = Arc::new(BrowserBridge::new_in_memory("fixture-token".into(), port).await.unwrap());
+    bridge.set_required_profile("fixture-profile", BrowserKind::Chrome, false).unwrap();
     println!("ready");
     for line in io::stdin().lock().lines() {
         let line = line.unwrap();

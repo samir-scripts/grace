@@ -76,6 +76,12 @@ pub struct FocusStateMachine {
     enforcement: EnforcementStatus,
 }
 
+impl Default for FocusStateMachine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FocusStateMachine {
     pub fn new() -> Self {
         Self {
