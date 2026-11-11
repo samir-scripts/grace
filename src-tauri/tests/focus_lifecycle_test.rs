@@ -5,6 +5,48 @@ use pomotroid_lib::focus::enforcer::MockEnforcer;
 use pomotroid_lib::focus::model::{AppTarget, FocusProfile, FocusRunJournal};
 use pomotroid_lib::focus::repository::FocusRepository;
 use pomotroid_lib::focus::state::FocusPhase;
+use pomotroid_lib::timer::{advance_focus_sequence, sequence::SequenceState};
+
+#[test]
+fn real_timer_sequence_finishes_focus_at_the_end_of_each_configured_cycle() {
+    for (short_enabled, long_enabled) in [(true, true), (false, true), (true, false), (false, false)] {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        migrations::run(&conn).unwrap();
+        let db = Arc::new(Mutex::new(conn));
+        let enforcer = Arc::new(MockEnforcer::new());
+        let controller = FocusController::new(db.clone(), Some(enforcer.clone()));
+        let profile = FocusProfile {
+            id: "sequence-cycle".into(), name: "Sequence cycle".into(),
+            work_secs: 120, short_break_secs: 60, long_break_secs: 60, work_rounds: 2,
+            blocked_apps: vec![], blocked_domains: vec!["example.com".into()], revision: 1,
+        };
+        controller.save_profile(profile).unwrap();
+        controller.select_profile("sequence-cycle").unwrap();
+        controller.set_unblock_during_breaks(true).unwrap();
+        controller.on_timer_started("work").unwrap();
+        let mut sequence = SequenceState::new(2, 120, 60, 60);
+        let steps = match (short_enabled, long_enabled) {
+            (true, _) => 4,
+            (false, true) => 3,
+            (false, false) => 2,
+        };
+        for step in 0..steps {
+            let (_, next, _, cycle_finished) = advance_focus_sequence(&mut sequence, short_enabled, long_enabled);
+            controller.on_round_completed(next.as_str(), cycle_finished).unwrap();
+            if step + 1 < steps {
+                assert!(controller.is_locked(), "released early at step {step}, short={short_enabled}, long={long_enabled}");
+                if next.as_str() == "work" {
+                    assert!(enforcer.is_active.load(std::sync::atomic::Ordering::Relaxed));
+                    assert!(FocusRepository::new().get_run_journal(&db.lock().unwrap()).unwrap().is_some());
+                }
+            } else {
+                assert!(!controller.is_locked(), "remained locked after cycle, short={short_enabled}, long={long_enabled}");
+                assert!(!enforcer.is_active.load(std::sync::atomic::Ordering::Relaxed));
+                assert!(FocusRepository::new().get_run_journal(&db.lock().unwrap()).unwrap().is_none());
+            }
+        }
+    }
+}
 
 #[test]
 fn test_full_focus_session_lifecycle() {
@@ -62,14 +104,14 @@ fn test_full_focus_session_lifecycle() {
     assert!(controller.check_timer_command(TimerAction::RestartRound).is_ok());
 
     // 4. Complete Work Round 1 -> Transition to Short Break
-    controller.on_round_completed("work", "short-break", false).unwrap();
+    controller.on_round_completed("short-break", false).unwrap();
     let snap_break = controller.get_snapshot();
     assert!(snap_break.is_locked); // Still locked
     assert!(!snap_break.blocking_active); // Unblocked during break
     assert!(!mock_enforcer.is_active.load(std::sync::atomic::Ordering::Relaxed));
 
     // 5. Complete Short Break -> Transition to Work Round 2
-    controller.on_round_completed("short-break", "work", false).unwrap();
+    controller.on_round_completed("work", false).unwrap();
     let snap_work_2 = controller.get_snapshot();
     assert!(snap_work_2.is_locked);
     assert!(snap_work_2.blocking_active); // Re-blocked
@@ -77,13 +119,13 @@ fn test_full_focus_session_lifecycle() {
     assert!(mock_enforcer.is_active.load(std::sync::atomic::Ordering::Relaxed));
 
     // 6. Complete Work Round 2 -> Transition to Long Break
-    controller.on_round_completed("work", "long-break", true).unwrap();
+    controller.on_round_completed("long-break", false).unwrap();
     let snap_long_break = controller.get_snapshot();
     assert!(snap_long_break.is_locked);
     assert!(!snap_long_break.blocking_active);
 
     // 7. Complete Long Break -> Cycle Complete!
-    controller.on_round_completed("long-break", "work", true).unwrap();
+    controller.on_round_completed("work", true).unwrap();
     let snap_final = controller.get_snapshot();
     assert!(!snap_final.is_locked);
     assert!(!snap_final.blocking_active);
@@ -133,6 +175,111 @@ fn test_emergency_exit_during_active_work() {
     let repo = FocusRepository::new();
     let conn = db.lock().unwrap();
     assert!(repo.get_run_journal(&conn).unwrap().is_none());
+}
+
+#[test]
+#[ignore = "requires disposable guest: release invokes native Do Not Disturb controls"]
+fn valid_emergency_passphrase_releases_active_session_without_deadlock() {
+    assert_eq!(std::env::var("POMOTROID_DISPOSABLE_GUEST").as_deref(), Ok("1"), "run only in a disposable guest");
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    migrations::run(&conn).unwrap();
+    let db = Arc::new(Mutex::new(conn));
+    let enforcer = Arc::new(MockEnforcer::new());
+    let controller = Arc::new(FocusController::new(db.clone(), Some(enforcer.clone())));
+    let profile = FocusProfile {
+        id: "passphrase-release".to_string(),
+        name: "Passphrase release".to_string(),
+        work_secs: 1500,
+        short_break_secs: 300,
+        long_break_secs: 900,
+        work_rounds: 2,
+        blocked_apps: vec![],
+        blocked_domains: vec!["example.com".to_string()],
+        revision: 1,
+    };
+    controller.save_profile(profile).unwrap();
+    controller.select_profile("passphrase-release").unwrap();
+    let passphrase = "isolated-test-emergency-passphrase-123456789";
+    controller.set_emergency_passphrase(passphrase).unwrap();
+    controller.on_timer_started("work").unwrap();
+    assert!(controller.is_locked());
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    let worker = Arc::clone(&controller);
+    std::thread::spawn(move || {
+        let _ = tx.send(worker.submit_emergency_passphrase(passphrase));
+    });
+    let result = rx.recv_timeout(std::time::Duration::from_secs(20))
+        .expect("emergency passphrase release did not complete");
+    assert!(result.unwrap());
+    assert!(!controller.is_locked());
+    assert!(!controller.is_active());
+    assert!(!enforcer.is_active.load(std::sync::atomic::Ordering::Relaxed));
+    assert!(FocusRepository::new().get_run_journal(&db.lock().unwrap()).unwrap().is_none());
+}
+
+#[test]
+#[ignore = "requires disposable guest: release invokes native Do Not Disturb controls"]
+fn passphrase_clear_waits_until_inflight_emergency_release_finishes() {
+    assert_eq!(std::env::var("POMOTROID_DISPOSABLE_GUEST").as_deref(), Ok("1"), "run only in a disposable guest");
+    use pomotroid_lib::focus::enforcer::{EnforcerError, NativeEnforcer};
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    struct PausedRelease {
+        entered: mpsc::Sender<()>,
+        proceed: Mutex<mpsc::Receiver<()>>,
+    }
+    impl NativeEnforcer for PausedRelease {
+        fn apply_blocking(&self, _: &[AppTarget], _: &[String]) -> Result<(), EnforcerError> { Ok(()) }
+        fn release_blocking(&self) -> Result<(), EnforcerError> {
+            let _ = self.entered.send(());
+            self.proceed.lock().unwrap().recv_timeout(Duration::from_secs(15))
+                .map_err(|_| EnforcerError::LeaseLost)?;
+            Ok(())
+        }
+        fn renew_lease(&self) -> Result<(), EnforcerError> { Ok(()) }
+    }
+
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    migrations::run(&conn).unwrap();
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let (proceed_tx, proceed_rx) = mpsc::channel();
+    let enforcer = Arc::new(PausedRelease { entered: entered_tx, proceed: Mutex::new(proceed_rx) });
+    let controller = Arc::new(FocusController::new(Arc::new(Mutex::new(conn)), Some(enforcer)));
+    let profile = FocusProfile {
+        id: "passphrase-race".into(), name: "Passphrase race".into(),
+        work_secs: 1500, short_break_secs: 300, long_break_secs: 900, work_rounds: 2,
+        blocked_apps: vec![], blocked_domains: vec!["example.com".into()], revision: 1,
+    };
+    controller.save_profile(profile).unwrap();
+    controller.select_profile("passphrase-race").unwrap();
+    let passphrase = "isolated-test-emergency-passphrase-123456789";
+    controller.set_emergency_passphrase(passphrase).unwrap();
+    controller.on_timer_started("work").unwrap();
+
+    let (submit_tx, submit_rx) = mpsc::channel();
+    let submit_controller = Arc::clone(&controller);
+    std::thread::spawn(move || { let _ = submit_tx.send(submit_controller.submit_emergency_passphrase(passphrase)); });
+    entered_rx.recv_timeout(Duration::from_secs(10)).expect("emergency release did not start");
+    let (clear_started_tx, clear_started_rx) = mpsc::channel();
+    let (clear_done_tx, clear_done_rx) = mpsc::channel();
+    let clear_controller = Arc::clone(&controller);
+    std::thread::spawn(move || {
+        clear_started_tx.send(()).unwrap();
+        let result = clear_controller.clear_emergency_passphrase();
+        clear_done_tx.send(result).unwrap();
+    });
+    clear_started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    let completed_before_release = clear_done_rx.recv_timeout(Duration::from_secs(1));
+    proceed_tx.send(()).unwrap();
+    let submitted = submit_rx.recv_timeout(Duration::from_secs(20)).expect("emergency release did not complete");
+
+    assert!(matches!(completed_before_release, Err(mpsc::RecvTimeoutError::Timeout)),
+        "passphrase clear completed before the in-flight release");
+    assert!(submitted.unwrap());
+    assert!(clear_done_rx.recv_timeout(Duration::from_secs(5)).unwrap().is_ok());
+    assert!(!controller.is_locked());
 }
 
 #[test]

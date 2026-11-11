@@ -19,6 +19,8 @@ pub enum TimerCommand {
     Pause,
     Resume,
     Reset,
+    /// Stop the current round and reset the timer sequence to its first work round.
+    ResetCycle,
     /// Immediately fires a `Complete` event (user-initiated skip).
     Skip,
     /// Change the total duration; moves engine to Idle so caller must Start.
@@ -41,6 +43,7 @@ pub enum TimerEvent {
     Paused { elapsed_secs: u32 },
     Resumed { elapsed_secs: u32 },
     Reset,
+    ResetCycle,
     Suspended { elapsed_secs: u32 },
 }
 
@@ -139,6 +142,11 @@ fn run_loop(
                     let _ = event_tx.send(TimerEvent::Reset);
                     Transition::Stay
                 }
+                Ok(TimerCommand::ResetCycle) => {
+                    elapsed_secs = 0;
+                    let _ = event_tx.send(TimerEvent::ResetCycle);
+                    Transition::Stay
+                }
                 // Skip while Idle: advance to the next round without starting.
                 Ok(TimerCommand::Skip) => {
                     let _ = event_tx.send(TimerEvent::Complete { skipped: true });
@@ -161,6 +169,11 @@ fn run_loop(
                 Ok(TimerCommand::Reset) => {
                     elapsed_secs = 0;
                     let _ = event_tx.send(TimerEvent::Reset);
+                    Transition::To(Phase::Idle)
+                }
+                Ok(TimerCommand::ResetCycle) => {
+                    elapsed_secs = 0;
+                    let _ = event_tx.send(TimerEvent::ResetCycle);
                     Transition::To(Phase::Idle)
                 }
                 Ok(TimerCommand::Skip) => {
@@ -226,6 +239,11 @@ fn run_loop(
                         let _ = event_tx.send(TimerEvent::Reset);
                         Transition::To(Phase::Idle)
                     }
+                    Ok(TimerCommand::ResetCycle) => {
+                        elapsed_secs = 0;
+                        let _ = event_tx.send(TimerEvent::ResetCycle);
+                        Transition::To(Phase::Idle)
+                    }
                     Ok(TimerCommand::Reconfigure { duration_secs: d }) => {
                         total_secs = d;
                         elapsed_secs = 0;
@@ -258,6 +276,25 @@ fn run_loop(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn cycle_reset_is_delivered_in_every_engine_phase_without_completion() {
+        use super::*;
+        for phase in ["idle", "running", "paused", "suspended"] {
+            let (engine, events) = spawn(120, Duration::from_secs(10));
+            if phase != "idle" {
+                engine.send(TimerCommand::Start);
+                assert!(matches!(events.recv_timeout(Duration::from_secs(1)).unwrap(), TimerEvent::Started { .. }));
+                if phase == "paused" || phase == "suspended" {
+                    engine.send(if phase == "paused" { TimerCommand::Pause } else { TimerCommand::Suspend });
+                    assert!(matches!(events.recv_timeout(Duration::from_secs(1)).unwrap(), TimerEvent::Paused { .. } | TimerEvent::Suspended { .. }));
+                }
+            }
+            engine.send(TimerCommand::ResetCycle);
+            assert!(matches!(events.recv_timeout(Duration::from_secs(1)).unwrap(), TimerEvent::ResetCycle), "phase {phase}");
+            assert!(events.recv_timeout(Duration::from_millis(30)).is_err(), "unexpected event after reset in {phase}");
+            engine.send(TimerCommand::Shutdown);
+        }
+    }
     use super::*;
     use std::time::Duration;
 
@@ -270,6 +307,32 @@ mod tests {
             events.push(e);
         }
         events
+    }
+
+    fn wait_for_tick(rx: &Receiver<TimerEvent>, minimum: u32) -> u32 {
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            assert!(!remaining.is_zero(), "timer tick timed out");
+            match rx.recv_timeout(remaining).expect("timer tick timed out") {
+                TimerEvent::Tick { elapsed_secs, .. } if elapsed_secs >= minimum => return elapsed_secs,
+                TimerEvent::Complete { .. } => panic!("timer completed before expected tick"),
+                _ => {}
+            }
+        }
+    }
+
+    fn wait_for_pause(rx: &Receiver<TimerEvent>) -> u32 {
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            assert!(!remaining.is_zero(), "timer pause timed out");
+            match rx.recv_timeout(remaining).expect("timer pause timed out") {
+                TimerEvent::Paused { elapsed_secs } => return elapsed_secs,
+                TimerEvent::Complete { .. } => panic!("timer completed before pause"),
+                _ => {}
+            }
+        }
     }
 
     fn collect_until_complete(rx: &Receiver<TimerEvent>, timeout: Duration) -> Vec<TimerEvent> {
@@ -329,44 +392,19 @@ mod tests {
 
     #[test]
     fn pause_stops_ticks_and_resume_continues() {
-        let (handle, rx) = spawn(6, TICK);
+        let (handle, rx) = spawn(40, TICK);
         handle.send(TimerCommand::Start);
-
-        // Let 2 ticks fire, then pause.
-        std::thread::sleep(TICK * 2 + TICK / 2);
+        wait_for_tick(&rx, 2);
         handle.send(TimerCommand::Pause);
+        let paused_at = wait_for_pause(&rx);
+        assert!(paused_at >= 2);
+        assert!(matches!(rx.recv_timeout(TICK * 3), Err(RecvTimeoutError::Timeout)), "ticks must stop while paused");
 
-        // Collect events so far.
-        std::thread::sleep(TICK * 3); // no ticks should arrive during this gap
-        let events_before_resume = drain(&rx);
-
-        let paused = events_before_resume
-            .iter()
-            .filter(|e| matches!(e, TimerEvent::Paused { .. }))
-            .count();
-        let ticks_before_pause = events_before_resume
-            .iter()
-            .filter(|e| matches!(e, TimerEvent::Tick { .. }))
-            .count();
-        assert_eq!(paused, 1, "expected 1 Paused event");
-        assert!(ticks_before_pause >= 2, "should have at least 2 ticks before pause");
-
-        // Resume and let the rest complete.
         handle.send(TimerCommand::Resume);
-        let events_after = collect_until_complete(&rx, Duration::from_secs(2));
-
-        assert!(
-            events_after
-                .iter()
-                .any(|e| matches!(e, TimerEvent::Resumed { .. })),
-            "expected Resumed event"
-        );
-        assert!(
-            events_after
-                .iter()
-                .any(|e| matches!(e, TimerEvent::Complete { .. })),
-            "expected Complete after resume"
-        );
+        let events_after = collect_until_complete(&rx, Duration::from_secs(3));
+        assert!(events_after.iter().any(|e| matches!(e, TimerEvent::Resumed { elapsed_secs } if *elapsed_secs == paused_at)));
+        assert!(events_after.iter().any(|e| matches!(e, TimerEvent::Tick { elapsed_secs, .. } if *elapsed_secs > paused_at)));
+        assert!(matches!(events_after.last(), Some(TimerEvent::Complete { skipped: false })));
     }
 
     #[test]
@@ -531,61 +569,32 @@ mod tests {
 
     #[test]
     fn prime_below_elapsed_while_running_does_not_complete_immediately() {
-        // If Prime fires with duration_secs < elapsed_secs while the timer is
-        // running, the engine must not complete on the very next tick — it
-        // should run at least one more tick first.
-        let (handle, rx) = spawn(10, TICK);
+        let (handle, rx) = spawn(1000, TICK);
         handle.send(TimerCommand::Start);
-        // Let 5 ticks fire so elapsed_secs = 5.
-        std::thread::sleep(TICK * 5 + TICK / 2);
-        // Prime with duration below elapsed — without the clamp this would fire
-        // Complete on the very next tick.
+        let observed = wait_for_tick(&rx, 5);
         handle.send(TimerCommand::Prime { duration_secs: 2 });
 
         let events = collect_until_complete(&rx, Duration::from_secs(2));
-        let ticks_after_prime: Vec<_> = events
-            .iter()
-            .filter(|e| matches!(e, TimerEvent::Tick { elapsed_secs, .. } if *elapsed_secs > 5))
-            .collect();
-        assert!(
-            !ticks_after_prime.is_empty(),
-            "at least one tick must fire after Prime before Complete"
-        );
-        assert!(
-            matches!(events.last(), Some(TimerEvent::Complete { .. })),
-            "timer must still complete after clamped Prime"
-        );
+        assert!(events.iter().any(|e| matches!(e, TimerEvent::Tick { elapsed_secs, total_secs } if *elapsed_secs > observed && *total_secs >= *elapsed_secs && *total_secs < 1000)),
+            "a tick with the clamped duration must occur after Prime");
+        assert!(matches!(events.last(), Some(TimerEvent::Complete { skipped: false })));
     }
 
     #[test]
     fn prime_below_elapsed_while_paused_does_not_complete_immediately_on_resume() {
-        // Same edge case in Paused phase: Prime with duration_secs < elapsed_secs
-        // must not cause immediate completion on the first tick after Resume.
-        let (handle, rx) = spawn(10, TICK);
+        let (handle, rx) = spawn(1000, TICK);
         handle.send(TimerCommand::Start);
-        // Let 5 ticks fire, then pause.
-        std::thread::sleep(TICK * 5 + TICK / 2);
+        wait_for_tick(&rx, 5);
         handle.send(TimerCommand::Pause);
-        std::thread::sleep(TICK); // let Paused event arrive
-        drain(&rx);
-
-        // Prime with duration below elapsed.
+        let paused_at = wait_for_pause(&rx);
         handle.send(TimerCommand::Prime { duration_secs: 2 });
         handle.send(TimerCommand::Resume);
 
         let events = collect_until_complete(&rx, Duration::from_secs(2));
-        let ticks_after_resume: Vec<_> = events
-            .iter()
-            .filter(|e| matches!(e, TimerEvent::Tick { elapsed_secs, .. } if *elapsed_secs > 5))
-            .collect();
-        assert!(
-            !ticks_after_resume.is_empty(),
-            "at least one tick must fire after Resume before Complete"
-        );
-        assert!(
-            matches!(events.last(), Some(TimerEvent::Complete { .. })),
-            "timer must still complete after clamped Prime in Paused phase"
-        );
+        assert!(events.iter().any(|e| matches!(e, TimerEvent::Resumed { elapsed_secs } if *elapsed_secs == paused_at)));
+        assert!(events.iter().any(|e| matches!(e, TimerEvent::Tick { elapsed_secs, total_secs } if *elapsed_secs > paused_at && *total_secs >= *elapsed_secs && *total_secs < 1000)),
+            "a tick with the clamped duration must occur after Resume");
+        assert!(matches!(events.last(), Some(TimerEvent::Complete { skipped: false })));
     }
 
     #[test]

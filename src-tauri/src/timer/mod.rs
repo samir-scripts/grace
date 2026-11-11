@@ -17,6 +17,103 @@ use crate::focus::controller::{FocusController, TimerAction};
 use engine::{EngineHandle, TimerCommand, TimerEvent};
 use sequence::{RoundType, SequenceState};
 
+/// Advance the timer sequence and return the completed round, next round,
+/// next duration, and the cycle completion signal for focus enforcement.
+pub fn advance_focus_sequence(seq: &mut SequenceState, short_enabled: bool, long_enabled: bool) -> (RoundType, RoundType, u32, bool) {
+    let completed = seq.current_round;
+    let cycle_finished = match completed {
+        RoundType::LongBreak => true,
+        RoundType::ShortBreak => seq.work_round_number == 0,
+        RoundType::Work => seq.work_round_number >= seq.work_rounds_total && !short_enabled && !long_enabled,
+    };
+    let (next, duration) = seq.advance(short_enabled, long_enabled);
+    (completed, next, duration, cycle_finished)
+}
+
+#[cfg(test)]
+mod reset_tests {
+    use super::*;
+    use crate::focus::{enforcer::MockEnforcer, model::FocusProfile};
+
+    #[test]
+    fn round_restart_preserves_focus_and_emergency_reset_starts_first_work_round() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        crate::db::migrations::run(&conn).unwrap();
+        let enforcer = Arc::new(MockEnforcer::new());
+        let focus = Arc::new(FocusController::new(Arc::new(Mutex::new(conn)), Some(enforcer.clone())));
+        let profile = FocusProfile {
+            id: "reset-scope".into(), name: "Reset scope".into(), work_secs: 120,
+            short_break_secs: 60, long_break_secs: 90, work_rounds: 2,
+            blocked_apps: vec![], blocked_domains: vec!["example.com".into()], revision: 1,
+        };
+        focus.save_profile(profile).unwrap();
+        focus.select_profile("reset-scope").unwrap();
+        focus.on_timer_started("work").unwrap();
+        let mut seq = SequenceState::new(2, 120, 60, 90);
+        seq.advance(true, true);
+        seq.advance(true, true);
+        seq.advance(true, true);
+        assert_eq!(seq.current_round, RoundType::LongBreak);
+        assert_eq!(seq.work_round_number, 2);
+        assert_eq!(seq.session_work_count, 2);
+        let (engine, events) = engine::spawn(60, Duration::from_secs(10));
+        let mut shared = TimerShared { elapsed_secs: 20, is_running: true };
+        engine.send(TimerCommand::Reset);
+        let event = events.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert!(matches!(event, TimerEvent::Reset));
+        assert_eq!(apply_reset_event(&mut seq, &mut shared, &engine, &focus, &event), 90);
+        assert_eq!(seq.current_round, RoundType::LongBreak);
+        assert_eq!(seq.work_round_number, 2);
+        assert!(focus.is_locked(), "round restart must keep focus locked");
+
+        engine.send(TimerCommand::Start);
+        assert!(matches!(events.recv_timeout(Duration::from_secs(1)).unwrap(), TimerEvent::Started { total_secs: 90 }));
+        engine.send(TimerCommand::Skip);
+        focus.start_supervisor(engine.clone());
+        let stale_generation = focus.reset_generation();
+        focus.execute_emergency_release().unwrap();
+        assert!(focus.get_snapshot().is_locked);
+        assert!(focus.start_timer("work", focus.reset_generation(), || {}).is_err());
+        let event = events.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert!(matches!(event, TimerEvent::Complete { .. }));
+        assert!(!completion_allowed(&focus), "stale completion must be discarded");
+        let event = events.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert!(matches!(event, TimerEvent::ResetCycle));
+        let duration = apply_reset_event(&mut seq, &mut shared, &engine, &focus, &event);
+        assert_eq!(duration, 120);
+        assert_eq!(seq.current_round, RoundType::Work);
+        assert_eq!(seq.work_round_number, 1);
+        assert_eq!(seq.session_work_count, 1);
+        assert!(!focus.is_locked());
+        assert!(focus.start_timer("long-break", stale_generation, || {}).is_err(), "a start captured before reset must not run afterwards");
+        let fresh_generation = focus.capture_start_generation().unwrap();
+        assert_ne!(fresh_generation, stale_generation);
+        focus.start_timer("work", fresh_generation, || engine.send(TimerCommand::Start)).unwrap();
+        assert!(enforcer.is_active.load(std::sync::atomic::Ordering::SeqCst));
+        assert!(matches!(events.recv_timeout(Duration::from_secs(1)).unwrap(), TimerEvent::Started { total_secs: 120 }));
+        assert!(events.recv_timeout(Duration::from_millis(30)).is_err(), "reset must not emit Complete");
+        engine.send(TimerCommand::Shutdown);
+    }
+}
+
+fn completion_allowed(focus: &FocusController) -> bool {
+    !focus.reset_pending()
+}
+
+fn apply_reset_event(seq: &mut SequenceState, shared: &mut TimerShared, engine: &EngineHandle, focus: &FocusController, event: &TimerEvent) -> u32 {
+    if matches!(event, TimerEvent::ResetCycle) {
+        seq.reset();
+    }
+    shared.elapsed_secs = 0;
+    shared.is_running = false;
+    let duration = seq.current_duration_secs();
+    engine.send(TimerCommand::Prime { duration_secs: duration });
+    if matches!(event, TimerEvent::ResetCycle) {
+        focus.finish_emergency_reset();
+    }
+    duration
+}
+
 // ---------------------------------------------------------------------------
 // Snapshot — serialized to JSON for the frontend
 // ---------------------------------------------------------------------------
@@ -135,6 +232,7 @@ impl TimerController {
 
     /// Toggle: start a fresh timer if idle, resume if paused, pause if running.
     pub fn toggle(&self) -> Result<(), String> {
+        let generation = self.focus.capture_start_generation()?;
         let (is_running, elapsed_secs) = {
             let s = self.shared.lock().unwrap();
             (s.is_running, s.elapsed_secs)
@@ -144,14 +242,14 @@ impl TimerController {
             self.engine.send(TimerCommand::Pause);
         } else {
             let round_type = self.sequence.lock().unwrap().current_round.as_str().to_string();
-            self.focus.on_timer_started(&round_type)?;
-            if elapsed_secs > 0 {
+            let command = if elapsed_secs > 0 {
                 log::info!("[timer] resume");
-                self.engine.send(TimerCommand::Resume);
+                TimerCommand::Resume
             } else {
                 log::info!("[timer] start");
-                self.engine.send(TimerCommand::Start);
-            }
+                TimerCommand::Start
+            };
+            self.focus.start_timer(&round_type, generation, || self.engine.send(command))?;
         }
         Ok(())
     }
@@ -332,6 +430,10 @@ fn listen_events(
             }
 
             TimerEvent::Complete { skipped: was_skipped } => {
+                let generation = focus.reset_generation();
+                if !completion_allowed(&focus) {
+                    continue;
+                }
                 let completed_round = sequence.lock().unwrap().current_round.as_str().to_string();
                 log::info!(
                     "[timer] round complete type={completed_round} skipped={was_skipped}"
@@ -345,11 +447,11 @@ fn listen_events(
                 }
 
                 // Advance sequence.
-                let (next_round, next_duration, auto_start_work, auto_start_break) = {
+                let (next_round, next_duration, auto_start_work, auto_start_break, cycle_finished) = {
                     let mut seq = sequence.lock().unwrap();
                     let s = settings.lock().unwrap();
-                    let (rt, dur) = seq.advance(s.short_breaks_enabled, s.long_breaks_enabled);
-                    (rt, dur, s.auto_start_work, s.auto_start_break)
+                    let (_, rt, dur, last) = advance_focus_sequence(&mut seq, s.short_breaks_enabled, s.long_breaks_enabled);
+                    (rt, dur, s.auto_start_work, s.auto_start_break, last)
                 };
 
                 // Reset shared state for the new round.
@@ -369,11 +471,7 @@ fn listen_events(
                 let snapshot = build_snapshot(&sequence, &settings, &shared);
                 let _ = app.emit("timer:round-change", snapshot);
 
-                let is_last_round = {
-                    let seq = sequence.lock().unwrap();
-                    seq.work_round_number >= seq.work_rounds_total
-                };
-                let enforcement_ready = match focus.on_round_completed(&completed_round, next_round.as_str(), is_last_round) {
+                let enforcement_ready = match focus.on_round_completed(next_round.as_str(), cycle_finished) {
                     Ok(()) => true,
                     Err(error) => {
                         log::error!("[focus] round transition blocked: {error}");
@@ -430,12 +528,11 @@ fn listen_events(
                 };
                 if should_auto && enforcement_ready {
                     let round_type = next_round.as_str();
-                    if let Err(error) = focus.on_timer_started(round_type) {
+                    if let Err(error) = focus.start_timer(round_type, generation, || engine.send(TimerCommand::Start)) {
                         log::error!("[focus] auto-start blocked: {error}");
                         tray::update_menu_items(&tray, false, false);
                     } else {
                         log::debug!("[timer] auto-starting {round_type}");
-                        engine.send(TimerCommand::Start);
                     }
                 } else {
                     // Timer is idle waiting for the user to start the new round.
@@ -478,30 +575,19 @@ fn listen_events(
                 tray::update_menu_items(&tray, true, false);
             }
 
-            TimerEvent::Reset => {
+            event @ (TimerEvent::Reset | TimerEvent::ResetCycle) => {
                 log::debug!("[timer] idle");
-                // Abandon the active session (leave DB row as-is).
-                current_session_id = None;
-
-                {
-                    let mut s = shared.lock().unwrap();
-                    s.elapsed_secs = 0;
-                    s.is_running = false;
+                if let Some(session_id) = current_session_id.take() {
+                    if let Ok(conn) = db.lock() {
+                        let _ = queries::complete_session(&conn, session_id, false);
+                    }
                 }
+                apply_reset_event(&mut sequence.lock().unwrap(), &mut shared.lock().unwrap(), &engine, &focus, &event);
                 let snapshot = build_snapshot(&sequence, &settings, &shared);
                 let _ = app.emit("timer:reset", snapshot);
                 if let Some(ws) = app.try_state::<Arc<WsState>>() {
                     websocket::broadcast_reset(&ws);
                 }
-
-                // Prime the engine with the current round's duration so the
-                // next Start uses the correct (possibly settings-updated)
-                // total. Using the lighter-weight command here avoids a race
-                // where a fast user click on Start is immediately clobbered by
-                // a late follow-up duration update.
-                focus.on_timer_reset();
-                let duration = sequence.lock().unwrap().current_duration_secs();
-                engine.send(TimerCommand::Prime { duration_secs: duration });
 
                 // Reset tray to idle (empty arc).
                 let rt = sequence.lock().unwrap().current_round.as_str().to_string();
