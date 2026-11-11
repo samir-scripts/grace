@@ -1,6 +1,6 @@
 # grace. Focus Companion Support
 
-**Status:** Release preparation. Public support: https://grace-chrome-support.springygranola16.chatgpt.site/. The store draft is not published; publisher contact and native acceptance remain open.
+**Status:** Release preparation. Public support: https://grace-chrome-support.springygranola16.chatgpt.site/. The Web Store contact is configured with Google; verification is pending. The store draft is not published, and native acceptance remains open.
 
 ## Requirements
 
@@ -44,4 +44,4 @@ The extension cannot pair until you accept the data-sharing disclosure. After ac
 
 ## Contact
 
-Use https://github.com/samir-scripts/grace/issues for support. Never post pairing tokens, keys, private profile data or unredacted logs. The publisher must choose and verify the public store contact before submission.
+Use https://github.com/samir-scripts/grace/issues for support. Never post pairing tokens, keys, private profile data or unredacted logs. The Web Store contact is configured with Google; verification is pending.

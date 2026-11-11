@@ -82,3 +82,9 @@ Draft extension ID: `cgibenlmgmblmalggjalnoaikjkdnoid`. Public-key derivation ch
 
 - Cross-platform CI run 43066210538 stopped in extension tests: Node 22 cancelled the timeout mock and six following tests because AbortSignal.timeout is unreferenced and the mock had no active I/O. Fixed the test with a referenced mock-request timer, cleared on abort, and an explicit aborted-signal assertion. No production timeout or gate was weakened. Focused tests passed 11/11; rerun pending.
 - Public contact set to the owner-supplied address, currently unverified; Google verification email requested. Trusted tester account saved. Publisher display name remains unchanged after automatic review rejected an unrequested identity change.
+
+- Owner approved false-positive closure. GitHub alert #1 was observed closed as false positive; no affected credential found, no unrelated key rotation performed. The report retains the scan limits.
+- Google contact verification was resent once after the owner reported non-delivery; dashboard confirmation says sent, but verification is still pending. Public email remains limited to the Web Store; the support site was not changed.
+- Native guest input still returns noWindowsAvailable for clicks after activation/rebinding. Keyboard attempts did not establish guest interaction. Owned clone stopped; baseline and other guests stayed stopped. No new native acceptance pass is claimed.
+
+- CI run 43068794933 passed frontend and Chromium checks, then exposed 13 Linux-only Clippy diagnostics in platform-specific application catalog/monitor code and browser policy paths. Helpers/imports are now compiled only on their supported platforms (or in tests); Linux tail expressions and unused executable argument handling were corrected without warning suppressions. macOS focused monitor/catalog/browser-detector tests and Clippy passed. Linux CI rerun is the remaining proof.

@@ -19,7 +19,7 @@ The owner received a GitHub alert identifying an OpenVSX Access Token in `extens
 - Secret scanning remains enabled. No history rewrite or pattern suppression was used.
 - Authenticated inspection found GitHub alert #1 with validity Unknown and two locations: the test publisher_id and the production release configuration publisher_id. Both matched the Google publisher identifier.
 - A scoped independent scan of 2,978 reachable text blobs found zero matches for the recognized credential formats checked. It skipped 239 binary/large blobs and cannot rule out other formats, unreachable history, or local-file exposure.
-- Automatic approval review rejected closing the alert because explicit dismissal authorization was missing. Owner approval was requested. The alert remains open; no closure or rotation is claimed.
+- Automatic approval review initially rejected dismissal without explicit owner approval. The owner subsequently approved closing as a false positive. Authenticated GitHub inspection then showed the alert already closed as false positive, with an explanation that it is the publisher ID. The assistant did not reopen it. No key rotation was needed or performed.
 
 ## Sources
 

@@ -21,3 +21,6 @@ extensions/dist/
 docs/chrome-web-store/site/
 # Dashboard evidence can contain publisher account details; keep it local.
 docs/chrome-web-store/assets/store-draft-proof.jpg
+
+# Local dashboard proof can include account details.
+docs/chrome-web-store/assets/*-proof.jpg

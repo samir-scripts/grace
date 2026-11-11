@@ -1,6 +1,6 @@
 # Chrome Web Store Listing Draft
 
-**Status:** Store account is ready. An unpublished draft exists with ID `cgibenlmgmblmalggjalnoaikjkdnoid`; no Chrome Web Store release has been published. The public support destination, monitored contact, final graphics, and hosted privacy-policy URL remain prerequisites.
+**Status:** Store account is ready. An unpublished draft exists with ID `cgibenlmgmblmalggjalnoaikjkdnoid`; no Chrome Web Store release has been published. Public support and privacy pages are hosted. The Web Store contact is configured with Google; verification is pending. Privacy certifications are saved in the draft.
 
 ## Product details
 
@@ -70,9 +70,11 @@ Verify these declarations against the final packaged build and Chrome Web Store 
 - Store item ID: `cgibenlmgmblmalggjalnoaikjkdnoid`.
 - Intended listing: https://chromewebstore.google.com/detail/cgibenlmgmblmalggjalnoaikjkdnoid (not public yet).
 - Privacy policy: https://grace-chrome-support.springygranola16.chatgpt.site/privacy.html
-- Support: https://grace-chrome-support.springygranola16.chatgpt.site/; publisher contact still requires owner selection/verification.
+- Support: https://grace-chrome-support.springygranola16.chatgpt.site/.
+- Web Store contact: configured with Google; verification pending.
+- Privacy certifications: saved in the draft.
 - Public setup instructions are included in the support page.
-- Publisher account: **ready**; public identity and listing details still need to be finalized.
+- Publisher account: **ready**; draft remains private and unpublished.
 - Store icon and actual extension consent screenshot uploaded to draft; optional promo artwork omitted.
 - Final release package, listing declarations, and Chrome Web Store review: **not submitted or approved**.
 
