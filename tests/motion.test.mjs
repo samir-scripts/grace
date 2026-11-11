@@ -734,3 +734,58 @@ test('updating an installed companion preserves participants and is disabled whi
     assert.deepEqual(await page.evaluate(() => window.__motionTest.getBrowserSetupCalls()), ['focus_native_host_register', 'focus_browser_extension_install']);
   } finally { await context.close(); }
 });
+
+test('titlebar is 48px, displays grace. in settings and stats, and delegates dragging outside buttons', async () => {
+  const context = await browser.newContext({ viewport: { width: 360, height: 478 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/`);
+    await page.waitForSelector('.titlebar');
+
+    // 1. Verify Titlebar height is 48px
+    const titlebarHeight = await page.locator('.titlebar').evaluate(el => window.getComputedStyle(el).height);
+    assert.equal(titlebarHeight, '48px', 'Titlebar computed height must be 48px');
+
+    // 2. In Timer view: .center-selector has pointer-events: none while .session-btn has pointer-events: auto
+    const pointerEvents = await page.evaluate(() => {
+      const selector = document.querySelector('.center-selector');
+      const btn = document.querySelector('.session-btn');
+      return {
+        selector: selector ? window.getComputedStyle(selector).pointerEvents : null,
+        btn: btn ? window.getComputedStyle(btn).pointerEvents : null,
+      };
+    });
+    assert.equal(pointerEvents.selector, 'none', '.center-selector must have pointer-events: none to avoid blocking drags');
+    assert.equal(pointerEvents.btn, 'auto', '.session-btn must have pointer-events: auto to stay clickable');
+
+    // 3. Clear drag count, then click empty titlebar space -> startDragging is called
+    await page.evaluate(() => window.__motionTest.clearStartDraggingCount());
+    const titlebarBox = await page.locator('.titlebar').boundingBox();
+    assert.ok(titlebarBox, 'Titlebar box exists');
+    // Click at x: 100, y: 24 (empty titlebar space inside .center-selector, to the left of session-btn)
+    await page.mouse.click(titlebarBox.x + 100, titlebarBox.y + 24);
+    const dragsAfterHeaderClick = await page.evaluate(() => window.__motionTest.getStartDraggingCount());
+    assert.ok(dragsAfterHeaderClick > 0, 'Clicking empty titlebar area must invoke startDragging');
+
+    // 4. Click upper canvas whitespace above the timer dial -> startDragging is called
+    await page.evaluate(() => window.__motionTest.clearStartDraggingCount());
+    // Click at x: 30, y: 56 (upper canvas whitespace above/beside the dial)
+    await page.mouse.click(30, 56);
+    const dragsAfterCanvasClick = await page.evaluate(() => window.__motionTest.getStartDraggingCount());
+    assert.ok(dragsAfterCanvasClick > 0, 'Clicking upper canvas whitespace above dial must invoke startDragging');
+
+    // 5. In Settings view: brand title grace. is rendered and visible
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.waitForSelector('.brand-title');
+    const brandInSettings = await page.locator('.brand-title').textContent();
+    assert.equal(brandInSettings?.trim(), 'grace.', 'Settings view titlebar must display grace.');
+
+    // 6. In Stats view: brand title grace. is rendered and visible
+    await page.getByRole('button', { name: 'Statistics' }).click();
+    await page.waitForSelector('.brand-title');
+    const brandInStats = await page.locator('.brand-title').textContent();
+    assert.equal(brandInStats?.trim(), 'grace.', 'Stats view titlebar must display grace.');
+  } finally {
+    await context.close();
+  }
+});

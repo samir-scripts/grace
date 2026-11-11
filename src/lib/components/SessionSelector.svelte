@@ -175,6 +175,7 @@
     justify-content: center;
     user-select: none;
     z-index: 50;
+    pointer-events: auto;
   }
 
   .session-btn {

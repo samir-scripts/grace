@@ -117,6 +117,7 @@ pub fn run() {
             )?;
             application_menu.remove(quit_item)?;
             application_menu.insert(&guarded_quit, application_items.len() - 1)?;
+            let _ = application_menu.set_text("grace.");
             Ok(menu)
         })
         .on_menu_event(|app_handle, event| {
@@ -364,7 +365,17 @@ pub fn run() {
                 use objc2::msg_send;
                 use objc2::runtime::{AnyClass, AnyObject};
                 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+                use objc2_foundation::NSString;
 
+                unsafe {
+                    if let Some(cls) = AnyClass::get(c"NSProcessInfo") {
+                        let process_info: *mut AnyObject = msg_send![cls, processInfo];
+                        if !process_info.is_null() {
+                            let name = NSString::from_str("grace.");
+                            let _: () = msg_send![process_info, setProcessName: &*name];
+                        }
+                    }
+                }
                 if let Ok(handle) = main_window.window_handle() {
                     if let RawWindowHandle::AppKit(h) = handle.as_raw() {
                         let ns_view = h.ns_view.as_ptr() as *mut AnyObject;

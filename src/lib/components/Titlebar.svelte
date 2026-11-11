@@ -76,6 +76,20 @@
     suppressRestoredTitlebarState();
     await getCurrentWebviewWindow().close();
   }
+
+  async function handleTitlebarMouseDown(e: MouseEvent) {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('button, a, input, select, textarea, [role="button"], [role="listbox"], [role="option"], [data-no-drag]')) {
+      return;
+    }
+    const win = getCurrentWebviewWindow();
+    if (e.detail === 2) {
+      await win.toggleMaximize();
+    } else {
+      await win.startDragging();
+    }
+  }
 </script>
 
 {#snippet backBtn()}
@@ -182,7 +196,14 @@
   </Tooltip>
 {/snippet}
 
-<nav class="titlebar" class:macos={isMac} class:suppress-hover={suppressTitlebarHover} data-tauri-drag-region>
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<nav
+  class="titlebar"
+  class:macos={isMac}
+  class:suppress-hover={suppressTitlebarHover}
+  onmousedown={handleTitlebarMouseDown}
+  data-tauri-drag-region
+>
   <!-- Left controls: on macOS, back button appears after the traffic lights (at 68px);
        on Windows/Linux, back button is first, followed by settings + stats. -->
   {#if isMac}
@@ -196,8 +217,12 @@
   {/if}
 
   {#if $activeView === 'timer'}
-    <div class="center-selector" data-tauri-drag-region="false">
+    <div class="center-selector">
       <SessionSelector {onEmergencyClick} />
+    </div>
+  {:else}
+    <div class="center-title" data-tauri-drag-region>
+      <span class="brand-title">grace.</span>
     </div>
   {/if}
 
@@ -293,7 +318,7 @@
 
 <style>
   .titlebar {
-    height: 40px;
+    height: 48px;
     width: 100%;
     display: flex;
     align-items: center;
@@ -362,6 +387,33 @@
     align-items: center;
     justify-content: center;
     z-index: 25;
+    pointer-events: none;
+  }
+
+  .center-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 25;
+  }
+
+  .brand-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-foreground);
+    user-select: none;
+    font-family: inherit;
+  }
+
+  @media (max-width: 299px) {
+    .center-title {
+      display: none;
+    }
   }
 
   .titlebar.macos .center-selector {

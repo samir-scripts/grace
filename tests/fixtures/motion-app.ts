@@ -182,6 +182,7 @@ function readField(obj: unknown, key: string): unknown {
 export const windowResizeCalls: Array<{ view: string; animate?: boolean; renderedBeforeResize?: boolean }> = [];
 
 const appearanceMotionCalls: boolean[] = [];
+let startDraggingCount = 0;
 let holdResize = false;
 let resizeResolve: (() => void) | null = null;
 
@@ -296,7 +297,12 @@ mockIPC((cmd, args: unknown) => {
     return false;
   }
 
-  if (cmd === 'plugin:window|show' || cmd === 'plugin:window|minimize' || cmd === 'plugin:window|close') {
+  if (cmd === 'plugin:window|show' || cmd === 'plugin:window|minimize' || cmd === 'plugin:window|close' || cmd === 'plugin:window|toggle_maximize') {
+    return;
+  }
+
+  if (cmd === 'plugin:window|start_dragging') {
+    startDraggingCount++;
     return;
   }
 
@@ -356,6 +362,8 @@ export interface MotionTestController {
   releaseResize: () => void;
   setFocusSnapshot: (snap: FocusSnapshot) => Promise<void>;
   getBrowserSetupCalls: () => string[];
+  getStartDraggingCount: () => number;
+  clearStartDraggingCount: () => void;
 }
 
 const controller: MotionTestController = {
@@ -410,6 +418,8 @@ const controller: MotionTestController = {
     currentFocus = snap;
     await emit('focus:changed', currentFocus);
   },
+  getStartDraggingCount: () => startDraggingCount,
+  clearStartDraggingCount: () => { startDraggingCount = 0; },
 };
 
 window.__motionTest = controller;
