@@ -1,0 +1,110 @@
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXButton | Timer | missing value
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 1
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXRadioButton | Timer & Sessions | true
+AXRadioButton | Appearance | false
+AXRadioButton | Notifications | false
+AXRadioButton | Shortcuts | false
+AXRadioButton | System | false
+AXRadioButton | About | false
+AXGroup | missing value | 
+AXStaticText | SESSION | SESSION
+AXStaticText | SESSION | SESSION
+AXPopUpButton | SESSION | Guest Acceptance • Active
+AXButton | New Session | missing value
+AXGroup | missing value | 
+AXStaticText | Invalid domain: *.youtube.com | Invalid domain: *.youtube.com
+AXStaticText | Session Name | Session Name
+AXStaticText | Session Name | Session Name
+AXGroup | missing value | 
+AXButton | Delete Session | missing value
+AXButton | Save Changes | missing value
+AXHeading | Timer durations | 3
+AXStaticText | Timer durations | Timer durations
+AXStaticText | Work Duration | Work Duration
+AXStaticText | 2m | 2m
+AXSlider | missing value | 2.0
+AXValueIndicator | missing value | 2.0
+AXGroup | missing value | 
+AXStaticText | Short Break Duration | Short Break Duration
+AXStaticText | 1m | 1m
+AXSlider | missing value | 1.0
+AXValueIndicator | missing value | 1.0
+AXGroup | missing value | 
+AXStaticText | Long Break Duration | Long Break Duration
+AXStaticText | 1m | 1m
+AXSlider | missing value | 1.0
+AXValueIndicator | missing value | 1.0
+AXGroup | missing value | 
+AXStaticText | Rounds per Cycle | Rounds per Cycle
+AXStaticText | 2 | 2
+AXSlider | missing value | 2.0
+AXValueIndicator | missing value | 2.0
+AXGroup | missing value | 
+AXHeading | Blocked Applications | 3
+AXStaticText | Blocked Applications | Blocked Applications
+AXPopUpButton | Select applications ▾ | 
+AXStaticText | Discord | Discord
+AXButton | Remove Discord | missing value
+AXHeading | Blocked Websites | 3
+AXStaticText | Blocked Websites | Blocked Websites
+AXGroup | missing value | 
+AXButton | + Add Domain | missing value
+AXStaticText | example.com | example.com
+AXButton | Remove domain | missing value
+AXStaticText | youtube.com | youtube.com
+AXButton | Remove domain | missing value
+AXStaticText | instagram.com | instagram.com
+AXButton | Remove domain | missing value
+AXStaticText | reddit.com | reddit.com
+AXButton | Remove domain | missing value
+AXStaticText | *.youtube.com | *.youtube.com
+AXButton | Remove domain | missing value
+AXStaticText | Leave both lists empty for a timer without blocking. | Leave both lists empty for a timer without blocking.
+AXHeading | Browser Companions | 3
+AXStaticText | Browser Companions | Browser Companions
+AXButton | Refresh installed browsers | missing value
+AXGroup | missing value | 
+AXStaticText | Select an installed browser to place the distraction-blocking extension and pair automatically via Native Messaging. | Select an installed browser to place the distraction-blocking extension and pair automatically via Native Messaging.
+AXStaticText | Zen | Zen
+AXStaticText | INSTALLED | INSTALLED
+AXButton | Remove Extension | missing value
+AXGroup | missing value | 
+AXStaticText | During focus sessions with website blocking, other installed browsers are blocked to prevent distraction bypass. | During focus sessions with website blocking, other installed browsers are blocked to prevent distraction bypass.
+AXStaticText | Connected Browser Profiles: | Connected Browser Profiles:
+AXGroup | missing value | 
+AXStaticText | Assign browser | Assign browser
+AXPopUpButton | Assign browser | Zen
+AXStaticText | ONLINE | ONLINE
+AXGroup | missing value | 
+AXCheckBox | Required for session | 1
+AXStaticText | Required for session | Required for session
+AXHeading | Timer preferences | 3
+AXStaticText | Timer preferences | Timer preferences
+AXCheckBox | Disable Short Breaks | 0
+AXCheckBox | Disable Long Breaks | 0
+AXCheckBox | Auto-start Work | 0
+AXCheckBox | Auto-start Breaks | 1
+AXCheckBox | Countdown Dial | 1
+AXHeading | Session Preferences | 3
+AXStaticText | Session Preferences | Session Preferences
+AXCheckBox | Temporarily unblock during breaks | 1
+AXGroup | missing value | 
+AXStaticText | Minimum 30 characters. Required twice to unlock early if hold option is not used. | Minimum 30 characters. Required twice to unlock early if hold option is not used.
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXButton | Clear | missing value
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value

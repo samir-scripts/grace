@@ -1,0 +1,19 @@
+{
+  "run_id": "7c36512e-4971-4d40-8e87-d6cbca8758fa",
+  "vm_name": "grace-acceptance-7c36512e-4971-4d40-8e87-d6cbca8758fa",
+  "pass": "matching",
+  "phase": "work",
+  "timestamp_utc": "2026-11-10T14:57:26.249717+00:00",
+  "companion_verified": true,
+  "observations": [
+    {
+      "tab_index": 3,
+      "status": "blocked-existing",
+      "original_target": "https://www.reddit.com/"
+    }
+  ],
+  "status": "observation-only",
+  "pending": "Correlate with active timer UI and authenticated active policy ACK.",
+  "distinct_verified_targets": 1,
+  "review_note": "Original native keyboard attempts repeated the same target; counted once. Helper now deduplicates."
+}

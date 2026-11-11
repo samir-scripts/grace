@@ -1,0 +1,102 @@
+{
+  "run_id": "7c36512e-4971-4d40-8e87-d6cbca8758fa",
+  "vm_name": "grace-acceptance-7c36512e-4971-4d40-8e87-d6cbca8758fa",
+  "pass": "matching",
+  "phase": "work",
+  "mode": "public",
+  "target_hash": "14614a85a19d66592f3825f639654e3b4b01e363fb4154a267179fa5b0fdf362",
+  "targets": {
+    "blocked": [
+      "https://example.com/",
+      "https://youtube.com/",
+      "https://www.youtube.com/",
+      "https://instagram.com/",
+      "https://m.instagram.com/",
+      "https://reddit.com/",
+      "https://old.reddit.com/"
+    ],
+    "allowed": [
+      "https://example.org/",
+      "https://example.org/?next=https://reddit.com/r/all"
+    ]
+  },
+  "timestamp_utc": "2026-11-10T14:50:56.054Z",
+  "log": {
+    "path": "/Users/admin/Library/Logs/com.splode.pomotroid/Grace.log",
+    "ino": 657232,
+    "offset": 134776
+  },
+  "active_ack": null,
+  "observations": [
+    {
+      "requested": "https://example.com/",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "https://youtube.com/",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "https://www.youtube.com/",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "https://instagram.com/",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "https://m.instagram.com/",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "https://reddit.com/",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "https://old.reddit.com/",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "https://example.org/",
+      "url": "https://example.org/",
+      "title": "Example Domain",
+      "sameHost": true,
+      "classification": "loaded"
+    },
+    {
+      "requested": "https://example.org/?next=https://reddit.com/r/all",
+      "url": "https://example.org/?next=https://reddit.com/r/all",
+      "title": "Example Domain",
+      "sameHost": true,
+      "classification": "loaded"
+    }
+  ],
+  "existing_tabs": [
+    {
+      "original_context": "c9c38d40-56d6-4816-9b0d-b66d015533b9",
+      "context": "3b7328a4-68b8-4aba-af81-6898f89d2591",
+      "original_url": "https://example.com/",
+      "classification": "inconclusive",
+      "error": "unsupported operation: System access is required. Start Zen with the \"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1\" environment variable set to enable it."
+    },
+    {
+      "original_context": "040a980f-550a-4849-ab78-8880683ad182",
+      "context": "5d3806c4-cd69-4816-9f4a-79cbd39400e0",
+      "original_url": "https://www.youtube.com/",
+      "classification": "inconclusive",
+      "error": "unsupported operation: System access is required. Start Zen with the \"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1\" environment variable set to enable it."
+    }
+  ],
+  "native_acceptance": "blocked",
+  "pending": [
+    "Native timer, selected profile and release require UI evidence.",
+    "Retained tabs require review if unavailable or extension identity cannot be verified."
+  ]
+}

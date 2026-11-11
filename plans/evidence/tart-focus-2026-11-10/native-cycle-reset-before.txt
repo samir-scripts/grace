@@ -1,0 +1,25 @@
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXPopUpButton | Emergency Reset Acceptance | 
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 0
+AXGroup | missing value | 
+AXStaticText | 01:00 | 01:00
+AXGroup | missing value | 
+AXStaticText | FOCUS | FOCUS
+AXButton | Restart round | missing value
+AXButton | Play | missing value
+AXButton | Skip round | missing value
+AXStaticText | 2  |  2 | 2  |  2
+AXButton | Reset | missing value
+AXButton | Mute | missing value
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value

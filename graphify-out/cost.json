@@ -1,0 +1,6 @@
+{
+  "token_usage_available": false,
+  "input_tokens": null,
+  "output_tokens": null,
+  "note": "Host semantic agent usage not exposed; AST used no model API."
+}

@@ -1,0 +1,24 @@
+{
+  "run_id": "7c36512e-4971-4d40-8e87-d6cbca8758fa",
+  "pass": "matching",
+  "timestamp_utc": "2026-11-10T14:56:21.006028+00:00",
+  "observations": [
+    {
+      "tab": 1,
+      "requested": "https://example.com/",
+      "native_window_title": "Example Domain"
+    },
+    {
+      "tab": 2,
+      "requested": "https://youtube.com/",
+      "native_window_title": "YouTube"
+    },
+    {
+      "tab": 3,
+      "requested": "https://reddit.com/",
+      "native_window_title": "Reddit - The heart of the internet"
+    }
+  ],
+  "acceptance": "inconclusive",
+  "reason": "Native preloaded-tab titles; correlate with prior fresh navigation baselines."
+}

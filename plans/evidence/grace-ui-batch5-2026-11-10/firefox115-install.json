@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-10",
+  "browser": "Firefox 115.44.0 ESR",
+  "official_image_sha256": "3b930631baea196f9bbfb957bdc07f8541a63d4d821938545f118e4036215ab3",
+  "app_signature_verified": true,
+  "signed_companion_version": "1.1.0",
+  "companion_active": true,
+  "companion_signed_state": 2,
+  "consent_and_appearance": "inconclusive: options navigation attempted; visual inspection interrupted",
+  "cleanup": "After explicit owner approval, Firefox-only companion policy removed with owner-only guest rollback snapshot; Firefox app absent. Zen policy and required participant, shared Mozilla native manifest and staged XPI confirmed present. Guest stopped."
+}

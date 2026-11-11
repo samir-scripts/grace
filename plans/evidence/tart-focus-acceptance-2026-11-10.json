@@ -1,0 +1,203 @@
+{
+  "date": "2026-11-10",
+  "scope": "macOS Tart packaged desktop acceptance",
+  "review": "Raw probes are observations; the reviewed case verdicts below combine native UI, policy ACKs and navigation/process evidence.",
+  "environment": {
+    "tart": "2.41.1",
+    "guest_macos": "15.7.7",
+    "guest_build": "24G720",
+    "apps": {
+      "Zen": {
+        "url": "https://github.com/zen-browser/desktop/releases/download/1.24.1b/zen.macos-universal.dmg",
+        "version": "1.24.1b",
+        "dmg_sha256": "00194b221ae87c76d82a8b4af5bdd89d49100bed78c6aa0df754a75de7733f8a",
+        "executable_sha256": "004eedde52c89f967e9d6244c34c4f8d375f8efbd7bf7449ac182048eb42844a"
+      },
+      "Discord": {
+        "url": "https://discord.com/api/download?platform=osx",
+        "version": "0.0.421",
+        "dmg_sha256": "85ac799972df5cc34978359ba720fb61024bd727b64db6c22bd705a1c555015d",
+        "executable_sha256": "503a75e9781a3fab1ac181686755fbb961331f0fefa548750453d62a4c0ecdab"
+      }
+    },
+    "companion": {
+      "sha256": "34c5729bd350ca9fb76fe0c0cdd488a18edfd0a34291517e058222a3f4602b4b",
+      "version": "1.0.0"
+    },
+    "matching_enabled_extensions_complete": true,
+    "unavailable_disabled_extensions": [
+      "Color Picker"
+    ]
+  },
+  "source": {
+    "head": "5cc41b589badd9e1e538b1d49ace97d84afd83a3",
+    "initial_dirty_patch_sha256": "28fdceca9698f9353d248d02eea326a158c3b41680ac28396d28973687de3dfd",
+    "final_dirty_patch_sha256": "b05ddee657cdd7f8309f2e147edb90bbe04feb2b93b390accc88c081a108a012",
+    "final_app_executable_sha256": "b6f2874713df3ca7b06abc3f7228d4a9cdbbd2d784c00b6277a75201ec2a8302",
+    "delegated_model": "gpt-6.1-terra",
+    "delegated_reasoning": "medium",
+    "builds_exercised": {
+      "initial_native": "885512ce0808c6542f57d42de6907034698b31f825c3d8a0e51270878be802ef",
+      "matching_matrix": "df654b56e9480eeedc0f8d9b80f17193c2dc8a71a356628e939e36fdd6a94a57",
+      "final_reset": "b6f2874713df3ca7b06abc3f7228d4a9cdbbd2d784c00b6277a75201ec2a8302"
+    },
+    "final_build_dirty_patch_sha256": "b35483aae0b6e16c1a11c6fac2ac595a3b85d08b7e691e3698e0eaf039f2395c",
+    "final_native_source_sha256": {
+      "src-tauri/src/timer/mod.rs": "2d4ca04d70f9646d275d20d88747150e80ba290347ce2af9493ab38c24a772e6",
+      "src-tauri/src/timer/engine.rs": "08586a47e64d3c87bb13fc1c2de7ec26837cf096f67cc85a79fe86330003417b",
+      "src-tauri/src/focus/controller.rs": "df3aaa8b3997dd979f7e2177d29acfe22067b69face566866a6fe7eec1447ab5",
+      "src-tauri/src/focus/validation.rs": "0cb329eb31ade05dc42bca49e99610194865bb832fd3981529be8030ab42873e",
+      "src-tauri/src/focus/browser.rs": "89c3c446e538fad603a06c7e90a76c82e4a5af407b06d06eb9ed47484e6d696c"
+    }
+  },
+  "provisioning": {
+    "first_clone": "7c36512e-4971-4d40-8e87-d6cbca8758fa",
+    "second_fresh_clone": "539143f4-aebe-4e59-95f9-d1ed8fdcbd0f",
+    "second_clone_result": "pass",
+    "second_clone_scope": "Independent provisioning; native matrix ran on first clone."
+  },
+  "cases": [
+    {
+      "id": "public-https-isolated-and-matching",
+      "status": "pass",
+      "blocked": [
+        "example.com",
+        "youtube.com",
+        "www.youtube.com",
+        "instagram.com",
+        "reddit.com",
+        "old.reddit.com"
+      ],
+      "allowed": [
+        "example.org",
+        "example.org URL containing reddit.com in its query"
+      ]
+    },
+    {
+      "id": "controlled-http-example",
+      "status": "pass",
+      "proof": "Verified baseline nonce; work NS_ERROR_ABORT with no matching proxy request; allowed controls loaded."
+    },
+    {
+      "id": "existing-reddit-native",
+      "status": "pass",
+      "distinct_verified_targets": 1,
+      "proof": "Preloaded native Reddit title; exact active signed companion block-page URL during work."
+    },
+    {
+      "id": "discord-work-and-restoration",
+      "status": "pass",
+      "launch_exit_ms": [
+        1098,
+        1044,
+        1018
+      ],
+      "proof": "Baseline survival, existing process closure, three relaunch exits, no observed helpers, break/final survival."
+    },
+    {
+      "id": "browser-disconnect-retry",
+      "status": "pass",
+      "paused_at": "01:56",
+      "resumed_observed": "01:54"
+    },
+    {
+      "id": "natural-cycle-unlock",
+      "initial_status": "fail",
+      "status": "pass",
+      "proof": "Repaired two-round cycle ended naturally; native Save Changes and ordinary Quit succeeded."
+    },
+    {
+      "id": "protected-round-restart",
+      "initial_status": "fail",
+      "status": "pass",
+      "proof": "Restart retained protected session; same PID survived ordinary Quit."
+    },
+    {
+      "id": "emergency-cycle-reset",
+      "initial_status": "fail",
+      "status": "pass",
+      "before_work_round": 2,
+      "after_work_round": 1,
+      "proof": "Real continuous hold; Work 01:00 idle at round 1/2; interrupted attempt recorded incomplete."
+    },
+    {
+      "id": "unsupported-pattern-input",
+      "status": "pass",
+      "proof": "Native Invalid domain: *.youtube.com and Rust rejection regressions."
+    },
+    {
+      "id": "mobile-instagram-baseline",
+      "status": "inconclusive",
+      "reason": "Redirected baseline changed host; public apex Instagram passed separately."
+    },
+    {
+      "id": "controlled-http-social-sites",
+      "status": "inconclusive",
+      "reason": "HSTS upgraded requests outside the HTTP nonce proxy; public HTTPS tests passed separately."
+    },
+    {
+      "id": "privileged-bidi-existing-tabs",
+      "status": "blocked",
+      "reason": "Extension-page inspection requires extra system access, which was not enabled. Native address-bar evidence used for one distinct target."
+    },
+    {
+      "id": "automatic-app-restart-reconnect",
+      "status": "inconclusive",
+      "reason": "Final short fixture required a Zen restart before the required participant reconnected; automatic reconnection after every app restart is not claimed."
+    }
+  ],
+  "verification": {
+    "frontend_check": "pass: 0 errors, 0 warnings",
+    "npm_test": "pass: 4 unit + 61 extension tests",
+    "guest_harness": "pass: 27 Python + 7 Node tests",
+    "rust_tests": {
+      "passed": 186,
+      "command": "cargo test --locked --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_commands_callable",
+      "scope": "Prescribed skip and default ignored opt-in native cases retained."
+    },
+    "tauri_debug_bundle": "pass: normal --require-signed prebuild guard",
+    "clippy": "fail: 13 existing diagnostics outside these repairs"
+  },
+  "statistics": {
+    "started_work_sessions": 7,
+    "completed_work_sessions": 6,
+    "completed_work_secs": 660,
+    "aborted_rows_closed": 1
+  },
+  "cleanup": {
+    "run_id": "7c36512e-4971-4d40-8e87-d6cbca8758fa",
+    "timestamp_utc": "2026-11-10T15:35:21.591130+00:00",
+    "owned_processes_absent": true,
+    "listeners_absent": [
+      1420,
+      1421,
+      9222
+    ],
+    "checks": 2,
+    "held_keys_released": true,
+    "all_owned_guests_stopped": true
+  },
+  "artifact_sha256": {
+    "bridge-events.log": "83e9b77f8f0e697cc679dac1da20eb79d3ef43c232f4c09661f09ab2fecf4e06",
+    "cleanup.json": "402d2a71bd826e655d7cb4271c677a5b542e8f342e79850617cfb3d12a621d26",
+    "controlled-work.json": "772b5b595a3dcd24163308cf796bcd09c0ae2a5d321eed85c66210ac895e3d6d",
+    "cycle-reset.json": "b9ab3110c95be9a860018bfef629be12309783a7aed4a7a714b11ee50dff2eed",
+    "discord-released.json": "5b5630f8a7109a8eedd2807fa1074b53549bcd088dc00427df778dc36a902b56",
+    "discord-work.json": "59eb52cf0f3baafb809ca25b931b25ddcdb024ae015cd677e42a4eb059948d45",
+    "existing-tab.json": "0401f8d613b1ff9a798c567f42bdafa7c3e0e2a8fc2644a90f03d70e8a6990a3",
+    "native-cycle-reset-after.txt": "e2d8edd7d7a293a1c473f31a3ed39d87bbc7f19a2d3d4b763e9ebc5e3ce7f9f9",
+    "native-cycle-reset-before.txt": "124ad63db326f5da4aa7fc9d2df4cde1393a79b5d108926a3b92119773488e9a",
+    "native-isolated-disconnected.txt": "bc661424e25c8ecde4a2b3fa927f0ec92ac47049397017221061b47dd4b745b7",
+    "native-isolated-recovered.txt": "d39d6d675931726e22fade1f8d5bbb7a26eb3c4f845a659c13999f1ea43dfd4a",
+    "native-pattern-rejection.txt": "1c62f08f96e52a31ff30c1de72b7281d6bb81b202c744dc19bb4926cc2f2c950",
+    "native-protected-round-restart.txt": "e2d8edd7d7a293a1c473f31a3ed39d87bbc7f19a2d3d4b763e9ebc5e3ce7f9f9",
+    "native-repaired-final-save.txt": "b3374dd8193596c9ef9a2c82f075e2b12492f4080f9f735a1536dc5c18d363fa",
+    "natural-quit.json": "95984e489e205ced9def377da56c245d0fe964ba8984771a1a67dee9934882c1",
+    "preloaded-tab-titles.json": "59fda02f497b9373ff7534dfdbade1a0accfe339c251a99d5aa591038d3ed21b",
+    "protected-break.png": "fd53299b3ec9186e50aa85e5fa4f8f93b36e9656f50077a655c33c3572af05b8",
+    "protected-restart.json": "cdac0eaea6bccc90940130b743ca7a8391f05cbf6c71c5cf61e5a9e38bce6d70",
+    "public-work.json": "729c7c2f3262e9bcdb96dce56f4ed554c20a88939d95d9e44697034afa06356c",
+    "statistics.json": "a1563e4c67f912527117bea17d81503924b5d8368987169474a14c43471e2d52",
+    "guest-states.json": "be6c8585f0fef81053d11cd5c9389195672724fb67ed3248a409093370851eaa"
+  }
+}

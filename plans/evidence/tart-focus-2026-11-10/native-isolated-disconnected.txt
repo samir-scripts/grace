@@ -1,0 +1,28 @@
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXPopUpButton | Guest Acceptance | 
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 0
+AXGroup | missing value | 
+AXStaticText | 01:56 | 01:56
+AXGroup | missing value | 
+AXStaticText | FOCUS | FOCUS
+AXGroup | missing value | 
+AXStaticText | Distraction blocking disconnected and the timer paused. Reconnect, then retry. | Distraction blocking disconnected and the timer paused. Reconnect, then retry.
+AXButton | Retry | missing value
+AXButton | Restart round | missing value
+AXButton | Play | missing value
+AXButton | Skip round | missing value
+AXStaticText | 2  |  2 | 2  |  2
+AXButton | Reset | missing value
+AXButton | Mute | missing value
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value

@@ -1,0 +1,117 @@
+{
+  "run_id": "7c36512e-4971-4d40-8e87-d6cbca8758fa",
+  "vm_name": "grace-acceptance-7c36512e-4971-4d40-8e87-d6cbca8758fa",
+  "pass": "matching",
+  "phase": "work",
+  "mode": "controlled",
+  "target_hash": "14614a85a19d66592f3825f639654e3b4b01e363fb4154a267179fa5b0fdf362",
+  "targets": {
+    "blocked": [
+      "https://example.com/",
+      "https://youtube.com/",
+      "https://www.youtube.com/",
+      "https://instagram.com/",
+      "https://m.instagram.com/",
+      "https://reddit.com/",
+      "https://old.reddit.com/"
+    ],
+    "allowed": [
+      "https://example.org/",
+      "https://example.org/?next=https://reddit.com/r/all"
+    ]
+  },
+  "timestamp_utc": "2026-11-10T14:50:54.417Z",
+  "log": {
+    "path": "/Users/admin/Library/Logs/com.splode.pomotroid/Grace.log",
+    "ino": 657232,
+    "offset": 134513
+  },
+  "active_ack": null,
+  "observations": [
+    {
+      "requested": "http://example.com/?probe_nonce=7650bcd6-90cd-49eb-8858-6d17047dcd60",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "proxyRequested": false,
+      "markerMatched": false,
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "http://youtube.com/?probe_nonce=53494882-e3fe-4cd8-a1a6-63230388684c",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "proxyRequested": false,
+      "markerMatched": false,
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "http://www.youtube.com/?probe_nonce=0b5d4986-4d88-4cbd-b94d-b8f7d1c6bc4a",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "proxyRequested": false,
+      "markerMatched": false,
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "http://instagram.com/?probe_nonce=7695b8ff-4592-48dd-bee6-dc369e8042b6",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "proxyRequested": false,
+      "markerMatched": false,
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "http://m.instagram.com/?probe_nonce=c71326ea-f9fd-4b97-ac86-fd5550750126",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "proxyRequested": false,
+      "markerMatched": false,
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "http://reddit.com/?probe_nonce=2351e1c6-731d-4046-9a5c-d3bbd7c6a70d",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "proxyRequested": false,
+      "markerMatched": false,
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "http://old.reddit.com/?probe_nonce=b97f749d-ea9f-41e6-9069-16d2fba9b81b",
+      "error": "unknown error: Error: NS_ERROR_ABORT",
+      "proxyRequested": false,
+      "markerMatched": false,
+      "classification": "inconclusive"
+    },
+    {
+      "requested": "http://example.org/?probe_nonce=46cefa5d-bc90-4dd3-a808-e5d38ef39d7d",
+      "url": "http://example.org/?probe_nonce=46cefa5d-bc90-4dd3-a808-e5d38ef39d7d",
+      "title": "grace-probe-46cefa5d-bc90-4dd3-a808-e5d38ef39d7d",
+      "sameHost": true,
+      "proxyRequested": true,
+      "markerMatched": true,
+      "classification": "loaded"
+    },
+    {
+      "requested": "http://example.org/?next=https%3A%2F%2Freddit.com%2Fr%2Fall&probe_nonce=46c3af3f-a817-45d1-b513-e4307738c9b8",
+      "url": "http://example.org/?next=https%3A%2F%2Freddit.com%2Fr%2Fall&probe_nonce=46c3af3f-a817-45d1-b513-e4307738c9b8",
+      "title": "grace-probe-46c3af3f-a817-45d1-b513-e4307738c9b8",
+      "sameHost": true,
+      "proxyRequested": true,
+      "markerMatched": true,
+      "classification": "loaded"
+    }
+  ],
+  "existing_tabs": [
+    {
+      "original_context": "65a2b301-9484-4709-8bdc-f428d40f2927",
+      "context": "6c31eab9-ec99-4642-8e0a-380e7171cf40",
+      "original_url": "http://example.com/?probe_nonce=cf382e82-1a59-4b48-bf4c-69cc540ef047",
+      "classification": "inconclusive",
+      "error": "unsupported operation: System access is required. Start Zen with the \"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1\" environment variable set to enable it."
+    }
+  ],
+  "native_acceptance": "blocked",
+  "pending": [
+    "Native timer, selected profile and release require UI evidence.",
+    "Retained tabs require review if unavailable or extension identity cannot be verified."
+  ],
+  "proxy_requests": [
+    "46cefa5d-bc90-4dd3-a808-e5d38ef39d7d",
+    "46c3af3f-a817-45d1-b513-e4307738c9b8"
+  ]
+}

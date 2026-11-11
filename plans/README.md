@@ -1,5 +1,15 @@
 # Implementation plans
 
+[grace. UI consistency and accessibility](grace-ui-consistency-plan.md) — implementation and verification ledger. [Batch 5 native/signing report](grace-ui-batch5-report.md): native development checks, Clippy and production build pass; signed 1.1.0 is approved and a packaged Zen update/reconnect passed; Firefox 115 support is retained with its consent fallback; pre-consent appearance and remaining browser acceptance are open.
+
+[Reproducible Tart Zen/Discord acceptance](tart-focus-acceptance-plan.md) — implemented and verified in batches. [Evidence report](tart-focus-acceptance-report.md) records two-clone provisioning, native website/Discord checks, completion/reset repairs, explicit inconclusive cases and existing Clippy blockers.
+
+[Zen installed-extension diagnosis / OMP handoff](zen-extension-omp-handoff.md) — active follow-up. Source identity correction is distinct from installed-extension acceptance; real Zen/Firefox enforcement verification remains outstanding. Project map: `graphify-out/GRAPH_REPORT.md` and `graphify-out/graph.html`.
+
+[Zen diagnosis and unsigned network alternatives](zen-network-alternatives-report.md) — current evidence, guest-only prototype outline, and outstanding acceptance gates.
+
+[Gecko companion CSP repair plan](zen-gecko-csp-repair-plan.md) — AMO unlisted version 1.0.0 is approved. Signed guest Firefox/Zen persistence and partial active enforcement are verified. [Native guest assistance](native-guest-assistance-2026-11-08.md) verified packaged Firefox 115.44 pause/retry, emergency hold and natural final/domain restoration, but exposed a protected-session Command-Q escape now handed to OMP. Correct-passphrase UI, earlier Firefox 115 compatibility and broader enforcement gates remain open; see the latest acceptance section.
+
 [Focus Sessions master plan](focus-sessions-master-plan.md) — completed.
 
 ## Progress

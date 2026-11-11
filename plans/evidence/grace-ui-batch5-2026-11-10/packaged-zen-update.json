@@ -1,0 +1,22 @@
+{
+  "date": "2026-11-10",
+  "scope": "Disposable macOS guest; production packaged app and existing Zen browser profile",
+  "app_executable_sha256": "7f5776ed4bbf5785ddd6dc7cc9af49520c8f9f6127e84d04505eb215102e6d46",
+  "bundled_and_staged_xpi_sha256": "3985f29a72a47749190a395ccf6730e62867cdfc0ae8355f54a02c00f1c91ee6",
+  "zen_version": "1.24.1b",
+  "gecko_milestone": "159.0.1",
+  "observed": [
+    "Bundle links stayed within bundle and sensitive filenames scan returned zero.",
+    "Update Extension reported success and staged the signed XPI without using Remove.",
+    "One existing required participant remained present; it came online after Zen opened and again after browser and app restart.",
+    "Existing Zen extension metadata reported version 1.1.0, active true, signedState 2.",
+    "A separate disposable Zen profile reported version 1.1.0, active true, signedState 2; the existing participant remained the sole offline participant while it ran.",
+    "Temporary browser profile was removed; app and Zen exited and guest stopped. Preferences and required participant were not changed; signed update retained."
+  ],
+  "inconclusive": [
+    "Navigation to the options address was attempted but browser accessibility exposed no companion page controls. Pre-consent appearance synchronization, actual consent state in the disposable profile, and withdrawal/re-consent were not verified.",
+    "Firefox 115 and later Firefox installations were not tested in this guest.",
+    "No new protected-session, emergency release, or native browser blocking test was run."
+  ],
+  "capture_note": "Sanitized observation record; no screenshots, credential values, browser profile identifiers or private configuration are retained."
+}

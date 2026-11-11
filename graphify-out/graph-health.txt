@@ -1,0 +1,41 @@
+[graphify] MultiDiGraph edge-collapse diagnostic
+input: <in-memory>
+input_stage: provided JSON (normal graph.json is post-build)
+effective_directed: <direct-call>
+nodes: 2105
+unverified_code_nodes: 0
+raw_edges: 4584
+valid_candidate_edges: 4058
+missing_endpoint_edges: 0
+dangling_endpoint_edges: 445
+external_reference_edges: 81
+self_loop_edges: 1
+exact_duplicate_edges: 22
+directed_unique_endpoint_pairs: 3673
+directed_same_endpoint_collapsed_edges: 385
+undirected_unique_endpoint_pairs: 3671
+undirected_same_endpoint_collapsed_edges: 387
+same_endpoint_group_count: 233
+relation_variant_groups: 32
+source_file_variant_groups: 0
+source_location_variant_groups: 179
+context_variant_groups: 107
+post_build_graph_type: DiGraph
+post_build_edges: 4140
+producer_suppression_sites: 12
+producer_suppression_examples:
+  - L1830 seen_ids arity=unknown
+  - L2393 seen_ids arity=unknown
+  - L2395 seen_doc_refs arity=unknown
+  - L3062 seen_ids arity=unknown
+  - L3209 seen_ids arity=unknown
+  - L4350 seen_keys arity=unknown
+  - L4536 seen_keys arity=unknown
+  - L8160 seen_ids arity=unknown
+examples:
+  - github_workflows_build_build_linux_steps -> github_workflows_build_steps_name edges=12 relations=['contains'] locations=['L15', 'L20', 'L26', 'L31', 'L36', 'L48', 'L51', 'L54', 'L57', 'L60', 'L63', 'L68'] contexts=['']
+  - github_workflows_release_build_linux_steps -> github_workflows_release_steps_name edges=11 relations=['contains'] locations=['L104', 'L116', 'L57', 'L62', 'L68', 'L71', 'L76', 'L88', 'L91', 'L94', 'L99'] contexts=['']
+  - github_workflows_release_build_windows_steps -> github_workflows_release_steps_name edges=9 relations=['contains'] locations=['L194', 'L199', 'L205', 'L208', 'L213', 'L216', 'L219', 'L224', 'L231'] contexts=['']
+  - github_workflows_build_build_macos_steps -> github_workflows_build_steps_name edges=8 relations=['contains'] locations=['L104', 'L107', 'L110', 'L115', 'L83', 'L88', 'L94', 'L99'] contexts=['']
+  - github_workflows_build_build_windows_steps -> github_workflows_build_steps_name edges=8 relations=['contains'] locations=['L127', 'L132', 'L138', 'L141', 'L146', 'L149', 'L152', 'L157'] contexts=['']
+note: normal graph.json is post-build; raw producer loss must be measured earlier.

@@ -1,0 +1,99 @@
+2.41.1
+[2026-11-10][14:18:15][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] hello_accepted connection=<redacted> version=3
+[2026-11-10][14:18:15][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent connection=<redacted> revision=0 active=false
+[2026-11-10][14:18:15][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=0
+[2026-11-10][14:19:24][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=1 domains=4
+[2026-11-10][14:19:24][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent revision=1 participants=1
+[2026-11-10][14:19:24][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=1
+[2026-11-10][14:19:25][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] app_monitor_ready
+[2026-11-10][14:21:25][pomotroid_lib::timer][INFO] [timer] round complete type=work skipped=false
+[2026-11-10][14:21:25][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=2
+[2026-11-10][14:22:25][pomotroid_lib::timer][INFO] [timer] round complete type=short-break skipped=false
+[2026-11-10][14:22:25][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=1 domains=4
+[2026-11-10][14:22:25][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent revision=3 participants=1
+[2026-11-10][14:22:25][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=3
+[2026-11-10][14:22:25][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] app_monitor_ready
+[2026-11-10][14:25:48][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] lease_failed reason=required_disconnected
+[2026-11-10][14:25:48][pomotroid_lib::timer][INFO] [timer] paused elapsed=4s
+[2026-11-10][14:26:08][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] hello_accepted connection=<redacted> version=3
+[2026-11-10][14:26:08][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent connection=<redacted> revision=4 active=false
+[2026-11-10][14:26:08][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=4
+[2026-11-10][14:26:43][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=1 domains=4
+[2026-11-10][14:26:43][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent revision=5 participants=1
+[2026-11-10][14:26:43][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=5
+[2026-11-10][14:26:43][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] app_monitor_ready
+[2026-11-10][14:26:43][pomotroid_lib::timer][INFO] [timer] resumed elapsed=4s
+[2026-11-10][14:28:39][pomotroid_lib::timer][INFO] [timer] round complete type=work skipped=false
+[2026-11-10][14:28:39][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=6
+[2026-11-10][14:29:39][pomotroid_lib::timer][INFO] [timer] round complete type=long-break skipped=false
+[2026-11-10][14:29:39][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=1 domains=4
+[2026-11-10][14:29:39][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent revision=7 participants=1
+[2026-11-10][14:29:39][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=7
+[2026-11-10][14:29:39][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] app_monitor_ready
+[2026-11-10][14:30:23][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] lease_failed reason=required_disconnected
+[2026-11-10][14:32:16][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] hello_accepted connection=<redacted> version=3
+[2026-11-10][14:32:16][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent connection=<redacted> revision=8 active=false
+[2026-11-10][14:32:16][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=8
+[2026-11-10][14:37:57][pomotroid_lib::timer][DEBUG] [timer] idle
+[2026-11-10][14:45:14][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] hello_accepted connection=<redacted> version=3
+[2026-11-10][14:45:14][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent connection=<redacted> revision=0 active=false
+[2026-11-10][14:45:14][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=0
+[2026-11-10][14:46:58][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=1 domains=4
+[2026-11-10][14:46:58][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent revision=1 participants=1
+[2026-11-10][14:46:58][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=1
+[2026-11-10][14:46:58][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] app_monitor_ready
+[2026-11-10][14:48:58][pomotroid_lib::timer][INFO] [timer] round complete type=work skipped=false
+[2026-11-10][14:48:59][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_released revision=2
+[2026-11-10][14:48:59][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=2
+[2026-11-10][14:49:59][pomotroid_lib::timer][INFO] [timer] round complete type=short-break skipped=false
+[2026-11-10][14:49:59][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=1 domains=4
+[2026-11-10][14:49:59][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent revision=3 participants=1
+[2026-11-10][14:49:59][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=3
+[2026-11-10][14:49:59][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] app_monitor_ready
+[2026-11-10][14:52:53][pomotroid_lib::timer][INFO] [timer] round complete type=work skipped=false
+[2026-11-10][14:52:53][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_released revision=4
+[2026-11-10][14:52:54][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=4
+[2026-11-10][14:53:54][pomotroid_lib::timer][INFO] [timer] round complete type=long-break skipped=false
+[2026-11-10][14:56:43][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] hello_accepted connection=<redacted> version=3
+[2026-11-10][14:56:43][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent connection=<redacted> revision=0 active=false
+[2026-11-10][14:56:43][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=0
+[2026-11-10][14:57:20][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=1 domains=4
+[2026-11-10][14:57:20][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent revision=1 participants=1
+[2026-11-10][14:57:20][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=1
+[2026-11-10][14:57:20][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] app_monitor_ready
+[2026-11-10][14:59:20][pomotroid_lib::timer][INFO] [timer] round complete type=work skipped=false
+[2026-11-10][14:59:20][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_released revision=2
+[2026-11-10][14:59:20][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=2
+[2026-11-10][15:00:20][pomotroid_lib::timer][INFO] [timer] round complete type=short-break skipped=false
+[2026-11-10][15:00:20][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=1 domains=4
+[2026-11-10][15:00:20][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent revision=3 participants=1
+[2026-11-10][15:00:20][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=3
+[2026-11-10][15:00:20][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] app_monitor_ready
+[2026-11-10][15:00:42][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_released revision=4
+[2026-11-10][15:00:42][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=4
+[2026-11-10][15:00:42][pomotroid_lib::timer][DEBUG] [timer] idle
+[2026-11-10][15:22:45][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=0 domains=1
+[2026-11-10][15:22:45][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_released revision=1
+[2026-11-10][15:22:47][pomotroid_lib::timer][DEBUG] [timer] idle
+[2026-11-10][15:25:52][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] hello_accepted connection=<redacted> version=3
+[2026-11-10][15:25:52][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent connection=<redacted> revision=0 active=false
+[2026-11-10][15:25:52][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=0
+[2026-11-10][15:26:15][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] hello_accepted connection=<redacted> version=3
+[2026-11-10][15:26:15][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent connection=<redacted> revision=0 active=false
+[2026-11-10][15:26:15][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=0
+[2026-11-10][15:27:52][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=0 domains=1
+[2026-11-10][15:27:52][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent revision=1 participants=1
+[2026-11-10][15:27:52][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=1
+[2026-11-10][15:27:52][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] app_monitor_ready
+[2026-11-10][15:27:55][pomotroid_lib::timer][DEBUG] [timer] idle
+[2026-11-10][15:28:57][pomotroid_lib::timer][INFO] [timer] round complete type=work skipped=false
+[2026-11-10][15:28:57][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_released revision=2
+[2026-11-10][15:28:57][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=2
+[2026-11-10][15:29:57][pomotroid_lib::timer][INFO] [timer] round complete type=short-break skipped=false
+[2026-11-10][15:29:57][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] apply apps=0 domains=1
+[2026-11-10][15:29:57][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_sent revision=3 participants=1
+[2026-11-10][15:29:57][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=3
+[2026-11-10][15:29:57][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] app_monitor_ready
+[2026-11-10][15:31:24][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] policy_released revision=4
+[2026-11-10][15:31:24][pomotroid_lib::focus::browser][DEBUG] [focus-bridge] ack_received connection=<redacted> revision=4
+[2026-11-10][15:31:24][pomotroid_lib::timer][DEBUG] [timer] idle

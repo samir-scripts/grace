@@ -1,0 +1,12 @@
+{
+  "run_id": "7c36512e-4971-4d40-8e87-d6cbca8758fa",
+  "timestamp_utc": "2026-11-10T15:35:21.591130+00:00",
+  "owned_processes_absent": true,
+  "listeners_absent": [
+    1420,
+    1421,
+    9222
+  ],
+  "checks": 2,
+  "held_keys_released": true
+}

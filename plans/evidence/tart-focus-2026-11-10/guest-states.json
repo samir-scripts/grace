@@ -1,0 +1,10 @@
+{
+  "timestamp_utc": "2026-11-10T15:47:37.141108+00:00",
+  "states": {
+    "grace-acceptance-20261110-a": "stopped",
+    "grace-acceptance-539143f4-aebe-4e59-95f9-d1ed8fdcbd0f": "stopped",
+    "grace-acceptance-7c36512e-4971-4d40-8e87-d6cbca8758fa": "stopped",
+    "pomotroid-zen-clean": "stopped",
+    "pomotroid-zen-diagnosis": "stopped"
+  }
+}

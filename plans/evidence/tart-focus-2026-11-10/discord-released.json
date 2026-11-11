@@ -1,0 +1,45 @@
+{
+  "run_id": "7c36512e-4971-4d40-8e87-d6cbca8758fa",
+  "vm_name": "grace-acceptance-7c36512e-4971-4d40-8e87-d6cbca8758fa",
+  "pass": "matching",
+  "phase": "released",
+  "timestamp_utc": "2026-11-10T14:55:04.521672+00:00",
+  "app": "/Users/admin/grace-acceptance/7c36512e-4971-4d40-8e87-d6cbca8758fa/Grace.app/Contents/MacOS/pomotroid",
+  "app_sha256": "df654b56e9480eeedc0f8d9b80f17193c2dc8a71a356628e939e36fdd6a94a57",
+  "discord_sha256": "503a75e9781a3fab1ac181686755fbb961331f0fefa548750453d62a4c0ecdab",
+  "initial_pids": [],
+  "remaining_pids": [],
+  "initial_helper_pids": [],
+  "remaining_helper_pids": [],
+  "launches": [
+    {
+      "pid": 1038,
+      "terminated": false,
+      "elapsed_ms": 3119,
+      "exit_code": null,
+      "helper_pids": [
+        1040,
+        1041,
+        1043,
+        1054,
+        1055,
+        1056
+      ]
+    }
+  ],
+  "launch_terminated_within_limit": [
+    false
+  ],
+  "process_observation": "pass",
+  "native_ui_evidence": {
+    "status": "inconclusive",
+    "path": "/Users/admin/grace-acceptance/7c36512e-4971-4d40-8e87-d6cbca8758fa/native-repaired-final.txt"
+  },
+  "active_evidence": null,
+  "acceptance": "blocked",
+  "pending": [
+    "Verify native selected profile, timer and locked state with fresh signed policy ACK.",
+    "Review UI evidence and browser behavior; a process exit alone may be an updater failure.",
+    "Confirm natural break and release restoration through the native application."
+  ]
+}
