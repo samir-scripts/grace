@@ -54,7 +54,7 @@
     justify-content: center;
     width: 24px;
     height: 24px;
-    background: none;
+    background: var(--color-background);
     border: none;
     border-radius: 3px;
     cursor: pointer;
@@ -75,7 +75,7 @@
     justify-content: center;
     width: 24px;
     height: 24px;
-    background: none;
+    background: var(--color-background);
     border: 1.5px solid var(--color-foreground-darker, var(--color-foreground));
     border-radius: 50%;
     cursor: pointer;
@@ -88,7 +88,7 @@
   }
 
   .play-pause:hover {
-    color: var(--color-accent);
+    color: var(--color-foreground);
     border-color: var(--color-accent);
     background: var(--color-hover);
   }

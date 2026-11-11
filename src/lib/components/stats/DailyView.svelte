@@ -101,7 +101,8 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    height: 100%;
+    min-height: 100%;
+    min-width: 0;
     padding: 0;
   }
 
@@ -113,7 +114,8 @@
   }
 
   .card {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -136,6 +138,8 @@
   }
 
   .card-label {
+    text-align: center;
+    overflow-wrap: anywhere;
     font-size: 0.68rem;
     font-weight: 600;
     letter-spacing: 0.1em;
@@ -144,6 +148,8 @@
   }
 
   .card-value {
+    overflow-wrap: anywhere;
+    text-align: center;
     font-size: clamp(1.4rem, 6vw, 2.4rem);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
@@ -166,12 +172,14 @@
     flex-direction: column;
     padding: 20px 24px 16px;
     gap: 12px;
-    overflow: hidden;
+    min-width: 0;
+    flex-shrink: 0;
   }
 
   .section-header {
     display: flex;
     align-items: baseline;
+    flex-wrap: wrap;
     gap: 12px;
   }
 
@@ -185,7 +193,7 @@
 
   .empty-hint {
     font-size: 0.72rem;
-    color: color-mix(in oklch, var(--color-foreground-darker) 60%, transparent);
+    color: var(--color-foreground-darker);
     font-style: italic;
   }
 
@@ -200,7 +208,7 @@
   .chart {
     display: block;
     width: 100%;
-    max-width: 100%;
+    min-width: 500px;
     height: auto;
   }
 
@@ -234,6 +242,11 @@
     font-size: 9px;
     font-variant-numeric: tabular-nums;
     cursor: default;
+  }
+
+  @media (max-width: 320px) {
+    .cards { flex-direction: column; }
+    .card-divider { width: auto; height: 1px; margin: 0 12px; }
   }
 
   .baseline {

@@ -18,6 +18,7 @@ const defaultSettings: Settings = {
   min_to_tray: false,
   min_to_tray_on_close: false,
   notifications_enabled: false,
+  dnd_enabled: false,
   always_on_top: false,
   break_always_on_top: false,
   volume: 1.0,
@@ -49,6 +50,8 @@ const defaultSettings: Settings = {
 
 // Check query param or sessionStorage override
 const urlParams = new URLSearchParams(window.location.search);
+const browserSetupCalls: string[] = [];
+const browserFixtureEnabled = urlParams.has('browser_fixture');
 const storedPref = sessionStorage.getItem('motion-test-animations-enabled');
 let currentAnimationsEnabled = storedPref !== null
   ? storedPref === 'true'
@@ -135,7 +138,7 @@ const detailedStats: DetailedStats = {
   today: {
     rounds: 3,
     focus_mins: 75,
-    completion_rate: 100,
+    completion_rate: 1,
     by_hour: Array.from({ length: 24 }, (_, h) => (h === 12 ? 3 : 0)),
   },
   week: [{ date: todayStr, rounds: 3 }],
@@ -178,6 +181,10 @@ function readField(obj: unknown, key: string): unknown {
 
 export const windowResizeCalls: Array<{ view: string; animate?: boolean; renderedBeforeResize?: boolean }> = [];
 
+const appearanceMotionCalls: boolean[] = [];
+let holdResize = false;
+let resizeResolve: (() => void) | null = null;
+
 mockWindows('main');
 mockIPC((cmd, args: unknown) => {
   if (cmd === 'settings_get') {
@@ -208,6 +215,7 @@ mockIPC((cmd, args: unknown) => {
       throw new Error(err);
     }
 
+    if (key === 'theme_mode') currentSettings.theme_mode = value;
     if (key === 'animations_enabled') {
       currentSettings.animations_enabled = value === 'true';
       sessionStorage.setItem('motion-test-animations-enabled', value);
@@ -253,11 +261,15 @@ mockIPC((cmd, args: unknown) => {
   }
 
   if (cmd === 'focus_browsers_list') {
-    return [];
+    return browserFixtureEnabled ? [{ kind: 'zen', name: 'Zen', executable_path: '/test/Zen.app', policy_path: null, is_installed: true, is_extension_installed: true }, { kind: 'firefox', name: 'Firefox', executable_path: '/test/Firefox.app', policy_path: null, is_installed: true, is_extension_installed: false }] : [];
+  }
+  if (['focus_native_host_register', 'focus_browser_extension_install', 'focus_browser_extension_remove'].includes(cmd)) {
+    browserSetupCalls.push(cmd);
+    return;
   }
 
   if (cmd === 'focus_browser_setup_get') {
-    return { token: 'test-only', port: 1314, profiles: [] };
+    return { token: 'test-only', port: 1314, profiles: browserFixtureEnabled ? [{ profile_id: 'fixture-profile', browser: 'zen', is_required: true, is_connected: false, last_seen_secs_ago: 0 }] : [] };
   }
 
   if (cmd === 'focus_escape_start_hold') {
@@ -292,6 +304,11 @@ mockIPC((cmd, args: unknown) => {
     return;
   }
 
+  if (cmd === 'appearance_publish') {
+    appearanceMotionCalls.push(Boolean(readField(args, 'animationsEnabled')));
+    return;
+  }
+
   if (cmd === 'window_set_view_size') {
     const viewVal = readField(args, 'view');
     const animVal = readField(args, 'animate');
@@ -306,6 +323,10 @@ mockIPC((cmd, args: unknown) => {
       animate: typeof animVal === 'boolean' ? animVal : undefined,
       renderedBeforeResize: targetElementMounted,
     });
+    if (holdResize) {
+      holdResize = false;
+      return new Promise<void>((resolve) => { resizeResolve = resolve; });
+    }
     return;
   }
 
@@ -330,7 +351,11 @@ export interface MotionTestController {
   getSaveCount: () => number;
   getWindowResizeCalls: () => Array<{ view: string; animate?: boolean; renderedBeforeResize?: boolean }>;
   clearResizeCalls: () => void;
+  getAppearanceMotionCalls: () => boolean[];
+  holdNextResize: () => void;
+  releaseResize: () => void;
   setFocusSnapshot: (snap: FocusSnapshot) => Promise<void>;
+  getBrowserSetupCalls: () => string[];
 }
 
 const controller: MotionTestController = {
@@ -372,7 +397,11 @@ const controller: MotionTestController = {
   setNextSaveError: (msg: string) => {
     nextSaveError = msg;
   },
+  holdNextResize: () => { holdResize = true; },
+  releaseResize: () => { resizeResolve?.(); resizeResolve = null; },
   getSaveCount: () => saveCount,
+  getBrowserSetupCalls: () => [...browserSetupCalls],
+  getAppearanceMotionCalls: () => [...appearanceMotionCalls],
   getWindowResizeCalls: () => [...windowResizeCalls],
   clearResizeCalls: () => {
     windowResizeCalls.length = 0;

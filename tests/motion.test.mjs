@@ -328,43 +328,39 @@ test('main navigation matches statistics entrance and requests fluid window resi
   await context.close();
 });
 
-test('destination is visible before a resize is requested', async () => {
+test('destination waits for resize completion before entering', async () => {
   const context = await browser.newContext({ viewport: { width: 360, height: 478 }, reducedMotion: 'no-preference' });
   const page = await context.newPage();
   try {
     await page.goto(`${serverUrl}/?animations=true`);
     await page.waitForSelector('.dial');
-    await page.evaluate(() => {
-      window.__motionTest.clearResizeCalls();
-      const callbacks = new Map();
-      let id = 0;
-      window.requestAnimationFrame = (callback) => {
-        callbacks.set(++id, callback);
-        return id;
-      };
-      window.cancelAnimationFrame = (id) => callbacks.delete(id);
-      window.__frameGate = {
-        count: () => callbacks.size,
-        step: () => {
-          const frame = [...callbacks.values()];
-          callbacks.clear();
-          frame.forEach((callback) => callback(performance.now()));
-        },
-      };
-      document.querySelector('button[aria-label="Settings"]').click();
-    });
-    await page.waitForSelector('.settings-view', { state: 'attached' });
-    assert.equal((await page.evaluate(() => window.__motionTest.getWindowResizeCalls())).length, 0);
-    await page.evaluate(() => document.querySelector('main.view-enter').getAnimations().forEach((animation) => animation.finish()));
-    await page.waitForFunction(() => window.__frameGate.count() > 0, { polling: 10 });
-    await page.evaluate(() => window.__frameGate.step());
-    assert.equal((await page.evaluate(() => window.__motionTest.getWindowResizeCalls())).length, 0);
-    await page.evaluate(() => window.__frameGate.step());
-    await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((call) => call.view === 'settings'), { polling: 10 });
-    assert.equal(await page.locator('main.view-enter').evaluate((element) => Number(getComputedStyle(element).opacity)), 1);
-  } finally {
-    await context.close();
-  }
+    await page.evaluate(() => { window.__motionTest.clearResizeCalls(); window.__motionTest.holdNextResize(); });
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((call) => call.view === 'settings'));
+    assert.equal(await page.locator('.settings-view').count(), 0, 'settings does not reflow during resize');
+    await page.setViewportSize({ width: 840, height: 520 });
+    await page.evaluate(() => window.__motionTest.releaseResize());
+    await page.waitForSelector('.settings-view');
+    assert.equal(await page.locator('.settings-view').evaluate((el) => getComputedStyle(el).flexDirection), 'row');
+  } finally { await context.close(); }
+});
+
+test('a stale resize completion cannot replace the latest view', async () => {
+  const context = await browser.newContext({ viewport: { width: 360, height: 478 }, reducedMotion: 'no-preference' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/?animations=true`);
+    await page.waitForSelector('.dial');
+    await page.evaluate(() => { window.__motionTest.clearResizeCalls(); window.__motionTest.holdNextResize(); });
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((call) => call.view === 'settings'));
+    await page.getByRole('button', { name: 'Statistics' }).click();
+    await page.waitForSelector('.stats-section');
+    await page.evaluate(() => window.__motionTest.releaseResize());
+    await page.waitForTimeout(50);
+    assert.equal(await page.locator('.settings-view').count(), 0);
+    assert.equal(await page.locator('.stats-section').count(), 1);
+  } finally { await context.close(); }
 });
 
 test('disabled motion requests immediate window resize', async () => {
@@ -375,9 +371,14 @@ test('disabled motion requests immediate window resize', async () => {
   });
   const page = await context.newPage();
   await page.goto(`${serverUrl}/?animations=false`);
+  await page.getByRole('button', { name: 'Settings' }).waitFor();
 
-  await page.evaluate(() => window.__motionTest.clearResizeCalls());
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.evaluate(() => {
+    window.__motionTest.clearResizeCalls();
+    // A disabled-motion resize must not depend on a compositor frame.
+    window.requestAnimationFrame = () => 1;
+    document.querySelector('button[aria-label="Settings"]').click();
+  });
   // Wait for asynchronous render-before-resize to dispatch IPC
   await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((c) => c.view === 'settings'));
   const calls = await page.evaluate(() => window.__motionTest.getWindowResizeCalls());
@@ -515,4 +516,221 @@ test('live motion disable updates window view size immediately', async () => {
   assert.ok(cancelCall, 'setWindowViewSize called with animate: false on live motion disable');
 
   await context.close();
+});
+
+test('live system motion changes cancel resizing and apply to later navigation', async () => {
+  const context = await browser.newContext({ viewport: { width: 840, height: 520 }, reducedMotion: 'no-preference' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/?animations=true`);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((call) => call.view === 'settings' && call.animate));
+    await page.evaluate(() => window.__motionTest.clearResizeCalls());
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((call) => call.view === 'settings' && !call.animate));
+    await page.waitForFunction(() => window.__motionTest.getAppearanceMotionCalls().at(-1) === false);
+    await page.getByRole('button', { name: 'Statistics' }).click();
+    await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((call) => call.view === 'stats' && !call.animate));
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.waitForFunction(() => window.__motionTest.getAppearanceMotionCalls().at(-1) === true);
+    await page.getByRole('button', { name: 'Timer' }).click();
+    await page.waitForFunction(() => window.__motionTest.getWindowResizeCalls().some((call) => call.view === 'timer' && call.animate));
+  } finally {
+    await context.close();
+  }
+});
+
+test('rendered theme roles remain opaque and readable across light, dark and custom palettes', async () => {
+  const context = await browser.newContext({ viewport: { width: 840, height: 520 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  await page.goto(`${serverUrl}/`);
+  await page.waitForSelector('.app', { state: 'visible' });
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance' }).click();
+  await page.getByRole('switch', { name: 'Animations', exact: true }).waitFor();
+  const palettes = [
+    JSON.parse(fs.readFileSync(path.join(projectRoot, 'static/themes/solarized-light.json'), 'utf8')),
+    JSON.parse(fs.readFileSync(path.join(projectRoot, 'static/themes/solarized-dark.json'), 'utf8')),
+    { name: 'Custom', colors: { '--color-background': '#abc', '--color-foreground': '#aaa', '--color-accent': '#b32' } },
+  ];
+  for (const palette of palettes) {
+    const results = await page.evaluate(async theme => {
+      const { applyTheme } = await import('/src/lib/stores/theme.ts');
+      applyTheme(theme);
+      const root = getComputedStyle(document.documentElement);
+      const parse = value => {
+        const probe = document.createElement('span');
+        probe.style.color = value;
+        document.body.append(probe);
+        const rgba = getComputedStyle(probe).color.match(/[\d.]+/g).map(Number);
+        probe.remove();
+        return rgba;
+      };
+      const luminance = color => color.slice(0, 3).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+      const contrast = (a, b) => { const x = luminance(a), y = luminance(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+      const surfaces = ['background', 'background-light', 'hover', 'selected'].map(name => parse(root.getPropertyValue(`--color-${name}`)));
+      const inks = ['foreground', 'foreground-darker', 'status-error', 'status-success', 'status-warning'].map(name => parse(root.getPropertyValue(`--color-${name}`)));
+      const border = parse(root.getPropertyValue('--color-border'));
+      const separator = parse(root.getPropertyValue('--color-separator'));
+      const button = parse(root.getPropertyValue('--color-button'));
+      const buttonText = parse(root.getPropertyValue('--color-button-text'));
+      const row = document.querySelector('button[role="switch"][aria-label="Animations"]');
+      const label = row.querySelector('.label');
+      const actualText = parse(getComputedStyle(label).color);
+      const actualSurface = parse(getComputedStyle(row).backgroundColor);
+      return { colors: [...surfaces, ...inks, actualText, actualSurface], ratios: [...inks.flatMap(ink => surfaces.map(surface => contrast(ink, surface))), contrast(actualText, actualSurface)], opacity: getComputedStyle(label).opacity, actualText, actualSurface, separatorRatio: contrast(separator, surfaces[0]), borderRatio: contrast(border, surfaces[0]), buttonRatio: contrast(button, buttonText) };
+    }, palette);
+    assert.equal(results.opacity, '1', `${palette.name}: label opacity`);
+    assert.ok(results.separatorRatio < results.borderRatio * .7, `${palette.name}: separator is softer than control border`);
+    assert.ok(results.buttonRatio >= 4.5, `${palette.name}: button contrast ${results.buttonRatio}`);
+    assert.ok(results.colors.every(color => color.length === 3 || color[3] === 1), `${palette.name}: colors are opaque`);
+    assert.ok(results.ratios.every(ratio => ratio >= 4.5), `${palette.name}: minimum contrast ${Math.min(...results.ratios)} actual ${JSON.stringify([results.actualText, results.actualSurface])}`);
+  }
+  await context.close();
+});
+
+test('capture desktop layout evidence', { skip: !process.env.GRACE_CAPTURE_LAYOUTS }, async () => {
+  const output = path.join(projectRoot, 'plans/evidence/grace-ui-2026-11-10');
+  fs.mkdirSync(output, { recursive: true });
+  for (const [name, width, height] of [['timer', 360, 478], ['compact', 240, 240], ['enlarged', 840, 700], ['settings', 840, 520], ['stats', 840, 520]]) {
+    const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    await page.goto(`${serverUrl}/`);
+    await page.waitForSelector('.app', { state: 'visible' });
+    if (name === 'settings') await page.getByRole('button', { name: 'Settings' }).click();
+    if (name === 'stats') await page.getByRole('button', { name: 'Statistics' }).click();
+    await page.screenshot({ path: path.join(output, `${name}.png`) });
+    await context.close();
+  }
+});
+
+
+test('capture theme appearance evidence', { skip: !process.env.GRACE_CAPTURE_THEMES }, async () => {
+  const output = path.join(projectRoot, 'plans/evidence/grace-ui-2026-11-10');
+  fs.mkdirSync(output, { recursive: true });
+  for (const [filename, palette, section] of [
+    ['solarized-light-sessions', 'solarized-light', 'sessions'],
+    ['solarized-light-appearance', 'solarized-light', 'appearance'],
+    ['solarized-dark-sessions', 'solarized-dark', 'sessions'],
+    ['solarized-dark-appearance', 'solarized-dark', 'appearance'],
+    ['custom-sessions', 'custom', 'sessions'],
+  ]) {
+    const theme = palette === 'custom'
+      ? { name: 'Custom', colors: { '--color-background': '#abc', '--color-foreground': '#aaa', '--color-accent': '#b32' } }
+      : JSON.parse(fs.readFileSync(path.join(projectRoot, `static/themes/${palette}.json`), 'utf8'));
+    const context = await browser.newContext({ viewport: { width: 840, height: 520 }, reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    await page.goto(`${serverUrl}/`);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    if (section === 'appearance') await page.getByRole('tab', { name: 'Appearance' }).click();
+    await page.evaluate(async theme => (await import('/src/lib/stores/theme.ts')).applyTheme(theme), theme);
+    await page.mouse.move(0, 519);
+    await page.screenshot({ path: path.join(output, `${filename}.png`) });
+    await context.close();
+  }
+});
+
+test('session slider shows its colored fill through the input and aligns with the thumb', async () => {
+  const context = await browser.newContext({ viewport: { width: 840, height: 520 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/`);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const slider = page.locator('.slider-container input[type="range"]').first();
+    await slider.waitFor();
+    const background = await slider.evaluate(el => getComputedStyle(el).backgroundColor);
+    assert.equal(background, 'rgba(0, 0, 0, 0)', 'input must expose the colored fill below it');
+    for (const fraction of [0, 0.5, 1]) {
+      const geometry = await slider.evaluate(async (el, fraction) => {
+        const min = Number(el.min), max = Number(el.max);
+        el.value = String(min + (max - min) * fraction);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const input = el.getBoundingClientRect();
+        const fill = el.parentElement.querySelector('.slider-bar');
+        const rect = fill.getBoundingClientRect();
+        return { actual: rect.right - input.left, expected: 7 + (Number(el.value) - min) / (max - min) * (input.width - 14), fill: getComputedStyle(fill).backgroundColor };
+      }, fraction);
+      assert.notEqual(geometry.fill, 'rgba(0, 0, 0, 0)', 'fill must have a visible color');
+      assert.ok(Math.abs(geometry.actual - geometry.expected) < 1, `fill ends at thumb center (${fraction}): ${JSON.stringify(geometry)}`);
+    }
+  } finally { await context.close(); }
+});
+
+test('long session name stays clear of titlebar controls in compact and normal windows', async () => {
+  for (const platform of ['Macintosh', 'Linux']) {
+    for (const width of [240, 360]) {
+      const context = await browser.newContext({ viewport: { width, height: 478 }, userAgent: `Mozilla/5.0 (${platform})`, reducedMotion: 'reduce' });
+      const page = await context.newPage();
+      try {
+        await page.goto(`${serverUrl}/`);
+        await page.locator('.session-name').evaluate(el => { el.textContent = 'An exceptionally long session name for geometry testing'; });
+        const result = await page.evaluate(() => {
+          const selector = document.querySelector('.session-btn').getBoundingClientRect();
+          const controls = [...document.querySelectorAll('.titlebar .btn-icon')].map(el => {
+            const rect = el.getBoundingClientRect();
+            return { left: rect.left, right: rect.right, label: el.getAttribute('aria-label') };
+          });
+          return { left: selector.left, right: selector.right, controls };
+        });
+        for (const control of result.controls) {
+          assert.ok(result.right <= control.left || result.left >= control.right, `${platform} ${width}: selector overlaps ${control.label}`);
+        }
+        await page.locator('.session-btn').click();
+        assert.equal(await page.getByRole('listbox').isVisible(), true);
+        await page.keyboard.press('Escape');
+        assert.equal(await page.getByRole('listbox').count(), 0);
+        await page.getByRole('button', { name: 'Statistics' }).click();
+        assert.equal(await page.getByRole('button', { name: 'This Week' }).isVisible(), true);
+      } finally { await context.close(); }
+    }
+  }
+});
+
+test('appearance mode exposes selection and responds to keyboard activation', async () => {
+  const context = await browser.newContext({ viewport: { width: 840, height: 520 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/`);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Appearance' }).click();
+    const mode = page.getByRole('group', { name: 'Mode' });
+    const auto = mode.getByRole('button', { name: 'Auto' });
+    const light = mode.getByRole('button', { name: 'Light' });
+    const dark = mode.getByRole('button', { name: 'Dark' });
+    assert.equal(await dark.getAttribute('aria-pressed'), 'true');
+    assert.equal(await light.getAttribute('aria-pressed'), 'false');
+    await light.focus();
+    await page.keyboard.press('Space');
+    await light.waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('button[aria-label="Light"]').getAttribute('aria-pressed') === 'true');
+    assert.equal(await dark.getAttribute('aria-pressed'), 'false');
+    await auto.focus();
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.querySelector('button[aria-label="Auto"]').getAttribute('aria-pressed') === 'true');
+    assert.equal(await light.getAttribute('aria-pressed'), 'false');
+  } finally { await context.close(); }
+});
+
+test('updating an installed companion preserves participants and is disabled while locked', async () => {
+  const context = await browser.newContext({ viewport: { width: 840, height: 520 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/?browser_fixture=1`);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const update = page.getByRole('button', { name: 'Update Extension' });
+    await update.click();
+    await page.waitForFunction(() => window.__motionTest.getBrowserSetupCalls().length === 2);
+    assert.deepEqual(await page.evaluate(() => window.__motionTest.getBrowserSetupCalls()), ['focus_native_host_register', 'focus_browser_extension_install']);
+    assert.equal(await page.getByText('fixture-profile').count(), 1);
+    await page.evaluate(async () => {
+      const store = await import('/src/lib/stores/focus.ts');
+      store.focusSnapshot.update(snapshot => ({ ...snapshot, is_locked: true }));
+    });
+    await page.waitForFunction(() => document.querySelector('button[title="Extensions cannot be changed while a focus session is active."]')?.disabled);
+    assert.equal(await update.isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: 'Remove Extension' }).isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: 'Install Extension' }).isDisabled(), true);
+    assert.deepEqual(await page.evaluate(() => window.__motionTest.getBrowserSetupCalls()), ['focus_native_host_register', 'focus_browser_extension_install']);
+  } finally { await context.close(); }
 });

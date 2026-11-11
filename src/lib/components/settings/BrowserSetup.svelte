@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import {
     listInstalledBrowsers,
+    getInstalledApplicationIcon,
     registerNativeHost,
     installBrowserExtension,
     removeBrowserExtension,
@@ -24,17 +25,54 @@
   let mutating = $state<{ kind: BrowserKind; action: 'install' | 'remove' } | null>(null);
   let statusMessage = $state('');
   let statusType = $state<'success' | 'error' | ''>('');
+  let isRefreshing = $state(false);
+  let iconCache = $state<Record<string, string | null>>({});
+  let loadGeneration = 0;
+
+  function isActive(kind: BrowserKind): boolean {
+    return browserSetup?.profiles.some((profile) => profile.browser === kind && profile.is_connected) ?? false;
+  }
+
+  async function loadIcon(id: string) {
+    if (id in iconCache) return;
+    iconCache[id] = null;
+    try {
+      iconCache[id] = await getInstalledApplicationIcon(id);
+    } catch {
+      // Icon failures must not prevent browser setup.
+    }
+  }
+
+  async function handleRefreshAll() {
+    if (isRefreshing || mutating !== null) return;
+    isRefreshing = true;
+    statusMessage = '';
+    try {
+      await Promise.all([loadBrowsers(), refreshSetup()]);
+    } catch (e: any) {
+      statusMessage = typeof e === 'string' ? e : (e?.message || 'Failed to refresh browsers');
+      statusType = 'error';
+    } finally {
+      isRefreshing = false;
+    }
+  }
+
 
   onMount(() => {
     loadBrowsers();
     refreshSetup();
     const interval = setInterval(refreshSetup, 3000);
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); loadGeneration++; };
   });
 
   async function loadBrowsers() {
     try {
-      installedBrowsers = await listInstalledBrowsers();
+      // Safari has no supported companion installation.
+      const generation = ++loadGeneration;
+      const browsers = (await listInstalledBrowsers()).filter((browser) => browser.kind !== 'safari');
+      if (generation !== loadGeneration) return;
+      installedBrowsers = browsers;
+      await Promise.all(browsers.map((browser) => browser.catalog_id ? loadIcon(browser.catalog_id) : Promise.resolve()));
     } catch (e) {
       console.warn('[BrowserSetup] failed to list browsers:', e);
     }
@@ -49,6 +87,7 @@
   }
 
   async function handleInstall(browser: InstalledBrowser) {
+    if (isLocked || mutating !== null) return;
     mutating = { kind: browser.kind, action: 'install' };
     statusMessage = '';
     statusType = '';
@@ -98,11 +137,38 @@
       console.error('[BrowserSetup] failed to toggle required profile:', e);
     }
   }
+
+  async function assignProfile(profileId: string, browser: BrowserKind, required: boolean) {
+    try {
+      await requireBrowserProfile(profileId, browser, required);
+    } catch (e: any) {
+      statusMessage = typeof e === 'string' ? e : (e?.message || 'Failed to assign browser');
+      statusType = 'error';
+    } finally {
+      await refreshSetup();
+    }
+  }
 </script>
 
 <div class="browser-setup-container">
   <div class="header-group">
-    <h3 class="group-title">{m.browser_companions_title()}</h3>
+    <div class="title-row">
+      <h3 class="group-title">{m.browser_companions_title()}</h3>
+      <button
+        type="button"
+        class="btn-refresh"
+        class:spinning={isRefreshing}
+        onclick={handleRefreshAll}
+        disabled={isRefreshing || mutating !== null}
+        title={m.browser_refresh_button()}
+        aria-label={m.browser_refresh_button()}
+      >
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 8A6 6 0 1 1 9.5 2.5L14 3"></path>
+          <path d="M14 3V7H10"></path>
+        </svg>
+      </button>
+    </div>
     <p class="section-desc">{m.browser_companions_desc()}</p>
   </div>
 
@@ -118,45 +184,54 @@
       <div class="browser-card">
         <div class="browser-info">
           <div class="browser-icon-wrapper">
-            {#if browser.kind === 'chrome'}
-              <svg class="browser-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="12" r="4" />
-                <line x1="21.17" y1="8" x2="12" y2="8" />
-                <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
-                <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
-              </svg>
-            {:else if browser.kind === 'firefox'}
-              <svg class="browser-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12c0-2.8 1.15-5.33 3-7.15" />
-                <path d="M16 8c-1.5-1.5-4-1-5 1s0 4 2 5 3 2 3 4-2 3-4 3" />
-              </svg>
-            {:else if browser.kind === 'zen'}
-              <svg class="browser-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M7 8h10l-10 8h10" />
-              </svg>
+            {#if browser.catalog_id && iconCache[browser.catalog_id]}
+              <img
+                class="browser-icon"
+                src={iconCache[browser.catalog_id] ?? ''}
+                alt=""
+                onerror={() => { if (browser.catalog_id) iconCache[browser.catalog_id] = null; }}
+              />
             {:else}
-              <svg class="browser-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <polygon points="12 8 8 16 16 16 12 8" />
+              <svg class="browser-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <ellipse cx="12" cy="12" rx="4" ry="9" />
+                <path d="M3 12h18" />
               </svg>
             {/if}
           </div>
           <div class="browser-text">
             <span class="browser-name">{browser.name}</span>
             <span class="browser-status">
+              {#if browser.is_default}
+                <span class="badge default-badge">{m.browser_is_default()}</span>
+              {/if}
               {#if browser.is_installed}
                 <span class="badge installed">{m.browser_status_installed()}</span>
               {:else}
                 <span class="badge not-installed">{m.browser_status_not_installed()}</span>
+              {/if}
+              {#if isActive(browser.kind)}
+                <span class="badge active"><span class="connection-dot" aria-hidden="true"></span>{m.browser_status_active()}</span>
               {/if}
             </span>
           </div>
         </div>
 
         {#if browser.is_extension_installed}
+          <div class="browser-actions">
+          <button
+            type="button"
+            class="btn-install"
+            disabled={mutating !== null || isLocked}
+            title={isLocked ? m.browser_locked_hint() : undefined}
+            onclick={() => handleInstall(browser)}
+          >
+            {#if mutating?.kind === browser.kind && mutating?.action === 'install'}
+              {m.browser_installing()}
+            {:else}
+              {m.browser_update_button()}
+            {/if}
+          </button>
           <button
             type="button"
             class="btn-install btn-remove"
@@ -170,11 +245,13 @@
               {m.browser_remove_button()}
             {/if}
           </button>
+          </div>
         {:else}
           <button
             type="button"
             class="btn-install"
-            disabled={mutating !== null}
+            disabled={mutating !== null || isLocked}
+            title={isLocked ? m.browser_locked_hint() : undefined}
             onclick={() => handleInstall(browser)}
           >
             {#if mutating?.kind === browser.kind && mutating?.action === 'install'}
@@ -186,6 +263,7 @@
         {/if}
       </div>
     {/each}
+  <p class="anti-bypass-note">{m.browser_anti_bypass_note()}</p>
   </div>
 
   <!-- Connected Profiles List -->
@@ -201,20 +279,36 @@
           {#each browserSetup.profiles as prof}
             <div class="browser-profile-row">
               <div class="prof-meta">
-                <span class="prof-browser">{prof.browser.toUpperCase()}</span>
+                <label>
+                  <span>{m.browser_assign_browser()}</span>
+                  <select
+                    value={prof.browser ?? ''}
+                    disabled={isLocked}
+                    onchange={(event) => {
+                      const browser = event.currentTarget.value as BrowserKind;
+                      if (browser) assignProfile(prof.profile_id, browser, prof.is_required);
+                    }}
+                  >
+                    <option value="">{m.browser_choose_browser()}</option>
+                    {#each installedBrowsers.filter((browser) => browser.is_installed) as browser}
+                      <option value={browser.kind}>{browser.name}</option>
+                    {/each}
+                  </select>
+                </label>
                 <span class="prof-id">{prof.profile_id}</span>
                 {#if prof.is_connected}
-                  <span class="badge online">Online</span>
+                  <span class="badge active"><span class="connection-dot" aria-hidden="true"></span>{m.browser_status_active()}</span>
                 {:else}
-                  <span class="badge offline">Offline</span>
+                  <span class="badge offline">{m.browser_status_offline()}</span>
                 {/if}
               </div>
+              {#if !prof.browser}<p>{m.browser_assignment_hint()}</p>{/if}
               <label class="req-toggle">
                 <input
                   type="checkbox"
                   checked={prof.is_required}
-                  disabled={isLocked && activeSessionId === editingSessionId}
-                  onchange={() => toggleRequireProfile(prof.profile_id, prof.browser, prof.is_required)}
+                  disabled={!prof.browser || (isLocked && activeSessionId === editingSessionId)}
+                  onchange={() => { if (prof.browser) toggleRequireProfile(prof.profile_id, prof.browser, prof.is_required); }}
                 />
                 <span>{m.browser_required_toggle()}</span>
               </label>
@@ -238,6 +332,58 @@
     flex-direction: column;
     gap: 4px;
   }
+  .title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .btn-refresh {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--color-background);
+    border: 1px solid color-mix(in oklch, var(--color-foreground) 15%, transparent);
+    border-radius: 4px;
+    color: var(--color-foreground-darker);
+    cursor: pointer;
+    transition: background-color var(--transition-snappy), color var(--transition-snappy), border-color var(--transition-snappy);
+  }
+
+  .btn-refresh:hover:not(:disabled) {
+    color: var(--color-foreground);
+    border-color: color-mix(in oklch, var(--color-foreground) 30%, transparent);
+    background: var(--color-background-light);
+  }
+
+  .btn-refresh:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-refresh.spinning svg {
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .badge.default-badge {
+    background: var(--color-background-light);
+    color: var(--color-foreground);
+  }
+
+  .anti-bypass-note {
+    font-size: 11px;
+    color: var(--color-foreground-darker);
+    line-height: 1.4;
+    margin: 4px 0 0;
+  }
+
+
 
   .group-title {
     font-size: 13px;
@@ -260,15 +406,15 @@
   }
 
   .alert.success {
-    background: color-mix(in oklch, var(--color-short-round) 15%, transparent);
+    background: var(--color-background-light);
     border: 1px solid var(--color-short-round);
-    color: var(--color-short-round);
+    color: var(--color-foreground);
   }
 
   .alert.error {
-    background: color-mix(in oklch, var(--color-focus-round) 15%, transparent);
+    background: var(--color-background-light);
     border: 1px solid var(--color-focus-round);
-    color: var(--color-focus-round);
+    color: var(--color-foreground);
   }
 
   .browser-grid {
@@ -279,6 +425,7 @@
 
   .browser-card {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     padding: 10px 14px;
@@ -295,6 +442,7 @@
   }
 
   .browser-icon-wrapper {
+    flex-shrink: 0;
     width: 24px;
     height: 24px;
     display: flex;
@@ -304,6 +452,7 @@
   }
 
   .browser-icon {
+    object-fit: contain;
     width: 20px;
     height: 20px;
   }
@@ -322,9 +471,16 @@
 
   .browser-status {
     display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
   }
 
   .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
     font-size: 9px;
     padding: 2px 6px;
     border-radius: 3px;
@@ -333,31 +489,40 @@
   }
 
   .badge.installed {
-    background: color-mix(in oklch, var(--color-short-round) 20%, transparent);
-    color: var(--color-short-round);
+    background: var(--color-browser-installed-bg);
+    color: var(--color-browser-installed-text);
   }
 
   .badge.not-installed {
-    background: color-mix(in oklch, var(--color-foreground-darker) 20%, transparent);
+    background: var(--color-background-light);
     color: var(--color-foreground-darker);
   }
 
-  .badge.online {
-    background: color-mix(in oklch, var(--color-short-round) 25%, transparent);
-    color: var(--color-short-round);
+  .badge.active {
+    background: var(--color-browser-active-bg);
+    color: var(--color-browser-active-text);
+  }
+
+  .connection-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
   }
 
   .badge.offline {
-    background: color-mix(in oklch, var(--color-foreground-darker) 25%, transparent);
+    background: var(--color-background-light);
     color: var(--color-foreground-darker);
   }
+
+  .browser-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
   .btn-install {
     padding: 6px 12px;
     font-size: 11px;
     font-weight: 600;
-    background: var(--color-accent);
-    color: #ffffff;
+    background: var(--color-button);
+    color: var(--color-button-text);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -375,13 +540,13 @@
   }
 
   .btn-install.btn-remove {
-    background: transparent;
-    color: var(--color-focus-round);
+    background: var(--color-background);
+    color: var(--color-foreground);
     border: 1px solid var(--color-focus-round);
   }
 
   .btn-install.btn-remove:hover:not(:disabled) {
-    background: color-mix(in oklch, var(--color-focus-round) 15%, transparent);
+    background: var(--color-background-light);
   }
   .profiles-section {
     display: flex;
@@ -430,15 +595,6 @@
     gap: 8px;
   }
 
-  .prof-browser {
-    font-weight: 700;
-    font-size: 9px;
-    padding: 2px 5px;
-    border-radius: 3px;
-    background: rgba(0, 0, 0, 0.25);
-    color: var(--color-foreground);
-  }
-
   .prof-id {
     font-family: monospace;
     color: var(--color-foreground);
@@ -454,7 +610,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .btn-install {
+    .browser-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .btn-install {
       transition: none !important;
     }
   }

@@ -97,9 +97,8 @@ export const statsGetDetailed = () => invoke<DetailedStats>('stats_get_detailed'
 export const statsGetHeatmap = () => invoke<HeatmapStats>('stats_get_heatmap');
 
 // --- Platform commands ---
-
 export const accessibilityTrusted = () => invoke<boolean>('accessibility_trusted');
-
+export const accessibilityRequest = () => invoke<boolean>('accessibility_request');
 /** Returns true if the system tray is usable on this platform/install.
  *  On Linux this probes for libayatana-appindicator3 / libappindicator3 at
  *  runtime; on macOS and Windows it always returns true. */
@@ -190,3 +189,14 @@ export const removeBrowserExtension = (browser: BrowserKind) =>
 
 export const onFocusChanged = (cb: (snapshot: FocusSnapshot) => void): Promise<UnlistenFn> =>
   listen<FocusSnapshot>('focus:changed', (e) => cb(e.payload));
+
+/** Publish only resolved appearance; no browser identity or pairing state. */
+export const publishAppearance = (colors: Record<string, string>, animationsEnabled: boolean) =>
+  invoke<void>('appearance_publish', {
+    colors: Object.fromEntries(Object.entries(colors).filter(([key]) => [
+      'background', 'background-light', 'background-lightest', 'foreground', 'foreground-darker',
+      'foreground-darkest', 'accent', 'focus-round', 'short-round', 'long-round', 'hover', 'selected',
+      'border', 'separator', 'button', 'button-text', 'status-error', 'status-success', 'status-warning'
+    ].some(role => key === `--color-${role}`))),
+    animationsEnabled,
+  });

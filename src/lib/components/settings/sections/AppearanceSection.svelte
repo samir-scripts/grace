@@ -103,6 +103,7 @@
       type="button"
       class="mode-btn"
       class:active={$settings.theme_mode === 'auto'}
+      aria-pressed={$settings.theme_mode === 'auto'}
       onclick={() => setMode('auto')}
       aria-label={m.appearance_mode_auto()}
       title={m.appearance_mode_auto()}
@@ -116,6 +117,7 @@
       type="button"
       class="mode-btn"
       class:active={$settings.theme_mode === 'light'}
+      aria-pressed={$settings.theme_mode === 'light'}
       onclick={() => setMode('light')}
       aria-label={m.appearance_mode_light()}
       title={m.appearance_mode_light()}
@@ -136,6 +138,7 @@
       type="button"
       class="mode-btn"
       class:active={$settings.theme_mode === 'dark'}
+      aria-pressed={$settings.theme_mode === 'dark'}
       onclick={() => setMode('dark')}
       aria-label={m.appearance_mode_dark()}
       title={m.appearance_mode_dark()}
@@ -327,9 +330,9 @@
     padding: 8px 12px;
     font-size: 0.75rem;
     border-radius: 4px;
-    background: color-mix(in oklch, var(--color-focus-round) 15%, transparent);
+    background: var(--color-background-light);
     border: 1px solid var(--color-focus-round);
-    color: var(--color-focus-round);
+    color: var(--color-foreground);
   }
 
   .group-label {
@@ -341,7 +344,6 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.6;
     margin: 0;
     padding: 16px 20px 6px;
   }
@@ -359,7 +361,7 @@
   .mode-btn {
     flex: 1;
     padding: 6px 0;
-    background: none;
+    background: var(--color-background);
     border: none;
     border-right: 1px solid var(--color-separator);
     font-size: 0.8rem;
@@ -380,8 +382,8 @@
   }
 
   .mode-btn.active {
-    background: color-mix(in oklch, var(--color-accent) 18%, transparent);
-    color: var(--color-accent);
+    background: var(--color-background-light);
+    color: var(--color-foreground);
     font-weight: 600;
   }
 
@@ -402,7 +404,7 @@
     align-items: center;
     width: 100%;
     padding: 9px 12px;
-    background: none;
+    background: var(--color-background);
     border: none;
     cursor: pointer;
     gap: 8px;
@@ -426,7 +428,6 @@
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.7;
     flex-shrink: 0;
   }
 
@@ -450,7 +451,6 @@
   .preview-name {
     font-size: 0.8rem;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.8;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -460,7 +460,6 @@
   .chevron {
     flex-shrink: 0;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.5;
     transition: transform 0.15s;
   }
 

@@ -168,6 +168,8 @@
 <style>
   .session-selector-container {
     position: relative;
+    min-width: 0;
+    max-width: 100%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -180,7 +182,7 @@
     align-items: center;
     gap: 6px;
     padding: 3px 8px;
-    background: transparent;
+    background: var(--color-background);
     border: 1px solid transparent;
     border-radius: 6px;
     color: var(--color-foreground-darker);
@@ -189,7 +191,8 @@
     font-weight: 500;
     cursor: pointer;
     transition: background var(--transition-snappy), color var(--transition-snappy), border-color var(--transition-snappy), transform 100ms ease-out;
-    max-width: 140px;
+    min-width: 0;
+    max-width: min(140px, 100%);
   }
 
   .session-btn:active:not(.locked) {
@@ -207,9 +210,9 @@
   }
 
   .session-btn.locked {
-    color: var(--color-focus-round);
-    border-color: color-mix(in oklch, var(--color-focus-round) 30%, transparent);
-    background: color-mix(in oklch, var(--color-focus-round) 10%, transparent);
+    color: var(--color-foreground);
+    border-color: var(--color-border);
+    background: var(--color-background-light);
   }
 
   .session-name {
@@ -258,7 +261,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 6px 8px;
-    background: transparent;
+    background: var(--color-background);
     border: none;
     border-radius: 4px;
     color: var(--color-foreground-darker);
@@ -296,7 +299,6 @@
   .item-meta {
     font-size: 9px;
     color: var(--color-foreground-darker);
-    opacity: 0.7;
   }
 
   .checkmark {
@@ -318,7 +320,6 @@
     gap: 6px;
     color: var(--color-foreground-darker);
     font-size: 10px;
-    opacity: 0.9;
   }
 
   .manage-icon {

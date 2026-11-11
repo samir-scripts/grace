@@ -145,13 +145,15 @@
   .view {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    min-height: 100%;
+    min-width: 0;
   }
 
   /* ── Summary row ─────────────────────────────────────────── */
   .summary {
     display: flex;
-    gap: 32px;
+    gap: 16px;
+    flex-wrap: wrap;
     padding: 20px 32px 16px;
     border-bottom: 1px solid var(--color-separator);
     flex-shrink: 0;
@@ -196,6 +198,8 @@
   /* ── Bar chart ───────────────────────────────────────────── */
   .chart-section {
     flex: 1;
+    flex-shrink: 0;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -209,20 +213,19 @@
     color: var(--color-foreground-darker);
     font-size: 0.85rem;
     font-style: italic;
-    opacity: 0.7;
   }
 
   .chart-wrap {
     width: 100%;
     min-width: 0;
     display: flex;
-    justify-content: center;
-    overflow: hidden;
+    overflow-x: auto;
   }
   .chart {
     display: block;
     width: 100%;
-    max-width: 100%;
+    min-width: 350px;
+    max-width: 500px;
     height: auto;
   }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { settings } from '$lib/stores/settings';
-  import { setSetting, reloadShortcuts, accessibilityTrusted } from '$lib/ipc';
+  import { setSetting, reloadShortcuts, accessibilityTrusted, accessibilityRequest } from '$lib/ipc';
   import ShortcutInput from '$lib/components/ShortcutInput.svelte';
   import LocalShortcutInput from '$lib/components/LocalShortcutInput.svelte';
   import SettingsToggle from '$lib/components/settings/SettingsToggle.svelte';
@@ -17,6 +17,10 @@
   async function checkTrusted() {
     trusted = await accessibilityTrusted();
   }
+  async function requestAccess() {
+    trusted = await accessibilityRequest();
+  }
+
 
   onMount(() => {
     if (!isMac) return;
@@ -126,9 +130,14 @@
     {#if isMac && !trusted}
       <div class="accessibility-notice">
         <p class="notice-text">{m.shortcuts_accessibility_notice()}</p>
-        <button class="notice-btn" onclick={() => openUrl(ACCESSIBILITY_URL)}>
-          {m.shortcuts_accessibility_open()}
-        </button>
+        <div class="notice-actions">
+          <button class="notice-btn primary" onclick={requestAccess}>
+            {m.shortcuts_accessibility_request()}
+          </button>
+          <button class="notice-btn" onclick={() => openUrl(ACCESSIBILITY_URL)}>
+            {m.shortcuts_accessibility_open()}
+          </button>
+        </div>
       </div>
     {/if}
 
@@ -192,7 +201,7 @@
     padding: 10px 14px;
     border: 1px solid color-mix(in oklch, var(--color-foreground-darker) 35%, transparent);
     border-radius: 6px;
-    background: color-mix(in oklch, var(--color-foreground-darker) 8%, transparent);
+    background: var(--color-background-light);
   }
 
   .notice-text {
@@ -207,7 +216,7 @@
     padding: 4px 10px;
     font-size: 0.75rem;
     color: var(--color-foreground);
-    background: color-mix(in oklch, var(--color-foreground) 10%, transparent);
+    background: var(--color-background-light);
     border: 1px solid color-mix(in oklch, var(--color-foreground) 20%, transparent);
     border-radius: 4px;
     cursor: pointer;
@@ -215,13 +224,30 @@
   }
 
   .notice-btn:hover {
-    background: color-mix(in oklch, var(--color-foreground) 18%, transparent);
+    background: var(--color-background-light);
   }
+  .notice-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .notice-btn.primary {
+    background: var(--color-button);
+    color: var(--color-button-text);
+    border-color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  .notice-btn.primary:hover {
+    filter: brightness(1.1);
+  }
+
 
   .note {
     font-size: 0.75rem;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.65;
     padding: 8px 20px 16px;
     line-height: 1.5;
   }
@@ -256,7 +282,6 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.6;
     margin: 0;
     padding: 16px 20px 6px;
   }

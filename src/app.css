@@ -34,17 +34,22 @@
   --color-foreground-darker: #a3aec4;
   --color-accent: #ff6347;
 
-  /* Derived chrome tokens — adapt automatically between dark and light themes.
-     color-mix with transparent produces the foreground color at N% opacity,
-     which creates subtle dark overlays on light themes and light overlays on
-     dark themes without any hardcoded rgba(255,255,255,...) values. */
-  --color-separator: color-mix(in oklch, var(--color-foreground) 8%, transparent);
-  --color-hover: color-mix(in oklch, var(--color-foreground) 10%, transparent);
+  /* Opaque chrome defaults; resolved semantic roles are supplied by applyTheme. */
+  --color-separator: #485062;
+  --color-border: #8794aa;
+  --color-selected: #424b5c;
+  --color-button: #ff6347;
+  --color-button-text: #000000;
+  --color-status-error: #ffb8c0;
+  --color-status-success: #9bd5a5;
+  --color-status-warning: #e5c38c;
+  --color-hover: #3b4456;
 
   /* Transition timing tokens — components reference these for consistency */
-  --transition-default: 0.2s ease;
-  --transition-snappy: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 0.35s ease;
+  --transition-default: 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-snappy: 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-exit: 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-slow: 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Optical sizing — adapts letterforms to font-size automatically */
   font-optical-sizing: auto;
@@ -166,3 +171,10 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Visible keyboard focus is shared across every app surface. */
+:where(button, input, select, textarea, a, summary):focus-visible {
+  outline: 2px solid var(--color-border);
+  outline-offset: 3px;
+}
+button:disabled { cursor: not-allowed; }

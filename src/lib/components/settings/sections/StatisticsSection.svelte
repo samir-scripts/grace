@@ -130,6 +130,8 @@
   .stats-section {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    min-width: 0;
     height: 100%;
     min-height: 0;
     overflow: hidden;
@@ -142,16 +144,19 @@
     gap: 0;
     border-bottom: 1px solid var(--color-separator);
     flex-shrink: 0;
-    padding: 0 20px;
+    padding: 0 clamp(0px, 2vw, 20px);
     background: var(--color-background);
   }
 
   .tab {
-    background: none;
+    background: var(--color-background);
     border: none;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
-    padding: 10px 18px;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 4px;
+    overflow-wrap: anywhere;
     font-size: 0.78rem;
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -169,7 +174,7 @@
   }
 
   .tab.active {
-    color: var(--color-focus-round);
+    color: var(--color-foreground);
     border-bottom-color: var(--color-focus-round);
   }
 
@@ -177,6 +182,7 @@
   .content {
     flex: 1;
     min-height: 0;
+    min-width: 0;
     overflow-y: auto;
     overflow-x: hidden;
     display: flex;

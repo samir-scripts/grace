@@ -319,12 +319,12 @@
   .modal-title {
     font-size: 15px;
     font-weight: 700;
-    color: var(--color-focus-round);
+    color: var(--color-foreground);
     margin: 0;
   }
 
   .btn-close {
-    background: none;
+    background: var(--color-background);
     border: none;
     color: var(--color-foreground-darker);
     font-size: 18px;
@@ -356,7 +356,7 @@
 
   .mode-tab {
     flex: 1;
-    background: transparent;
+    background: var(--color-background);
     border: none;
     border-radius: 4px;
     padding: 6px;
@@ -382,7 +382,7 @@
   }
 
   kbd {
-    background: color-mix(in oklch, var(--color-foreground) 12%, transparent);
+    background: var(--color-background-light);
     border: 1px solid var(--color-separator);
     border-radius: 3px;
     padding: 1px 4px;
@@ -400,7 +400,7 @@
     position: relative;
     width: 100%;
     height: 72px;
-    background: color-mix(in oklch, var(--color-focus-round) 15%, transparent);
+    background: var(--color-background-light);
     border: 2px solid var(--color-focus-round);
     border-radius: 8px;
     overflow: hidden;
@@ -444,7 +444,7 @@
   .holding-countdown {
     font-size: 15px;
     font-weight: 700;
-    color: var(--color-focus-round);
+    color: var(--color-foreground);
   }
 
   .subtext {
@@ -461,7 +461,7 @@
   .progress-track {
     flex: 1;
     height: 6px;
-    background: color-mix(in oklch, var(--color-foreground) 16%, transparent);
+    background: var(--color-background-light);
     border-radius: 3px;
     overflow: hidden;
   }
@@ -520,7 +520,7 @@
   }
 
   .btn-secondary {
-    background: transparent;
+    background: var(--color-background);
     border: 1px solid var(--color-separator);
     color: var(--color-foreground);
     border-radius: 6px;
@@ -530,7 +530,7 @@
   }
 
   .btn-danger {
-    background: var(--color-focus-round);
+    background: var(--color-status-error);
     border: none;
     color: var(--color-background);
     border-radius: 6px;
@@ -546,9 +546,9 @@
   }
 
   .alert.error {
-    background: color-mix(in oklch, var(--color-focus-round) 15%, transparent);
+    background: var(--color-background-light);
     border: 1px solid var(--color-focus-round);
-    color: var(--color-focus-round);
+    color: var(--color-foreground);
     padding: 8px;
     border-radius: 6px;
     font-size: 11px;

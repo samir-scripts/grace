@@ -94,7 +94,6 @@
 
   .shortcut-input::placeholder {
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.5;
     font-family: system-ui, sans-serif;
     font-size: 0.7rem;
   }

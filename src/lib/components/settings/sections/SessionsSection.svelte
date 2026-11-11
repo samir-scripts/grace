@@ -655,7 +655,7 @@
     width: 30px;
     height: 30px;
     border-radius: 6px;
-    background: transparent;
+    background: var(--color-background);
     border: 1px solid var(--color-separator);
     color: var(--color-foreground);
     cursor: pointer;
@@ -667,7 +667,7 @@
     .btn-add-session:hover {
       background: var(--color-hover);
       border-color: var(--color-accent);
-      color: var(--color-accent);
+      color: var(--color-foreground);
     }
   }
 
@@ -679,7 +679,7 @@
   .modal-backdrop {
     position: absolute;
     inset: 0;
-    background: color-mix(in oklch, black 40%, transparent);
+    background: var(--color-background-light);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -713,9 +713,9 @@
   }
 
   .btn-discard {
-    background: color-mix(in oklch, var(--color-focus-round) 15%, transparent);
+    background: var(--color-background-light);
     border: 1px solid var(--color-focus-round);
-    color: var(--color-focus-round);
+    color: var(--color-foreground);
     border-radius: 6px;
     padding: 6px 12px;
     font-size: 11px;
@@ -727,7 +727,7 @@
 
   @media (hover: hover) {
     .btn-discard:hover {
-      background: color-mix(in oklch, var(--color-focus-round) 25%, transparent);
+      background: var(--color-background-light);
     }
   }
 
@@ -795,8 +795,8 @@
 
   /* Refined Animated Buttons */
   .btn-primary {
-    background: var(--color-accent);
-    color: var(--color-background);
+    background: var(--color-button);
+    color: var(--color-button-text);
     border: none;
     border-radius: 6px;
     padding: 6px 14px;
@@ -818,7 +818,7 @@
   }
 
   .btn-secondary {
-    background: transparent;
+    background: var(--color-background);
     border: 1px solid var(--color-separator);
     color: var(--color-foreground);
     border-radius: 6px;
@@ -851,7 +851,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: transparent;
+    background: var(--color-background);
     border: 1px solid var(--color-separator);
     color: var(--color-foreground-darker);
     border-radius: 6px;
@@ -870,9 +870,9 @@
 
   @media (hover: hover) {
     .btn-delete:hover:not(:disabled) {
-      background: color-mix(in oklch, var(--color-focus-round) 12%, transparent);
+      background: var(--color-background-light);
       border-color: color-mix(in oklch, var(--color-focus-round) 36%, transparent);
-      color: var(--color-focus-round);
+      color: var(--color-foreground);
     }
     .btn-delete:hover:not(:disabled) .trash-icon {
       transform: scale(1.08);
@@ -881,7 +881,7 @@
 
   .btn-delete:focus-visible {
     border-color: var(--color-focus-round);
-    color: var(--color-focus-round);
+    color: var(--color-foreground);
   }
 
   .btn-delete:active:not(:disabled) {
@@ -931,6 +931,16 @@
     align-items: center;
   }
 
+  .slider-container::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-separator);
+  }
+
   .slider-container input[type='range'] {
     position: relative;
     z-index: 2;
@@ -938,10 +948,16 @@
     -webkit-appearance: none;
     appearance: none;
     height: 4px;
-    background: color-mix(in oklch, var(--color-foreground) 14%, transparent);
+    /* The opaque track and fill are separate layers beneath the interactive thumb. */
+    background: transparent;
     border-radius: 2px;
     outline: none;
     cursor: pointer;
+  }
+
+  .slider-container input[type='range']:focus-visible {
+    outline: 2px solid var(--color-border);
+    outline-offset: 5px;
   }
 
   .slider-container input[type='range']::-webkit-slider-thumb {
@@ -1000,7 +1016,7 @@
     align-items: center;
     gap: 6px;
     padding: 3px 8px;
-    background: color-mix(in oklch, var(--color-foreground) 10%, transparent);
+    background: var(--color-background-light);
     border-radius: 4px;
     font-size: 11px;
     color: var(--color-foreground);
@@ -1016,7 +1032,7 @@
   }
 
   .chip-remove {
-    background: none;
+    background: var(--color-background);
     border: none;
     color: var(--color-foreground-darker);
     cursor: pointer;
@@ -1028,20 +1044,18 @@
 
   @media (hover: hover) {
     .chip-remove:hover {
-      color: var(--color-focus-round);
+      color: var(--color-foreground);
     }
   }
 
   .empty-hint {
     font-size: 11px;
     color: var(--color-foreground-darker);
-    opacity: 0.7;
   }
 
   .unblock-note {
     font-size: 10px;
     color: var(--color-foreground-darker);
-    opacity: 0.8;
   }
 
   .passphrase-box {
@@ -1086,11 +1100,11 @@
 
   .passphrase-status {
     font-size: 10px;
-    color: var(--color-short-round);
+    color: var(--color-foreground);
   }
 
   .passphrase-status.error {
-    color: var(--color-focus-round);
+    color: var(--color-foreground);
   }
 
   .alert {
@@ -1100,15 +1114,15 @@
   }
 
   .alert.error {
-    background: color-mix(in oklch, var(--color-focus-round) 15%, transparent);
+    background: var(--color-background-light);
     border: 1px solid var(--color-focus-round);
-    color: var(--color-focus-round);
+    color: var(--color-foreground);
   }
 
   .alert.success {
-    background: color-mix(in oklch, var(--color-short-round) 15%, transparent);
+    background: var(--color-background-light);
     border: 1px solid var(--color-short-round);
-    color: var(--color-short-round);
+    color: var(--color-foreground);
   }
 
   @media (prefers-reduced-motion: reduce) {

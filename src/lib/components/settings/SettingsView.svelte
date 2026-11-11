@@ -68,7 +68,7 @@
   /* Responsive navigation */
   .sidebar {
     flex-shrink: 0;
-    background: var(--color-background-light);
+    background: var(--color-background);
     border-bottom: 1px solid var(--color-separator);
     overflow-x: auto;
     overflow-y: hidden;
@@ -88,7 +88,7 @@
     align-items: center;
     justify-content: center;
     padding: 9px 14px;
-    background: none;
+    background: var(--color-background);
     border: none;
     border-bottom: 2px solid transparent;
     font-size: 0.78rem;

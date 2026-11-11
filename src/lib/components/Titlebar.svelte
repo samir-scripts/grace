@@ -182,7 +182,7 @@
   </Tooltip>
 {/snippet}
 
-<nav class="titlebar" class:suppress-hover={suppressTitlebarHover} data-tauri-drag-region>
+<nav class="titlebar" class:macos={isMac} class:suppress-hover={suppressTitlebarHover} data-tauri-drag-region>
   <!-- Left controls: on macOS, back button appears after the traffic lights (at 68px);
        on Windows/Linux, back button is first, followed by settings + stats. -->
   {#if isMac}
@@ -321,7 +321,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--color-foreground);
-    background: color-mix(in oklch, var(--color-accent) 18%, transparent);
+    background: var(--color-background-light);
     border: 1px solid color-mix(in oklch, var(--color-accent) 35%, transparent);
     cursor: pointer;
     font-family: inherit;
@@ -334,7 +334,7 @@
   }
 
   .btn-back:hover {
-    background: color-mix(in oklch, var(--color-accent) 28%, transparent);
+    background: var(--color-background-light);
     border-color: var(--color-accent);
   }
 
@@ -355,16 +355,21 @@
 
   .center-selector {
     position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 68px;
+    right: 100px;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 25;
   }
 
+  .titlebar.macos .center-selector {
+    right: 68px;
+  }
+
   .btn-icon {
-    background: none;
+    background: var(--color-background);
     border: none;
     cursor: pointer;
     color: var(--color-foreground-darker, var(--color-foreground));
@@ -381,14 +386,14 @@
 
   .btn-icon.active {
     color: var(--color-foreground);
-    background: color-mix(in oklch, var(--color-accent) 22%, transparent);
+    background: var(--color-background-light);
   }
   .btn-icon:focus {
     outline: none;
   }
 
   .btn-icon:focus-visible {
-    outline: 2px solid color-mix(in oklch, var(--color-foreground) 45%, transparent);
+    outline: 2px solid var(--color-border);
     outline-offset: 2px;
   }
 
@@ -399,6 +404,6 @@
 
   .titlebar:not(.suppress-hover) .btn-icon.close:hover {
     color: var(--color-background);
-    background: var(--color-focus-round);
+    background: var(--color-status-error);
   }
 </style>

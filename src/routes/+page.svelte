@@ -1,6 +1,6 @@
 <script lang="ts">
   import '../app.css';
-  import { onMount, tick } from 'svelte';
+  import { onMount } from 'svelte';
   import Titlebar from '$lib/components/Titlebar.svelte';
   import Timer from '$lib/components/Timer.svelte';
   import FocusEscapeDialog from '$lib/components/FocusEscapeDialog.svelte';
@@ -9,6 +9,7 @@
   import { activeView, showTimerView } from '$lib/stores/navigation';
   import {
     getSettings,
+    publishAppearance,
     getThemes,
     onSettingsChanged,
     onThemesChanged,
@@ -24,7 +25,7 @@
   import { timerState } from '$lib/stores/timer';
   import { settings } from '$lib/stores/settings';
   import * as m from '$paraglide/messages.js';
-  import { applyTheme } from '$lib/stores/theme';
+  import { applyTheme, getAppliedThemeColors, setThemePublisher } from '$lib/stores/theme';
   import { resolveThemeName } from '$lib/utils/theme';
   import { isMac } from '$lib/utils/platform';
   import { setLocale } from '$lib/locale.svelte.js';
@@ -42,6 +43,9 @@
   let showEscapeDialog = $state(false);
 
   let settingsLoaded = $state(false);
+  let osReducedMotion = $state(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 
   $effect(() => {
     if (typeof document !== 'undefined') {
@@ -54,6 +58,22 @@
         document.documentElement.dataset.animationsEnabled = 'false';
       }
     };
+  });
+  // Serialize appearance snapshots so a late older write cannot replace the current theme.
+  let appearanceWrites = Promise.resolve();
+  function publishCurrentAppearance(colors = getAppliedThemeColors()) {
+    if (!settingsLoaded || Object.keys(colors).length === 0) return;
+    const enabled = $settings.animations_enabled && !osReducedMotion;
+    appearanceWrites = appearanceWrites.then(() => publishAppearance(colors, enabled)).catch((error) => {
+      console.warn('[appearance] snapshot unavailable:', error);
+    });
+  }
+  $effect(() => {
+    if (settingsLoaded) {
+      $settings.animations_enabled;
+      osReducedMotion;
+      publishCurrentAppearance();
+    }
   });
   // Base window dimensions (natural/default size).
   const BASE_W = 360;
@@ -75,60 +95,27 @@
 
   // Automatically resize window to the optimal dimensions for settings / stats,
   // and restore the timer's dimensions when returning to timer.
-  let viewContainer = $state<HTMLElement>();
   let lastView = $state<'timer' | 'settings' | 'stats'>('timer');
   let lastMotionEnabled = $state(true);
   let transitionGeneration = 0;
-  let activeRafHandle: number | null = null;
   let isDestroyed = false;
+  let viewResizing = $state(false);
 
   async function requestViewResize(targetView: 'timer' | 'settings' | 'stats', animate: boolean) {
     const gen = ++transitionGeneration;
-    if (activeRafHandle !== null) {
-      cancelAnimationFrame(activeRafHandle);
-      activeRafHandle = null;
-    }
-
-    // 1. Await Svelte 5 DOM reconciliation
-    await tick();
-    if (gen !== transitionGeneration || isDestroyed) return;
-
-    // 2. Await Web Animations API completion on the destination view container
-    if (viewContainer && animate) {
-      const animations = viewContainer.getAnimations();
-      if (animations.length > 0) {
-        await Promise.allSettled(animations.map((a) => a.finished));
-        if (gen !== transitionGeneration || isDestroyed) return;
-      }
-    }
-
-    // 3. Double requestAnimationFrame: frame 1 executes layout/paint, frame 2 ensures compositor presentation
-    await new Promise<void>((resolve) => {
-      activeRafHandle = requestAnimationFrame(() => {
-        if (gen !== transitionGeneration || isDestroyed) return resolve();
-        activeRafHandle = requestAnimationFrame(() => {
-          activeRafHandle = null;
-          resolve();
-        });
-      });
-    });
-
-    if (gen !== transitionGeneration || isDestroyed) return;
-
-    if ($activeView === targetView) {
-      try {
-        await setWindowViewSize(targetView, animate);
-      } catch (err) {
-        console.warn('[main] failed to resize window for view:', targetView, err);
-      }
+    viewResizing = true;
+    try {
+      await setWindowViewSize(targetView, animate);
+    } catch (err) {
+      console.warn('[main] failed to resize window for view:', targetView, err);
+    } finally {
+      if (gen === transitionGeneration && !isDestroyed) viewResizing = false;
     }
   }
 
   $effect(() => {
     const current = $activeView;
-    const motionEnabled =
-      $settings.animations_enabled &&
-      !(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const motionEnabled = $settings.animations_enabled && !osReducedMotion;
 
     if (current !== lastView) {
       lastView = current;
@@ -136,12 +123,7 @@
       requestViewResize(current, motionEnabled);
     } else if (lastMotionEnabled && !motionEnabled) {
       lastMotionEnabled = false;
-      transitionGeneration++;
-      if (activeRafHandle !== null) {
-        cancelAnimationFrame(activeRafHandle);
-        activeRafHandle = null;
-      }
-      setWindowViewSize(current, false).catch(() => {});
+      requestViewResize(current, false);
     } else {
       lastMotionEnabled = motionEnabled;
     }
@@ -172,7 +154,18 @@
     await getCurrentWebviewWindow().startResizeDragging(direction as any);
   }
 
+  let themeGeneration = 0;
+  async function refreshActiveTheme() {
+    const generation = ++themeGeneration;
+    const allThemes = await getThemes();
+    if (generation !== themeGeneration || isDestroyed) return;
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = allThemes.find(t => t.name === resolveThemeName($settings, dark)) ?? allThemes[0];
+    if (theme) applyTheme(theme);
+  }
+
   onMount(() => {
+    setThemePublisher(publishCurrentAppearance);
     const cleanups: UnlistenFn[] = [];
 
     // Mount local keyboard shortcut handler.
@@ -209,14 +202,7 @@
     if (typeof window !== 'undefined') {
       const motionMq = window.matchMedia('(prefers-reduced-motion: reduce)');
       const handleMotionMq = (e: MediaQueryListEvent) => {
-        if (e.matches) {
-          transitionGeneration++;
-          if (activeRafHandle !== null) {
-            cancelAnimationFrame(activeRafHandle);
-            activeRafHandle = null;
-          }
-          setWindowViewSize($activeView, false).catch(() => {});
-        }
+        osReducedMotion = e.matches;
       };
       motionMq.addEventListener('change', handleMotionMq);
       cleanups.push(() => motionMq.removeEventListener('change', handleMotionMq));
@@ -305,11 +291,8 @@
 
       // Live OS color scheme changes — re-resolve only in auto mode.
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      const mqListener = async (e: MediaQueryListEvent) => {
-        if ($settings.theme_mode !== 'auto') return;
-        const allThemes = await getThemes();
-        const t = allThemes.find((th) => th.name === resolveThemeName($settings, e.matches));
-        if (t) applyTheme(t);
+      const mqListener = async () => {
+        if ($settings.theme_mode === 'auto') await refreshActiveTheme();
       };
       mq.addEventListener('change', mqListener);
       cleanups.push(() => mq.removeEventListener('change', mqListener));
@@ -331,14 +314,12 @@
             updated.theme_light !== prevLight ||
             updated.theme_dark !== prevDark
           ) {
-            const allThemes = await getThemes();
-            const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const t = allThemes.find((th) => th.name === resolveThemeName(updated, dark));
-            if (t) applyTheme(t);
+            await refreshActiveTheme();
           }
         }),
         // Re-apply theme when custom themes are hot-reloaded.
         await onThemesChanged((updated) => {
+          themeGeneration++;
           const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
           const current =
             updated.find((t) => t.name === resolveThemeName($settings, dark)) ?? updated[0];
@@ -348,12 +329,9 @@
     })();
 
     return () => {
+      setThemePublisher(null);
       isDestroyed = true;
       transitionGeneration++;
-      if (activeRafHandle !== null) {
-        cancelAnimationFrame(activeRafHandle);
-        activeRafHandle = null;
-      }
       for (const fn of cleanups) fn();
     };
   });
@@ -382,9 +360,9 @@
 
 <div class="app">
   <Titlebar onEmergencyClick={() => (showEscapeDialog = true)} />
+  {#if !viewResizing}
   {#key $activeView}
     <main
-      bind:this={viewContainer}
       class="view-enter"
       class:compact={isCompact}
       class:view-panel={$activeView !== 'timer'}
@@ -398,6 +376,7 @@
       {/if}
     </main>
   {/key}
+  {/if}
 </div>
 <FocusEscapeDialog
   open={showEscapeDialog}

@@ -20,12 +20,6 @@
 
   let state = $derived($timerState);
 
-  function roundColor(rt: string): string {
-    if (rt === 'work') return 'var(--color-focus-round)';
-    if (rt === 'short-break') return 'var(--color-short-round)';
-    return 'var(--color-long-round)';
-  }
-
   function roundLabel(rt: string): string {
     if (rt === 'work') return m.round_label_work();
     if (rt === 'short-break') return m.round_label_short_break();
@@ -45,7 +39,7 @@
     {#if !isCompact}
       <!-- Round type label sits below the dial as a normal flex child so it
            does not affect the dial-stack height used to centre TimerDisplay. -->
-      <div class="round-label" style="color: {roundColor(state.round_type)}">
+      <div class="round-label">
         {roundLabel(state.round_type)}
       </div>
 
@@ -136,7 +130,7 @@
   }
 
   .btn-side {
-    background: none;
+    background: var(--color-background);
     border: none;
     cursor: pointer;
     color: var(--color-foreground-darker, var(--color-foreground));
@@ -157,7 +151,7 @@
   }
 
   .play-pause {
-    background: none;
+    background: var(--color-background);
     border: none;
     cursor: pointer;
     color: var(--color-foreground);
@@ -176,7 +170,7 @@
   }
 
   .play-pause:hover {
-    color: var(--color-accent);
+    color: var(--color-foreground);
     border-color: var(--color-accent);
     background: var(--color-hover);
   }
@@ -189,6 +183,7 @@
   }
 
   .round-label {
+    color: var(--color-foreground);
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.08em;

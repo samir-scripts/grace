@@ -9,7 +9,8 @@
   import * as m from '$paraglide/messages.js';
 
   const BASE_VERSION = '1.0.0';
-  const REPO = 'https://github.com/Splode/pomotroid';
+  const REPO = 'https://github.com/samir-scripts/grace';
+  const UPSTREAM_REPO = 'https://github.com/Splode/pomotroid';
 
   let version = $state('...');
 
@@ -77,7 +78,7 @@
       height="64"
       viewBox="0 0 256 256"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Pomotroid logo"
+      aria-label="grace. logo"
     >
       <circle fill="var(--color-background-light)" cx="128" cy="128" r="126.81" />
       <circle
@@ -91,11 +92,11 @@
       />
     </svg>
     <div>
-      <h2 class="name">Pomotroid</h2>
+      <h2 class="name">grace.</h2>
       <p class="version">Version {version}</p>
+      <p class="credit">A fork of Pomotroid by Christopher Murphy</p>
     </div>
   </div>
-
   <div class="links">
     <button class="link-row" onclick={() => openUrl(releaseUrl)}>
       <span>{m.about_release_notes()}</span>
@@ -207,7 +208,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    background: none;
+    background: var(--color-background);
     border: none;
     border-bottom: 1px solid var(--color-separator);
     cursor: pointer;
@@ -249,7 +250,7 @@
 
   .update-row--action {
     width: 100%;
-    background: none;
+    background: var(--color-background);
     border: none;
     cursor: pointer;
     color: var(--color-accent);

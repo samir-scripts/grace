@@ -284,7 +284,6 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.6;
     margin: 0;
     padding: 16px 20px 6px;
   }
@@ -324,7 +323,6 @@
   .note {
     font-size: 0.75rem;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.65;
     padding: 16px 20px;
     line-height: 1.6;
   }
@@ -332,7 +330,7 @@
   code {
     font-family: monospace;
     font-size: 0.75em;
-    background: color-mix(in oklch, var(--color-foreground) 12%, transparent);
+    background: var(--color-background-light);
     padding: 1px 5px;
     border-radius: 3px;
   }
@@ -373,7 +371,6 @@
     flex-shrink: 0;
     margin-left: 6px;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.7;
     transition: transform 0.15s;
   }
 
@@ -409,7 +406,7 @@
   }
 
   .lang-option.selected {
-    color: var(--color-accent);
+    color: var(--color-foreground);
     font-weight: 500;
   }
 
@@ -425,7 +422,7 @@
     align-items: center;
     width: 100%;
     padding: 12px 16px;
-    background: none;
+    background: var(--color-background);
     border: none;
     border-bottom: 1px solid var(--color-separator);
     cursor: pointer;
@@ -462,7 +459,6 @@
   .confirm-label {
     font-size: 0.8rem;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.8;
   }
 
   .confirm-actions {
@@ -473,7 +469,7 @@
 
   .confirm-cancel,
   .confirm-destructive {
-    background: none;
+    background: var(--color-background);
     border: 1px solid color-mix(in oklch, var(--color-foreground) 18%, transparent);
     border-radius: 4px;
     font-size: 0.8rem;
@@ -494,12 +490,12 @@
   }
 
   .confirm-destructive {
-    color: var(--color-accent);
+    color: var(--color-foreground);
     border-color: color-mix(in oklch, var(--color-accent) 40%, transparent);
   }
 
   .confirm-destructive:hover {
-    background: color-mix(in oklch, var(--color-accent) 10%, transparent);
+    background: var(--color-background-light);
     border-color: var(--color-accent);
   }
 </style>

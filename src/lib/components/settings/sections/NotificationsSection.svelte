@@ -155,6 +155,12 @@
     checked={$settings.notifications_enabled}
     onclick={() => toggle('notifications', $settings.notifications_enabled)}
   />
+  <SettingsToggle
+    label={m.notif_toggle_dnd()}
+    description={m.notif_toggle_dnd_desc()}
+    checked={$settings.dnd_enabled}
+    onclick={() => toggle('dnd_enabled', $settings.dnd_enabled)}
+  />
 
   <div class="group-heading">{m.notif_group_tick()}</div>
 
@@ -205,7 +211,6 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--color-foreground-darker, var(--color-foreground));
-    opacity: 0.6;
     margin: 0;
     padding: 16px 20px 6px;
   }
@@ -251,7 +256,7 @@
     -webkit-appearance: none;
     appearance: none;
     height: 4px;
-    background: color-mix(in oklch, var(--color-foreground) 14%, transparent);
+    background: var(--color-background-light);
     border-radius: 2px;
     outline: none;
     cursor: pointer;
@@ -282,7 +287,7 @@
     border-radius: 2px;
     pointer-events: none;
     z-index: 1;
-    background: var(--color-accent);
+    background: var(--color-button);
     transition: width 0.05s;
   }
 
@@ -313,7 +318,7 @@
   }
 
   .file-name.custom {
-    color: var(--color-accent);
+    color: var(--color-foreground);
   }
 
   .audio-actions {
@@ -336,7 +341,7 @@
   }
 
   .btn-choose:hover {
-    background: color-mix(in oklch, var(--color-foreground) 17%, transparent);
+    background: var(--color-background-light);
   }
 
   .btn-restore {
@@ -344,7 +349,7 @@
   }
 
   .btn-restore:hover {
-    background: color-mix(in oklch, var(--color-foreground) 14%, transparent);
+    background: var(--color-background-light);
     color: var(--color-foreground);
   }
 

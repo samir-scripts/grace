@@ -328,7 +328,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    background: color-mix(in oklch, var(--color-foreground) 8%, transparent);
+    background: var(--color-background-light);
     border: 1px solid var(--color-separator);
     border-radius: 6px;
     padding: 6px 12px;
@@ -384,7 +384,7 @@
     justify-content: center;
     width: 28px;
     height: 28px;
-    background: transparent;
+    background: var(--color-background);
     border: 1px solid var(--color-separator);
     border-radius: 6px;
     color: var(--color-foreground-darker);
@@ -452,7 +452,7 @@
   .clear-search {
     position: absolute;
     right: 6px;
-    background: none;
+    background: var(--color-background);
     border: none;
     color: var(--color-foreground-darker);
     font-size: 14px;
@@ -463,7 +463,7 @@
 
   .partial-warning {
     font-size: 10px;
-    color: var(--color-long-round);
+    color: var(--color-foreground);
     padding: 2px 4px;
   }
 
@@ -483,7 +483,7 @@
     align-items: center;
     gap: 8px;
     padding: 5px 8px;
-    background: transparent;
+    background: var(--color-background);
     border: 1px solid transparent;
     border-radius: 6px;
     cursor: pointer;
@@ -500,7 +500,7 @@
   }
 
   .app-row.checked {
-    background: color-mix(in oklch, var(--color-accent) 10%, transparent);
+    background: var(--color-background-light);
     border-color: color-mix(in oklch, var(--color-accent) 25%, transparent);
   }
 
@@ -534,7 +534,7 @@
     align-items: center;
     justify-content: center;
     color: var(--color-foreground-darker);
-    background: color-mix(in oklch, var(--color-foreground) 8%, transparent);
+    background: var(--color-background-light);
     border-radius: 4px;
   }
 
@@ -560,7 +560,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    opacity: 0.75;
   }
 
   .loading-state,
@@ -611,8 +610,8 @@
   }
 
   .btn-done {
-    background: var(--color-accent);
-    color: var(--color-background);
+    background: var(--color-button);
+    color: var(--color-button-text);
     border: none;
     border-radius: 4px;
     padding: 3px 10px;
@@ -644,7 +643,7 @@
     align-items: center;
     gap: 6px;
     padding: 3px 7px 3px 5px;
-    background: color-mix(in oklch, var(--color-foreground) 10%, transparent);
+    background: var(--color-background-light);
     border-radius: 5px;
     font-size: 11px;
     color: var(--color-foreground);
@@ -679,7 +678,7 @@
   }
 
   .chip-remove {
-    background: none;
+    background: var(--color-background);
     border: none;
     color: var(--color-foreground-darker);
     cursor: pointer;
@@ -693,14 +692,13 @@
 
   @media (hover: hover) {
     .chip-remove:hover {
-      color: var(--color-focus-round);
+      color: var(--color-foreground);
     }
   }
 
   .empty-hint {
     font-size: 11px;
     color: var(--color-foreground-darker);
-    opacity: 0.7;
   }
 
   @media (prefers-reduced-motion: reduce) {

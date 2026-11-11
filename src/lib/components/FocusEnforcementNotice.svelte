@@ -61,8 +61,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    background: rgba(243, 139, 168, 0.15);
-    border: 1px solid rgba(243, 139, 168, 0.4);
+    background: var(--color-background-light);
+    border: 1px solid var(--color-status-error);
     border-radius: 8px;
     padding: 8px 14px;
     margin: 8px 0;
@@ -70,8 +70,8 @@
     color: var(--color-foreground, #cdd6f4);
   }
   .notice-banner.danger {
-    background: rgba(235, 77, 75, 0.2);
-    border-color: rgba(235, 77, 75, 0.6);
+    background: var(--color-background-light);
+    border: 1px solid var(--color-status-error);
   }
   .notice-content {
     display: flex;
@@ -87,8 +87,8 @@
     line-height: 1.4;
   }
   .retry-btn {
-    background: var(--color-accent, #89b4fa);
-    color: var(--color-background, #1e1e2e);
+    background: var(--color-button);
+    color: var(--color-button-text);
     border: none;
     border-radius: 4px;
     font-weight: 600;

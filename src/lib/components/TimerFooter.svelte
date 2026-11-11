@@ -140,7 +140,7 @@
   }
 
   .btn-text {
-    background: none;
+    background: var(--color-background);
     border: none;
     cursor: pointer;
     color: var(--color-foreground-darker, var(--color-foreground));
@@ -158,7 +158,7 @@
   }
 
   .btn-icon {
-    background: none;
+    background: var(--color-background);
     border: none;
     cursor: pointer;
     color: var(--color-foreground-darker, var(--color-foreground));

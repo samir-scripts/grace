@@ -50,7 +50,7 @@
     justify-content: space-between;
     width: 100%;
     padding: 10px 20px;
-    background: none;
+    background: var(--color-background);
     border: none;
     border-bottom: 1px solid var(--color-separator);
     cursor: pointer;
@@ -84,7 +84,6 @@
     font-size: 0.72rem;
     color: var(--color-foreground-darker, var(--color-foreground));
     letter-spacing: 0.02em;
-    opacity: 0.7;
   }
 
   /* Pill toggle */
@@ -95,7 +94,8 @@
     border-radius: 9px;
     /* Use a foreground-tinted track so it's visible on both dark and light themes
        (rgba(255,255,255,0.15) vanishes on light backgrounds). */
-    background: color-mix(in oklch, var(--color-foreground) 22%, transparent);
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
     flex-shrink: 0;
     transition: background 0.2s;
   }
@@ -117,7 +117,7 @@
   }
 
   .toggle.on {
-    background: var(--color-accent);
+    background: var(--color-button);
   }
 
   .toggle.on::after {
@@ -125,6 +125,6 @@
     /* ON state: the background color is always chosen by the theme designer to
        contrast with the accent, so it reads cleanly and stays within the palette.
        e.g. dark navy on teal (Pomotroid), dark charcoal on yellow (Gruvbox). */
-    background: var(--color-background);
+    background: var(--color-button-text);
   }
 </style>

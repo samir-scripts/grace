@@ -207,6 +207,7 @@
         </div>
 
         <!-- Heatmap SVG -->
+        <div class="heatmap-scroll">
         <svg
           width={SVG_W}
           height={SVG_H}
@@ -257,6 +258,7 @@
             {/each}
           {/each}
         </svg>
+        </div>
 
         <!-- Cell tooltip (HTML so it matches Tooltip.svelte style and escapes SVG clipping) -->
         {#if tooltip}
@@ -318,7 +320,8 @@
   .view {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    min-height: 100%;
+    min-width: 0;
     position: relative;
   }
 
@@ -329,7 +332,6 @@
     justify-content: center;
     color: var(--color-foreground-darker);
     font-size: 0.85rem;
-    opacity: 0.7;
   }
 
   /* ── Heatmap ──────────────────────────────────────────────── */
@@ -339,7 +341,8 @@
     align-items: center;
     justify-content: center;
     padding: 16px 24px 8px;
-    overflow: hidden;
+    min-width: 0;
+    flex-shrink: 0;
   }
 
   .heatmap-wrap {
@@ -348,7 +351,8 @@
     gap: 8px;
     align-items: flex-start;
     min-width: 0;
-    max-width: 100%;
+    width: 100%;
+    max-width: 720px;
   }
 
   /* ── Year navigation ─────────────────────────────────────── */
@@ -370,7 +374,7 @@
   }
 
   .year-btn {
-    background: none;
+    background: var(--color-background);
     border: none;
     cursor: pointer;
     color: var(--color-foreground-darker);
@@ -397,10 +401,19 @@
   }
 
   /* ── Heatmap SVG ─────────────────────────────────────────── */
+  .heatmap-scroll {
+    width: 100%;
+    overflow-x: auto;
+  }
+
   .heatmap-svg {
     display: block;
-    max-width: 100%;
+    max-width: none;
     height: auto;
+  }
+
+  @media (min-width: 600px) {
+    .heatmap-svg { width: 100%; max-width: 100%; }
   }
 
   .cell {
@@ -492,13 +505,14 @@
   }
 
   .total-card {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 18px 24px;
+    padding: 18px 8px;
     animation: card-rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: var(--delay, 0ms);
   }
@@ -515,6 +529,8 @@
   }
 
   .total-label {
+    text-align: center;
+    overflow-wrap: anywhere;
     font-size: 0.62rem;
     font-weight: 600;
     letter-spacing: 0.1em;
@@ -523,6 +539,9 @@
   }
 
   .total-value {
+    flex-wrap: wrap;
+    justify-content: center;
+    overflow-wrap: anywhere;
     font-size: 1.8rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
@@ -547,17 +566,21 @@
     margin: 10px 0;
   }
 
+  @media (max-width: 320px) {
+    .totals { flex-direction: column; }
+    .total-divider { width: auto; height: 1px; margin: 0 12px; }
+  }
+
   /* ── Empty overlay ───────────────────────────────────────── */
   .empty-overlay {
-    position: absolute;
-    inset: 40px 0 80px 0;
+    padding: 12px;
+    text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--color-foreground-darker);
     font-size: 0.82rem;
     font-style: italic;
-    opacity: 0.65;
     pointer-events: none;
   }
 </style>

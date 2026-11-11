@@ -43,7 +43,6 @@
     color: var(--color-foreground);
     cursor: default;
     margin-left: 5px;
-    opacity: 0.55;
     transition: opacity 0.15s;
     user-select: none;
     flex-shrink: 0;
