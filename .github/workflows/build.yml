@@ -62,7 +62,26 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Frontend and extension tests
-        run: npm test
+        shell: bash
+        run: |
+          set -o pipefail
+          set +e
+          npm test 2>&1 | tee "$RUNNER_TEMP/frontend-tests.log"
+          test_status=${PIPESTATUS[0]}
+          if [ "$test_status" -ne 0 ]; then
+            python3 - "$RUNNER_TEMP/frontend-tests.log" <<'PY' || true
+          import re
+          import sys
+
+          with open(sys.argv[1], encoding='utf-8', errors='replace') as log:
+              for line in log:
+                  match = re.match(r'^\s*(?:not ok \d+ - |✖ )(.+?)\s*$', line)
+                  if match:
+                      title = match.group(1)[:500].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                      print(f'::error title=Failed test::{title}')
+          PY
+          fi
+          exit "$test_status"
 
       - name: Chromium extension integration
         run: npm run test:chrome-integration
