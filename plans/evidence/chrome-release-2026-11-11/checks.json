@@ -1,0 +1,76 @@
+{
+  "npm_test": {
+    "status": "passed",
+    "suites": [
+      {
+        "tests": 8,
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "tests": 105,
+        "passed": 105,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "tests": 23,
+        "passed": 21,
+        "failed": 0,
+        "skipped": 2
+      },
+      {
+        "tests": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "tests": 10,
+        "passed": 10,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "npm_check": {
+    "status": "passed",
+    "errors": 0,
+    "warnings": 0
+  },
+  "chromium_integration": {
+    "status": "passed",
+    "tests": 2
+  },
+  "cargo_test": {
+    "status": "passed",
+    "library_passed": 166,
+    "native_ignored_retained": true
+  },
+  "cargo_clippy": {
+    "status": "passed"
+  },
+  "native_acceptance": {
+    "macos": "blocked",
+    "windows": "not_run",
+    "linux": "not_run"
+  },
+  "store": {
+    "status": "unpublished_draft",
+    "upload": "SUCCEEDED",
+    "restricted_distribution": "private",
+    "submitted_for_review": false
+  },
+  "review": {
+    "reviewer": "Terra fresh context",
+    "linux_launcher_fix": "verified",
+    "remaining": "packaged native acceptance"
+  },
+  "chrome_diagnostics": {
+    "unit_tests": 5,
+    "status": "passed",
+    "preconsent_browser_check": "passed",
+    "native_serialization": "protocol_version=3"
+  }
+}

@@ -970,8 +970,33 @@ fn resolve_extension_dist_dir(app: &AppHandle) -> std::path::PathBuf {
     std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).join("extensions/dist")
 }
 
+fn chrome_unpacked_directory(base: &std::path::Path) -> Result<std::path::PathBuf, String> {
+    let dir = base.join("chrome");
+    if !dir.join("manifest.json").is_file() {
+        return Err("Chrome extension directory was not found in application resources.".into());
+    }
+    dir.canonicalize().map_err(|e| format!("Cannot resolve Chrome extension directory: {e}"))
+}
+
 #[tauri::command]
-pub fn focus_native_host_register(app: AppHandle) -> Result<(), String> {
+pub fn focus_chrome_extension_prepare(
+    app: AppHandle,
+    focus: State<'_, Arc<FocusController>>,
+    bridge: State<'_, Arc<crate::focus::browser::BrowserBridge>>,
+) -> Result<String, String> {
+    if bridge.is_active() {
+        return Err("Cannot modify browser extensions during an active focus session.".into());
+    }
+    focus.execute_guarded_browser_mutation(|| {
+        let dir = chrome_unpacked_directory(&resolve_extension_dist_dir(&app))?;
+        let id = crate::focus::native_messaging::unpacked_chrome_id()?;
+        crate::focus::native_messaging::validate_unpacked_chrome_identity(&dir, &id)?;
+        crate::focus::native_messaging::register_native_messaging_manifests(&resolve_native_host_path(&app)?)?;
+        Ok(dir.to_string_lossy().into_owned())
+    })
+}
+
+fn resolve_native_host_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
     let mut exe_path = std::env::current_exe().map_err(|e| format!("Cannot locate current exe: {e}"))?;
     exe_path.pop();
     #[cfg(windows)]
@@ -993,7 +1018,26 @@ pub fn focus_native_host_register(app: AppHandle) -> Result<(), String> {
         host_in_exe_dir
     };
 
-    crate::focus::native_messaging::register_native_messaging_manifests(&host_path)
+    Ok(host_path)
+}
+
+#[tauri::command]
+pub fn focus_native_host_register(app: AppHandle) -> Result<(), String> {
+    crate::focus::native_messaging::register_mozilla_manifest(&resolve_native_host_path(&app)?)
+}
+
+#[tauri::command]
+pub fn focus_chrome_extension_install(
+    app: AppHandle,
+    focus: State<'_, Arc<FocusController>>,
+    bridge: State<'_, Arc<crate::focus::browser::BrowserBridge>>,
+) -> Result<String, String> {
+    if bridge.is_active() {
+        return Err("Cannot modify browser extensions during an active focus session.".into());
+    }
+    focus.execute_guarded_browser_mutation(|| {
+        crate::focus::native_messaging::register_release_chrome_manifest(&resolve_native_host_path(&app)?)
+    })
 }
 
 #[tauri::command]
@@ -1025,14 +1069,7 @@ pub fn focus_browser_extension_install(
                 crate::focus::enterprise_policy::stage_gecko_xpi_to_dir(&source_xpi, &app_data)?
             }
             crate::focus::browser::BrowserKind::Chrome => {
-                let chrome_candidate1 = base_dir.join("chrome");
-                if chrome_candidate1.exists() {
-                    chrome_candidate1
-                } else if base_dir.exists() {
-                    base_dir
-                } else {
-                    return Err("Chrome extension directory was not found in application resources.".into());
-                }
+                return Err("Chrome requires manual unpacked extension setup.".into());
             }
             crate::focus::browser::BrowserKind::Safari => {
                 return Err("Extension installation is not supported for Safari".into());
@@ -1078,6 +1115,17 @@ pub fn focus_enforcement_retry(
 mod tests {
     use rusqlite::Connection;
     use crate::db::migrations;
+
+    #[test]
+    fn chrome_unpacked_directory_requires_a_manifest() {
+        let dir = std::env::temp_dir().join(format!("grace-chrome-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(super::chrome_unpacked_directory(&dir).is_err());
+        std::fs::create_dir(dir.join("chrome")).unwrap();
+        std::fs::write(dir.join("chrome/manifest.json"), "{}").unwrap();
+        assert_eq!(super::chrome_unpacked_directory(&dir).unwrap(), dir.join("chrome").canonicalize().unwrap());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 
     fn setup() -> Connection {
         let conn = Connection::open_in_memory().unwrap();

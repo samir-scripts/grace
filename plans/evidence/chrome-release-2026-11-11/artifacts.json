@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-11",
+  "source_revision": "d55beda1fdc392427c232f7d8d7c43bafefbe93c",
+  "working_tree_dirty": true,
+  "platform": "macOS arm64",
+  "app_version": "1.7.1",
+  "extension_version": "1.1.0",
+  "protocol_version": 3,
+  "extension_id": "cgibenlmgmblmalggjalnoaikjkdnoid",
+  "draft_upload": "SUCCEEDED",
+  "public_release": false,
+  "artifacts": [
+    {
+      "path": "extensions/dist/chrome.zip",
+      "sha256": "cab4de203380ea19d23a336ab195bb18de4e0de68976ce5f81de2469cbb869bf",
+      "bytes": 557389
+    },
+    {
+      "path": "src-tauri/target/release/bundle/macos/grace..app/Contents/MacOS/pomotroid",
+      "sha256": "ec59cb493e0d52bf1be8b517160acf3e5023cff24b2959b055952671cd3251b9",
+      "bytes": 21043888
+    },
+    {
+      "path": "src-tauri/target/release/bundle/dmg/grace._1.7.1_aarch64.dmg",
+      "sha256": "48ebb833239f0cced667cd185151ff53d4288af5295c9dc56f36fe630bfd0020",
+      "bytes": 12964984
+    }
+  ],
+  "limits": [
+    "Windows and Linux builds not performed",
+    "No store-installed native acceptance on any platform",
+    "macOS guest input blocker remains open"
+  ],
+  "source_hashes": {
+    "extensions/chrome/release.json": "bb33008313d8a4de6094f98d0438eddc1fe40fb3c83ab08be4a28ba3ef25b6da",
+    "extensions/chrome/manifest.json": "2e8b2e3409a11207dbd2991328033ab5f750c9af7595b0edae19a2e8fa72a4df",
+    "extensions/chrome/chrome-background.js": "240d6b29325434b173d805cc6275a3aa7335c22d22c5ddbc139ff9fd8a9cf765",
+    "extensions/chrome/chrome-diagnostics.js": "579df1df1ec406574f2a8fd54579cb8fffd637038f954964055a22f34805b63f",
+    "extensions/chrome/chrome-options.js": "aba48fcaf267aff9f101d3d02291a7e563e3c99bf819375e7b37113fd1f4ce9a",
+    "scripts/build-browser-extensions.mjs": "60cacb738f54bf0a1630aab174c9041ce1892120390babc2a2bdb5e9cf665447",
+    "scripts/chrome-release-config.mjs": "bb1cdbd8f49fbbb07ca4eaafcb4525795e9b9ab77f433ba350ac20fa8182cce6",
+    "scripts/chrome-web-store.mjs": "ac7125eaa732783ecf2559e24e0e294aa778c60ce27dd31428ee125b326a1f08",
+    "src-tauri/src/focus/native_messaging.rs": "d43502fd28b2b5791d8dc765c87f44d31ee4b76e8f3734b8191e411172f64eb5",
+    "src-tauri/src/commands.rs": "aca2178f4e86ee0c91d1d3c30d69b5481d49b16959fcc1d03a861f4456265784",
+    "src/lib/ipc/index.ts": "5a9c77c93b672247ed6b3042b7af83197be43733d5d46c58e432b662ca14ab96",
+    "src-tauri/capabilities/chrome-store.json": "82bbbbdb78312800f704abbf7b4f5c122a26dc72f13b0a892813e10e0b566857"
+  }
+}

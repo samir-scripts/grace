@@ -2,35 +2,52 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { verifySignedGeckoArtifact } from './gecko-signed-artifact.mjs';
+import { readChromeReleaseConfig } from './chrome-release-config.mjs';
 import { assertSafeExtensionTree } from './extension-source-guard.mjs';
 
 const rootDir = process.cwd();
 const sharedDir = path.join(rootDir, 'extensions', 'focus');
 const distDir = path.join(rootDir, 'extensions', 'dist');
-const browsers = ['chrome', 'firefox', 'safari'];
+const args = process.argv.slice(2);
+const chromeOnly = args.includes('--chrome-release') || args.includes('--chrome-draft');
+const browsers = chromeOnly ? ['chrome'] : ['chrome', 'firefox', 'safari'];
 assertSafeExtensionTree(sharedDir);
 for (const browser of browsers) {
   const browserSourceDir = path.join(rootDir, 'extensions', browser);
   if (fs.existsSync(browserSourceDir)) assertSafeExtensionTree(browserSourceDir);
 }
 
-const args = process.argv.slice(2);
-if (args.some(arg => !['--require-signed', '--development'].includes(arg))) throw new Error('Unknown extension build option');
+if (args.some(arg => !['--require-signed', '--development', '--chrome-release', '--chrome-draft'].includes(arg))) throw new Error('Unknown extension build option');
 const development = args.includes('--development');
 if (development && args.includes('--require-signed')) throw new Error('--development and --require-signed are mutually exclusive');
+if (args.includes('--chrome-release') && args.includes('--chrome-draft') || chromeOnly && (development || args.includes('--require-signed'))) throw new Error('Chrome-only and other build modes are mutually exclusive');
 const signedDir = path.join(rootDir, 'extensions', 'signed', 'firefox');
 const artifactPath = path.join(signedDir, 'focus@pomotroid.local.xpi');
 const provenancePath = path.join(signedDir, 'provenance.json');
 const hasArtifact = fs.existsSync(artifactPath);
 const hasProvenance = fs.existsSync(provenancePath);
-if (!development && (hasArtifact !== hasProvenance || (!hasArtifact && args.includes('--require-signed')))) {
+if (!chromeOnly && !development && (hasArtifact !== hasProvenance || (!hasArtifact && args.includes('--require-signed')))) {
   throw new Error('Signed Gecko artifact required with provenance');
 }
-const signedBytes = !development && hasArtifact ? verifySignedGeckoArtifact({
+const signedBytes = !chromeOnly && !development && hasArtifact ? verifySignedGeckoArtifact({
   artifactPath, provenancePath, sharedDir,
   manifestPath: path.join(rootDir, 'extensions', 'firefox', 'manifest.json')
 }) : null;
-if (!signedBytes) console.log('Unsigned Gecko development package; not persistent-installation evidence' + (development ? ' (--development: signed artifact ignored)' : ''));
+if (!chromeOnly && !signedBytes) console.log('Unsigned Gecko development package; not persistent-installation evidence' + (development ? ' (--development: signed artifact ignored)' : ''));
+
+const chromeSource = path.join(rootDir, 'extensions/chrome');
+const chromeManifest = JSON.parse(fs.readFileSync(path.join(chromeSource, 'manifest.json'), 'utf8'));
+if (args.includes('--chrome-draft')) delete chromeManifest.key;
+else if (!development) {
+  const config = readChromeReleaseConfig(path.join(chromeSource, 'release.json'), chromeManifest.key);
+  chromeManifest.key = config.public_key;
+}
+// Validate before touching any previous output.
+for (const size of [16, 32, 48, 128]) {
+  const icon = fs.readFileSync(path.join(chromeSource, chromeManifest.icons?.[size] ?? 'missing-icon'));
+  if (icon.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || icon.readUInt32BE(16) !== size || icon.readUInt32BE(20) !== size) throw new Error('Invalid Chrome icon dimensions');
+}
+if (chromeManifest.manifest_version !== 3 || chromeManifest.minimum_chrome_version !== '116' || !chromeManifest.options_ui?.page || !chromeManifest.background?.service_worker) throw new Error('Invalid Chrome manifest');
 
 function createZipFromDirectory(sourceDir, targetZipPath) {
   function getFiles(dir, base = '') {
@@ -122,7 +139,7 @@ function createZipFromDirectory(sourceDir, targetZipPath) {
 }
 
 for (const browser of browsers) {
-  const browserDist = path.join(distDir, browser);
+  const browserDist = path.join(distDir, args.includes('--chrome-draft') ? 'chrome-draft' : browser);
   fs.rmSync(browserDist, { recursive: true, force: true });
   fs.mkdirSync(browserDist, { recursive: true });
 
@@ -134,7 +151,14 @@ for (const browser of browsers) {
   // Copy browser manifest
   const manifestPath = path.join(rootDir, 'extensions', browser, 'manifest.json');
   if (fs.existsSync(manifestPath)) {
-    fs.copyFileSync(manifestPath, path.join(browserDist, 'manifest.json'));
+    if (browser === 'chrome') {
+      fs.writeFileSync(path.join(browserDist, 'manifest.json'), JSON.stringify(chromeManifest, null, 2) + '\n');
+      fs.cpSync(path.join(chromeSource, 'icons'), path.join(browserDist, 'icons'), { recursive: true });
+      fs.copyFileSync(path.join(chromeSource, 'chrome-background.js'), path.join(browserDist, 'chrome-background.js'));
+      for (const name of ['chrome-options.js', 'chrome-diagnostics.js']) fs.copyFileSync(path.join(chromeSource, name), path.join(browserDist, name));
+      const options = fs.readFileSync(path.join(browserDist, 'options.html'), 'utf8');
+      fs.writeFileSync(path.join(browserDist, 'options.html'), options.replace('</body>', '<script type="module" src="chrome-options.js"></script>\n</body>'));
+    } else fs.copyFileSync(manifestPath, path.join(browserDist, 'manifest.json'));
   }
 
   if (browser === 'firefox') {
@@ -142,9 +166,9 @@ for (const browser of browsers) {
     if (signedBytes) fs.writeFileSync(xpiPath, signedBytes);
     else createZipFromDirectory(browserDist, xpiPath);
   } else if (browser === 'chrome') {
-    const zipPath = path.join(distDir, 'chrome.zip');
+    const zipPath = path.join(distDir, args.includes('--chrome-draft') ? 'chrome-draft.zip' : 'chrome.zip');
     createZipFromDirectory(browserDist, zipPath);
   }
 }
 
-console.log('Extensions built in extensions/dist/{chrome,firefox,safari}');
+console.log(chromeOnly ? `Chrome ${args.includes('--chrome-draft') ? 'identity bootstrap draft' : 'release'} built in extensions/dist` : 'Extensions built in extensions/dist/{chrome,firefox,safari}');

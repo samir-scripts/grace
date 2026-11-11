@@ -11,6 +11,7 @@ fn test_native_message_read_write_framing() {
     let msg = NativeOutboundMessage::Config {
         token: "test-token-xyz".into(),
         port: 1421,
+        protocol_version: 3,
     };
     write_native_message(&mut buffer, &msg).unwrap();
 
@@ -23,9 +24,10 @@ fn test_native_message_read_write_framing() {
     let mut cursor = Cursor::new(buffer);
     let decoded = read_native_message::<NativeOutboundMessage>(&mut cursor).unwrap();
     match decoded {
-        NativeOutboundMessage::Config { token, port } => {
+        NativeOutboundMessage::Config { token, port, protocol_version } => {
             assert_eq!(token, "test-token-xyz");
             assert_eq!(port, 1421);
+            assert_eq!(protocol_version, 3);
         }
         other => panic!("Unexpected message: {other:?}"),
     }
@@ -105,7 +107,7 @@ fn native_host_diagnostics_preserve_framing_and_secrets() {
     assert!(output.status.success());
     let mut cursor = Cursor::new(&output.stdout);
     assert_eq!(read_native_message::<NativeOutboundMessage>(&mut cursor).unwrap(),
-        NativeOutboundMessage::Config { token: "DO_NOT_LOG_TOKEN".into(), port: 1421 });
+        NativeOutboundMessage::Config { token: "DO_NOT_LOG_TOKEN".into(), port: 1421, protocol_version: 3 });
     assert_eq!(cursor.position() as usize, output.stdout.len());
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(stderr.contains("config_sent"));

@@ -4,12 +4,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { generateKeyPairSync, createHash } from 'node:crypto';
 import { zipSync, unzipSync } from 'fflate';
 
 const builder = path.resolve('scripts/build-browser-extensions.mjs');
 const source = path.resolve('extensions');
 const id = 'focus@pomotroid.local';
+// Synthetic store identity keeps Gecko packaging tests independent of production.
+const public_key = generateKeyPairSync('rsa', { modulusLength: 2048 }).publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
+const extension_id = [...createHash('sha256').update(Buffer.from(public_key, 'base64')).digest('hex').slice(0, 32)].map(n => String.fromCharCode(97 + parseInt(n, 16))).join('');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pomotroid signed gecko '));
@@ -17,6 +20,7 @@ function fixture(t) {
   for (const dir of ['focus', 'firefox', 'chrome', 'safari']) {
     fs.cpSync(path.join(source, dir), path.join(root, 'extensions', dir), { recursive: true });
   }
+  fs.writeFileSync(path.join(root, 'extensions/chrome/release.json'), JSON.stringify({ extension_id, public_key, privacy_policy_url: 'https://github.com/samir-scripts/grace/privacy', support_url: 'https://github.com/samir-scripts/grace/issues' }));
   const signed = path.join(root, 'extensions/signed/firefox');
   const input = path.join(signed, `${id}.xpi`);
   const provenance = path.join(signed, 'provenance.json');

@@ -1,0 +1,7 @@
+{
+  "run_id": "62698990-30f2-488d-b1c5-b7a4d3cd3f51",
+  "app_executable_sha256": "dcbfaa009e1ea3ee7f57c121134e43f626cf4351c87b5aee777b0d282991ee05",
+  "fixture_sha256": "963d5c528890bd19537d062a1cf2aa3b3364709656cc0ec440cc4bbab0e07f81",
+  "archive_sha256": "d200534bcacee3e4ddcec2226b81917aa2b1d031ff806158e8195a5203d92198",
+  "native_acceptance": "blocked"
+}

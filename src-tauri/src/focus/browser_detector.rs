@@ -41,10 +41,7 @@ pub fn browsers_from_catalog(apps: &[InstalledApplication]) -> Vec<InstalledBrow
                 let exec_path = PathBuf::from(&app.path);
                 if exec_path.exists() {
                     let policy_path = compute_policy_path(k, &exec_path);
-                    let is_extension_installed = policy_path
-                        .as_ref()
-                        .map(|p| super::enterprise_policy::is_policy_installed_at_path(k, p))
-                        .unwrap_or(false);
+                    let is_extension_installed = extension_installed_from_policy(k, policy_path.as_deref());
                     browsers.push(InstalledBrowser {
                         kind: k,
                         name: if app.name.is_empty() { default_name.into() } else { app.name.clone() },
@@ -68,6 +65,13 @@ pub fn browsers_from_catalog(apps: &[InstalledApplication]) -> Vec<InstalledBrow
     });
 
     browsers
+}
+
+fn extension_installed_from_policy(kind: BrowserKind, path: Option<&Path>) -> bool {
+    if kind == BrowserKind::Chrome {
+        return false;
+    }
+    path.is_some_and(|p| super::enterprise_policy::is_policy_installed_at_path(kind, p))
 }
 
 fn compute_policy_path(kind: BrowserKind, exec_path: &Path) -> Option<PathBuf> {
@@ -134,10 +138,7 @@ pub fn detect_installed_browsers() -> Vec<InstalledBrowser> {
                 let path = PathBuf::from(candidate);
                 if path.exists() {
                     let policy_path = compute_policy_path(kind, &path);
-                    let is_extension_installed = policy_path
-                        .as_ref()
-                        .map(|p| super::enterprise_policy::is_policy_installed_at_path(kind, p))
-                        .unwrap_or(false);
+                    let is_extension_installed = extension_installed_from_policy(kind, policy_path.as_deref());
                     detected.push(InstalledBrowser {
                         kind,
                         name: name.to_string(),
@@ -294,4 +295,20 @@ pub fn launch_browser(browser: BrowserKind, url: Option<&str>) -> Result<(), Str
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod chrome_status_tests {
+    use super::*;
+
+    #[test]
+    fn chrome_policy_file_does_not_prove_extension_is_installed() {
+        let dir = std::env::temp_dir().join(format!("grace-chrome-policy-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let policy = dir.join(format!("{}.json", super::super::enterprise_policy::CHROME_EXTENSION_ID));
+        std::fs::write(policy, "{}").unwrap();
+        assert!(super::super::enterprise_policy::is_policy_installed_at_path(BrowserKind::Chrome, &dir));
+        assert!(!extension_installed_from_policy(BrowserKind::Chrome, Some(&dir)));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 }

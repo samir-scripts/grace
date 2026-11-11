@@ -1,0 +1,10 @@
+✔ Playwright Chromium MV3 extension connects and blocks webpages dynamically (8189.260084ms)
+✔ options use cached appearance before consent and remain usable at narrow widths (1615.317666ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10270.5185

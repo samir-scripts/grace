@@ -112,3 +112,19 @@ Tooling checks: `npm run test:guest-focus`. This runs the Python ownership/confi
 Run Cargo build, test and Clippy commands sequentially. Concurrent Tauri builds can replace dependency artifacts while rustdoc is reading them; a missing-crate doctest error in that situation needs a serial rerun after the build finishes.
 
 For reset regression acceptance, use a separate 60/60/60-second, two-round profile with a blocked domain. During work, Restart Round must keep focus locked. During its final break-to-work transition, a deliberate emergency hold must return to Work round 1, idle, and unlocked. A rapid start must wait until the reset has finished. Restore the main profile afterward.
+
+## Chrome unpacked acceptance
+
+Create a separate Chrome-owned run; do not reuse a Zen run marker or profile:
+
+```sh
+python3 scripts/guest-focus/runner.py create --browser chrome --app /absolute/path/to/Grace.app --tart /absolute/path/to/tart
+python3 scripts/guest-focus/runner.py boot --run-id "$RUN_ID" --tart /absolute/path/to/tart
+python3 scripts/guest-focus/runner.py provision --run-id "$RUN_ID" --tart /absolute/path/to/tart
+```
+
+The Chrome provisioner downloads the official universal stable DMG, verifies Google's designated signing identity and strict bundle signature, and refuses to overwrite an existing installation. It records the downloaded hash, executable hash, Chrome/macOS versions and fixed extension ID in `chrome-provision.json`. `--resume` accepts only the recorded unchanged installation. Chrome auto-updates require a fresh run rather than silently reusing evidence. The empty profile is `$HOME/grace-acceptance/$RUN_ID/chrome-profile`. No Chrome policy is installed by provisioning.
+
+Launch official Chrome using its executable and `--user-data-dir` pointing to that owned profile. In packaged Grace, prepare Chrome setup. Open `chrome://extensions`, enable Developer mode, choose Load unpacked and select the absolute folder shown by Grace. Complete consent and native pairing in the actual options UI; assign the resulting profile in Grace. Never inject pairing credentials into storage for native acceptance.
+
+Run all scenarios listed in `chrome-provision.json`, correlating actual UI state, authenticated ACKs and controlled navigation. Existing Chromium fixtures and `test:chrome-guest-bridge` are separate integration evidence: they do not prove official Chrome installation or native automatic pairing. Keep browser consoles, profile contents and raw pairing data inside the guest. Use `collect` for sanitized reports, then `stop` for the owned clone. A scenario remains blocked until independently observed; a blank page, successful policy write or desktop badge alone cannot pass it.

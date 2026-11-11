@@ -61,8 +61,14 @@ jobs:
       - name: Svelte and TypeScript check
         run: npm run check
 
+      - name: Install Chromium test browser
+        run: npx playwright install --with-deps chromium
+
       - name: Frontend and extension tests
         run: npm test
+
+      - name: Chromium extension integration
+        run: npm run test:chrome-integration
 
       - name: Rust clippy
         run: cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings

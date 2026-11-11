@@ -99,21 +99,50 @@ test('resolved themes give distinct readable badges and German text fits', async
   } finally { await page.close(); }
 });
 
-test('Chrome displays unpacked setup guidance only when installed and not active', async () => {
+test('Chrome opens the store after registration and explains the next steps', async () => {
   const page = await browser.newPage({ viewport: { width: 330, height: 700 } });
   try {
     await page.goto(url);
-    const chrome = page.locator('.browser-card').nth(0);
-    const firefox = page.locator('.browser-card').nth(1);
-    await chrome.locator('.badge.active').waitFor();
-    assert.equal(await chrome.locator('.chrome-unpacked-hint').count(), 0, 'guidance hidden while active');
-    assert.equal(await firefox.locator('.chrome-unpacked-hint').count(), 0, 'guidance absent on Firefox');
-    await page.evaluate(() => window.__browserSetupTest.disconnect());
-    await page.locator('.btn-refresh').click();
-    await page.waitForFunction(() => !document.querySelector('.browser-card .badge.active'));
-    const hint = chrome.locator('.chrome-unpacked-hint');
-    await hint.waitFor({ timeout: 2000 });
-    assert.ok((await hint.textContent()).includes('chrome://extensions'));
+    await page.getByRole('button', { name: 'Install Chrome Companion' }).click();
+    await page.getByText(/Chrome Web Store opened/).waitFor();
+    assert.deepEqual((await page.evaluate(() => window.__browserSetupTest.calls())).filter((c) => c.includes('chrome_extension') || c.includes('opener')), ['focus_chrome_extension_install', 'plugin:opener|open_url']);
+    assert.equal(await page.evaluate(() => window.__browserSetupTest.openedUrl()), 'https://chromewebstore.google.com/detail/example');
+    assert.equal(await page.evaluate(() => window.__browserSetupTest.openedWith()), process.platform === 'darwin' ? 'Google Chrome' : process.platform === 'win32' ? 'chrome' : 'google-chrome');
+    assert.equal(await page.getByText(/chrome:\/\/extensions/).count(), 0);
+    assert.equal(await page.getByText('Extension installed! Restart your browser if needed.').count(), 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  } finally { await page.close(); }
+});
+
+test('registration failure does not open the store and offers recovery', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${url}/?registrationError=1`);
+    await page.getByRole('button', { name: 'Install Chrome Companion' }).click();
+    await page.getByText(/Registration failed/).waitFor();
+    assert.ok(await page.getByText(/try again/).isVisible());
+    assert.equal((await page.evaluate(() => window.__browserSetupTest.calls())).includes('plugin:opener|open_url'), false);
+  } finally { await page.close(); }
+});
+
+test('locked Chrome setup makes no installation calls', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${url}/?locked=1`);
+    const button = page.getByRole('button', { name: 'Install Chrome Companion' });
+    await button.waitFor();
+    assert.equal(await button.isDisabled(), true);
+    assert.equal((await page.evaluate(() => window.__browserSetupTest.calls())).includes('focus_chrome_extension_install'), false);
+  } finally { await page.close(); }
+});
+
+test('Linux retries the stable Chrome launcher without repeating registration', async () => {
+  const page = await browser.newPage({ userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36' });
+  try {
+    await page.goto(`${url}/?stableFallback=1`);
+    await page.getByRole('button', { name: 'Install Chrome Companion' }).click();
+    await page.getByText(/Chrome Web Store opened/).waitFor();
+    assert.deepEqual(await page.evaluate(() => window.__browserSetupTest.openAttempts()), ['google-chrome', 'google-chrome-stable']);
+    assert.equal((await page.evaluate(() => window.__browserSetupTest.calls())).filter((c) => c === 'focus_chrome_extension_install').length, 1);
   } finally { await page.close(); }
 });

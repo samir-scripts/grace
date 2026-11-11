@@ -16,3 +16,8 @@ extensions/dist/
 .env
 .env.*
 !.env.example
+
+# Public support site has its own source repository (see docs/chrome-web-store/hosting.json).
+docs/chrome-web-store/site/
+# Dashboard evidence can contain publisher account details; keep it local.
+docs/chrome-web-store/assets/store-draft-proof.jpg

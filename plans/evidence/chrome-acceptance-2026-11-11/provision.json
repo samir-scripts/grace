@@ -1,0 +1,109 @@
+{
+  "run_id": "62698990-30f2-488d-b1c5-b7a4d3cd3f51",
+  "vm_name": "grace-acceptance-62698990-30f2-488d-b1c5-b7a4d3cd3f51",
+  "url": "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+  "final_url": "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+  "dmg_sha256": "e72772e792b34c7f4de0f8fefc7c92bb59f1057abdf7e5db3db199cce1daad3f",
+  "version": "157.0.8103.51",
+  "macos": "15.7.7",
+  "executable_sha256": "96e7ab3731761715441bb93aea397812e6d564fd629b28d527c36750fe873244",
+  "extension_id": "ddiojihepmbimcfoefnebpolgaljlcfn",
+  "profile": "/Users/admin/grace-acceptance/62698990-30f2-488d-b1c5-b7a4d3cd3f51/chrome-profile",
+  "scenarios": [
+    {
+      "id": "unpacked-install",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "native-pairing",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "consent",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "profile-assignment",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "existing-tabs",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "fresh-http",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "fresh-https",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "allowed-controls",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "break-restoration",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "work-reapplication",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "worker-restart",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "browser-restart",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "desktop-restart",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "disconnect-retry",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "natural-completion",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "protected-restart",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "emergency-release",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "consent-withdrawal",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    },
+    {
+      "id": "appearance-keyboard",
+      "status": "blocked",
+      "reason": "Native UI acceptance not observed."
+    }
+  ]
+}

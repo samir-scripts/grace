@@ -4,6 +4,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open as dialogOpen } from '@tauri-apps/plugin-dialog';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { isLinux, isMac } from '$lib/utils/platform';
 import type {
   TimerState,
   Settings,
@@ -182,6 +184,20 @@ export const listInstalledBrowsers = () =>
   invoke<InstalledBrowser[]>('focus_browsers_list');
 export const registerNativeHost = () =>
   invoke<void>('focus_native_host_register');
+export const prepareChromeExtension = () =>
+  invoke<string>('focus_chrome_extension_prepare');
+export const installChromeCompanion = async () => {
+  const url = await invoke<string>('focus_chrome_extension_install');
+  if (isLinux) {
+    try {
+      await openUrl(url, 'google-chrome');
+    } catch {
+      await openUrl(url, 'google-chrome-stable');
+    }
+  } else {
+    await openUrl(url, isMac ? 'Google Chrome' : 'chrome');
+  }
+};
 export const installBrowserExtension = (browser: BrowserKind) =>
   invoke<void>('focus_browser_extension_install', { browser });
 export const removeBrowserExtension = (browser: BrowserKind) =>

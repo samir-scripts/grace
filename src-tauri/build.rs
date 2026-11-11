@@ -37,10 +37,11 @@ fn main() {
     println!("cargo:rerun-if-changed=../scripts/build-browser-extensions.mjs");
     println!("cargo:rerun-if-changed=../scripts/gecko-signed-artifact.mjs");
 
+    println!("cargo:rerun-if-changed=../scripts/chrome-release-config.mjs");
     let dist_xpi = std::path::Path::new("../extensions/dist/firefox/focus@pomotroid.local.xpi");
     let dist_chrome = std::path::Path::new("../extensions/dist/chrome");
     let release = std::env::var("PROFILE").as_deref() == Ok("release");
-    if release || !dist_xpi.exists() || !dist_chrome.exists() {
+    if release || cfg!(debug_assertions) || !dist_xpi.exists() || !dist_chrome.exists() {
         let mut command = Command::new("node");
         command.arg("scripts/build-browser-extensions.mjs").current_dir("..");
         if release {

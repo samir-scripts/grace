@@ -22,6 +22,14 @@ function build(root, ...args) {
   return spawnSync(process.execPath, [builder, ...args], { cwd: root, encoding: 'utf8' });
 }
 
+function filesIn(directory, prefix = '') {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const relative = path.posix.join(prefix, entry.name);
+    const full = path.join(directory, entry.name);
+    return entry.isDirectory() ? filesIn(full, relative) : [relative];
+  }).sort();
+}
+
 test('Chrome ZIP exposes loadable entry points and the native-host-authorized identity', t => {
   const root = fixture(t);
   const result = build(root, '--development');
@@ -39,9 +47,14 @@ test('Chrome ZIP exposes loadable entry points and the native-host-authorized id
   assert.equal(id, 'ddiojihepmbimcfoefnebpolgaljlcfn');
   assert.equal(Object.keys(entries).some(name => /\.(?:zip|xpi)$/.test(name)), false);
   assert.ok(fs.existsSync(path.join(root, 'extensions/dist/chrome', manifest.background.service_worker)));
+  const unpacked = path.join(root, 'extensions/dist/chrome');
+  assert.deepEqual(Object.keys(entries).sort(), filesIn(unpacked), 'ZIP and unpacked output contain the same files');
+  for (const filename of filesIn(unpacked)) {
+    assert.deepEqual(Buffer.from(entries[filename]), fs.readFileSync(path.join(unpacked, filename)), filename);
+  }
 });
 
-for (const filename of ['.env.local', 'nested/owner.pem']) {
+for (const filename of ['.env.local', '.env.amo.local', 'nested/owner.pem']) {
   test(`Chrome packaging rejects ${filename} before changing existing output`, t => {
     const root = fixture(t);
     const source = path.join(root, 'extensions/chrome', filename);
@@ -50,10 +63,41 @@ for (const filename of ['.env.local', 'nested/owner.pem']) {
     const dist = path.join(root, 'extensions/dist/chrome');
     fs.mkdirSync(dist, { recursive: true });
     fs.writeFileSync(path.join(dist, 'previous-build'), 'preserve');
+    const zip = path.join(root, 'extensions/dist/chrome.zip');
+    const previousZip = Buffer.from('previous chrome archive');
+    fs.writeFileSync(zip, previousZip);
     const result = build(root);
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /Credential file is not allowed/);
     assert.equal(fs.readFileSync(path.join(dist, 'previous-build'), 'utf8'), 'preserve');
-    assert.equal(fs.existsSync(path.join(root, 'extensions/dist/chrome.zip')), false);
+    assert.deepEqual(fs.readFileSync(zip), previousZip);
   });
 }
+
+test('Chrome packaging rejects symlinks before changing existing output', t => {
+  const root = fixture(t);
+  const target = path.join(root, 'outside-source');
+  fs.writeFileSync(target, 'test-only symlink fixture');
+  const link = path.join(root, 'extensions/chrome/linked-resource');
+  try {
+    fs.symlinkSync(target, link);
+  } catch (error) {
+    if (['EPERM', 'EACCES', 'ENOTSUP', 'UNKNOWN'].includes(error.code)) {
+      t.skip(`symlink creation is unavailable: ${error.code}`);
+      return;
+    }
+    throw error;
+  }
+
+  const dist = path.join(root, 'extensions/dist/chrome');
+  fs.mkdirSync(dist, { recursive: true });
+  fs.writeFileSync(path.join(dist, 'previous-build'), 'preserve');
+  const zip = path.join(root, 'extensions/dist/chrome.zip');
+  const previousZip = Buffer.from('previous chrome archive');
+  fs.writeFileSync(zip, previousZip);
+  const result = build(root);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Unsupported entry in extension source/);
+  assert.equal(fs.readFileSync(path.join(dist, 'previous-build'), 'utf8'), 'preserve');
+  assert.deepEqual(fs.readFileSync(zip), previousZip);
+});

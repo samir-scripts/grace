@@ -1,0 +1,8 @@
+{
+  "scripts/guest-focus/chrome.py": "536112342c7996228c901c08949fd430281c8eab77ba447271ea89475903baa4",
+  "scripts/guest-focus/runner.py": "a7845329738042601898e0f029d5e402fd1020e36c2cc4b7d2986426463fdcad",
+  "extensions/tests/desktop-bridge.test.mjs": "05b6f4797355ca387685b0085a7cd27715889b3dfe021dfb84ee0561d759baa8",
+  "extensions/tests/playwright-blocking.test.mjs": "2bb2624ca417d607755d6da3c619fbad82e8ef4439322d99df400ff7e86598ce",
+  "src-tauri/src/commands.rs": "ec4e722acc63f82fc025850ea9aa1dc0d62dc49381b65cd28e0ef53116b5e38a",
+  "src-tauri/src/focus/browser_detector.rs": "5cefb6a51d6b94927022b567f411f3d7ca78f026df181e6bd9496226ac5f4282"
+}

@@ -29,7 +29,7 @@ def exportable(name):
 
 
 def collectable(name):
-    return name == 'provision.json' or bool(re.fullmatch(r'(?:scenario-(?:isolated|matching)-(?:baseline|work|break|released)|browser-(?:baseline|work|released)-(?:isolated|matching))-[A-Za-z0-9_.-]+[.]json', name))
+    return name in {'provision.json', 'chrome-provision.json'} or bool(re.fullmatch(r'(?:scenario-(?:isolated|matching)-(?:baseline|work|break|released)|browser-(?:baseline|work|released)-(?:isolated|matching))-[A-Za-z0-9_.-]+[.]json', name))
 
 
 def sanitize_report(value):
@@ -73,7 +73,10 @@ def validate_owner(data):
     return data
 
 
-def initial_results():
+def initial_results(browser='zen'):
+    if browser == 'chrome':
+        from chrome import initial_results as chrome_results
+        return chrome_results()
     return [{'id': name, 'status': 'blocked', 'reason': 'Native acceptance has not been observed.'}
             for name in ('profile-ui-persistence', 'signed-companion', 'existing-tabs', 'fresh-http', 'fresh-https',
                          'allowed-control', 'discord-baseline', 'discord-existing', 'discord-relaunch',
@@ -129,6 +132,7 @@ def main():
     parser.add_argument('action', choices=('create', 'boot', 'provision', 'collect', 'stop', 'exec'))
     parser.add_argument('--tart', default=os.environ.get('TART_BIN', shutil.which('tart')))
     parser.add_argument('--run-id')
+    parser.add_argument('--browser', choices=('zen', 'chrome'), default='zen')
     parser.add_argument('--baseline', default='pomotroid-zen-clean')
     parser.add_argument('--config', type=pathlib.Path, default=pathlib.Path(__file__).with_name('config.example.json'))
     parser.add_argument('--app', type=pathlib.Path)
@@ -150,8 +154,9 @@ def main():
         # Existing files and unrelated guests are never overwritten or pruned.
         manifest.update(snapshot(directory, args.config.resolve(), args.app.resolve() if args.app else None))
         manifest['baseline'] = args.baseline
+        manifest['browser'] = args.browser
         (directory / 'run.json').write_text(json.dumps(manifest, indent=2) + '\n')
-        (directory / 'results.json').write_text(json.dumps({'run_id': run_id, 'scenarios': initial_results()}, indent=2) + '\n')
+        (directory / 'results.json').write_text(json.dumps({'run_id': run_id, 'scenarios': initial_results(args.browser)}, indent=2) + '\n')
         call([args.tart, 'clone', args.baseline, manifest['vm_name']], env={**os.environ, 'TART_NO_AUTO_PRUNE': '1'}, timeout=600)
         print('RUN_ID=' + run_id)
         print('Boot in a separate terminal: python3 scripts/guest-focus/runner.py boot --run-id ' + run_id)
@@ -165,7 +170,8 @@ def main():
     elif args.action == 'exec':
         if not args.command:
             raise ValueError('--command is required')
-        guest(args.tart, manifest, '/usr/bin/env', 'POMOTROID_DISPOSABLE_GUEST=1', *args.command, timeout=1800)
+        guest(args.tart, manifest, '/usr/bin/env', 'POMOTROID_DISPOSABLE_GUEST=1',
+              'POMOTROID_DISPOSABLE_RUN_ID=' + run_id, *args.command, timeout=1800)
     elif args.action == 'stop':
         call([args.tart, 'stop', manifest['vm_name']])
         call([args.tart, 'list'])
@@ -184,6 +190,8 @@ def main():
             with (directory / 'source.tar.gz').open('rb') as stream:
                 guest(args.tart, manifest, '/usr/bin/tar', '-xzf', '-', '-C', work, stdin=stream)
         command = ['/usr/bin/env', 'POMOTROID_DISPOSABLE_GUEST=1', '/usr/bin/python3', work + '/source/scripts/guest-focus/provision.py', '--config', work + '/config.json', '--source', work + '/source', '--run-id', run_id, '--pass', args.pass_name]
+        if manifest.get('browser') == 'chrome':
+            command = ['/usr/bin/env', 'POMOTROID_DISPOSABLE_GUEST=1', '/usr/bin/python3', work + '/source/scripts/guest-focus/chrome.py', '--source', work + '/source', '--run-id', run_id]
         guest(args.tart, manifest, *command, *provision_flags(args.resume, args.skip_download), timeout=1800)
     elif args.action == 'collect':
         # Copy only the known run's reports; browser profiles and raw credentials stay in the guest.

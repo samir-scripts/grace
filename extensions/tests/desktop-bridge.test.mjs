@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import net from 'node:net';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { chromium } from 'playwright';
 import path from 'node:path';
@@ -10,8 +10,92 @@ import fs from 'node:fs';
 import os from 'node:os';
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const canonicalRunId = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
 
-test('installed extension applies and releases policies from the Rust desktop bridge', { timeout: 90000, skip: process.env.POMOTROID_DISPOSABLE_GUEST !== '1' }, async () => {
+export function validateBridgeFixtureBinary(binaryPath, runId, { guestRoot = '/Users/admin/grace-acceptance', fsApi = fs, pathApi = path, uid = typeof process.getuid === 'function' ? process.getuid() : null } = {}) {
+  if (!canonicalRunId(runId) || typeof binaryPath !== 'string' || !pathApi.isAbsolute(binaryPath) || uid == null) {
+    throw new Error('invalid prebuilt bridge fixture path or run ID');
+  }
+  try {
+    const expectedRunDir = pathApi.join(fsApi.realpathSync(guestRoot), runId);
+    const actualRunDir = fsApi.realpathSync(expectedRunDir);
+    const actualBinary = fsApi.realpathSync(binaryPath);
+    const stat = fsApi.lstatSync(binaryPath);
+    const relative = pathApi.relative(actualRunDir, actualBinary);
+    if (actualRunDir !== expectedRunDir || actualBinary !== binaryPath || stat.isSymbolicLink() || !stat.isFile() || stat.uid !== uid || !relative || relative === '..' || relative.startsWith(`..${pathApi.sep}`) || pathApi.isAbsolute(relative)) {
+      throw new Error('unsafe prebuilt bridge fixture');
+    }
+    fsApi.accessSync(actualBinary, fsApi.constants.X_OK);
+    return actualBinary;
+  } catch {
+    throw new Error('prebuilt bridge fixture must be an executable regular file inside the current owned run directory');
+  }
+}
+
+export function isOwnedDisposableGuest({
+  env = process.env,
+  platform = process.platform,
+  home = os.homedir(),
+  uid = typeof process.getuid === 'function' ? process.getuid() : null,
+  markerPath = '/Users/admin/.grace-disposable-guest.json',
+  fsApi = fs,
+} = {}) {
+  if (env.POMOTROID_DISPOSABLE_GUEST !== '1' || platform !== 'darwin' || home !== '/Users/admin' || uid == null || uid === 0) return false;
+  const runId = env.POMOTROID_DISPOSABLE_RUN_ID;
+  if (typeof runId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(runId)) return false;
+  try {
+    const stat = fsApi.lstatSync(markerPath);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== uid) return false;
+    const marker = JSON.parse(fsApi.readFileSync(markerPath, 'utf8'));
+    return canonicalRunId(runId) && marker.run_id === runId && marker.vm_name === `grace-acceptance-${runId}`;
+  } catch {
+    return false;
+  }
+}
+
+test('guest guard requires explicit opt-in, admin macOS context, and matching owned marker', () => {
+  const runId = '4c83a270-5a5e-48fc-a6d1-35328fedf802';
+  const marker = { run_id: runId, vm_name: `grace-acceptance-${runId}` };
+  const stat = { uid: 501, isFile: () => true, isSymbolicLink: () => false };
+  const fsApi = { lstatSync: () => stat, readFileSync: () => JSON.stringify(marker) };
+  const valid = { env: { POMOTROID_DISPOSABLE_GUEST: '1', POMOTROID_DISPOSABLE_RUN_ID: runId }, platform: 'darwin', home: '/Users/admin', uid: 501, markerPath: '/marker', fsApi };
+  assert.equal(isOwnedDisposableGuest(valid), true);
+  assert.equal(isOwnedDisposableGuest({ ...valid, env: { ...valid.env, POMOTROID_DISPOSABLE_GUEST: undefined } }), false);
+  assert.equal(isOwnedDisposableGuest({ ...valid, platform: 'linux' }), false);
+  assert.equal(isOwnedDisposableGuest({ ...valid, home: '/Users/other' }), false);
+  assert.equal(isOwnedDisposableGuest({ ...valid, uid: 0 }), false);
+  assert.equal(isOwnedDisposableGuest({ ...valid, env: { ...valid.env, POMOTROID_DISPOSABLE_RUN_ID: 'not-a-uuid' } }), false);
+  assert.equal(isOwnedDisposableGuest({ ...valid, fsApi: { ...fsApi, readFileSync: () => JSON.stringify({ ...marker, vm_name: 'foreign-vm' }) } }), false);
+  assert.equal(isOwnedDisposableGuest({ ...valid, fsApi: { ...fsApi, lstatSync: () => ({ ...stat, isSymbolicLink: () => true }) } }), false);
+});
+
+test('prebuilt bridge fixture must be canonical, executable, owned, and inside the run directory', t => {
+  const runId = '4c83a270-5a5e-48fc-a6d1-35328fedf802';
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'grace-bridge-fixture-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const runDir = path.join(fs.realpathSync(root), runId);
+  fs.mkdirSync(path.join(runDir, 'bin'), { recursive: true });
+  const binary = path.join(runDir, 'bin/focus_bridge_fixture');
+  fs.writeFileSync(binary, '#!/bin/sh\nexit 0\n', { mode: 0o700 });
+  const uid = fs.statSync(binary).uid;
+  assert.equal(validateBridgeFixtureBinary(binary, runId, { guestRoot: root, uid }), binary);
+  assert.throws(() => validateBridgeFixtureBinary(binary, runId, { guestRoot: root, uid: uid + 1 }));
+  assert.throws(() => validateBridgeFixtureBinary(path.join(root, 'outside'), runId, { guestRoot: root, uid }));
+  assert.throws(() => validateBridgeFixtureBinary(binary, 'bad-run-id', { guestRoot: root, uid }));
+  const link = path.join(runDir, 'bin/fixture-link');
+  fs.symlinkSync(binary, link);
+  assert.throws(() => validateBridgeFixtureBinary(link, runId, { guestRoot: root, uid }));
+});
+
+const disposableGuest = isOwnedDisposableGuest();
+
+test('installed extension applies and releases policies from the Rust desktop bridge', { timeout: 90000, skip: disposableGuest ? false : 'requires runner-managed opt-in and matching disposable guest marker' }, async () => {
+  const runId = process.env.POMOTROID_DISPOSABLE_RUN_ID;
+  const fixtureBinary = process.env.POMOTROID_BRIDGE_FIXTURE_BINARY
+    ? validateBridgeFixtureBinary(process.env.POMOTROID_BRIDGE_FIXTURE_BINARY, runId)
+    : null;
+  const build = spawnSync(process.execPath, [path.resolve('scripts/build-browser-extensions.mjs'), '--development'], { cwd: process.cwd(), encoding: 'utf8' });
+  assert.equal(build.status, 0, build.stderr || build.error?.message || 'Chrome extension development build failed');
   const portServer = net.createServer();
   await new Promise(resolve => portServer.listen(0, '127.0.0.1', resolve));
   const port = portServer.address().port;
@@ -19,7 +103,13 @@ test('installed extension applies and releases policies from the Rust desktop br
   const server = http.createServer((req, res) => res.end('<h1>fixture content</h1>'));
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const url = `http://127.0.0.1:${server.address().port}/`;
-  const child = spawn('cargo', ['run', '--quiet', '--manifest-path', 'src-tauri/Cargo.toml', '--example', 'focus_bridge_fixture', '--', String(port)], { stdio: ['pipe', 'pipe', 'inherit'] });
+  const child = fixtureBinary
+    ? spawn(fixtureBinary, [String(port)], { stdio: ['pipe', 'pipe', 'inherit'] })
+    : spawn('cargo', ['run', '--quiet', '--manifest-path', 'src-tauri/Cargo.toml', '--example', 'focus_bridge_fixture', '--', String(port)], { stdio: ['pipe', 'pipe', 'inherit'] });
+  const spawned = new Promise((resolve, reject) => {
+    child.once('spawn', resolve);
+    child.once('error', error => reject(new Error(`Unable to start bridge fixture (${error.code || 'spawn error'})`)));
+  });
   const lines = createInterface({ input: child.stdout })[Symbol.asyncIterator]();
   const next = async () => {
     let timeout;
@@ -37,6 +127,7 @@ test('installed extension applies and releases policies from the Rust desktop br
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pomotroid-bridge-'));
   let context;
   try {
+    await spawned;
     assert.equal(await next(), 'ready');
     const ext = path.resolve('extensions/dist/chrome');
     context = await chromium.launchPersistentContext(dir, { channel: 'chromium', headless: true, args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`] });
@@ -85,8 +176,8 @@ test('installed extension applies and releases policies from the Rust desktop br
     assert.match(await nextPage.content(), /fixture content/);
   } finally {
     if (context) await context.close();
-    child.stdin.end('quit\n');
-    child.kill();
+    child.stdin?.end('quit\n');
+    if (child.pid) child.kill();
     fs.rmSync(dir, { recursive: true, force: true });
     await new Promise(resolve => server.close(resolve));
   }

@@ -22,7 +22,9 @@
     "check": "npm run paraglide:compile && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "npm run paraglide:compile && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test:unit": "node --test src/lib/utils/theme.test.mjs src/lib/stores/navigation.test.mjs",
-    "test:extensions": "node --test extensions/tests/appearance.test.mjs extensions/tests/policy.test.mjs extensions/tests/policies.test.mjs extensions/tests/bridge-auth.test.mjs extensions/tests/background-auth.test.mjs extensions/tests/consent.test.mjs extensions/tests/native_pairing.test.mjs extensions/tests/chrome-package.test.mjs extensions/tests/unsigned-gecko-package.test.mjs extensions/tests/signed-gecko-package.test.mjs extensions/tests/sign-firefox.test.mjs",
+    "test:extensions": "node --test extensions/tests/appearance.test.mjs extensions/tests/policy.test.mjs extensions/tests/policies.test.mjs extensions/tests/bridge-auth.test.mjs extensions/tests/background-auth.test.mjs extensions/tests/consent.test.mjs extensions/tests/native_pairing.test.mjs extensions/tests/chrome-package.test.mjs extensions/tests/unsigned-gecko-package.test.mjs extensions/tests/signed-gecko-package.test.mjs extensions/tests/sign-firefox.test.mjs extensions/tests/chrome-release.test.mjs extensions/tests/chrome-web-store.test.mjs extensions/tests/chrome-diagnostics.test.mjs",
+    "test:chrome-integration": "npm run extensions:build -- --development && node --test extensions/tests/playwright-blocking.test.mjs",
+    "test:chrome-guest-bridge": "node --test extensions/tests/desktop-bridge.test.mjs",
     "test:motion": "node --test tests/motion.test.mjs",
     "test:stats-layout": "node --test tests/stats-layout.test.mjs",
     "test:browser-setup": "node --test tests/browser-setup.test.mjs",
@@ -31,7 +33,11 @@
     "guest:focus": "python3 scripts/guest-focus/runner.py",
     "format": "prettier --write .",
     "tauri": "tauri",
-    "extensions:sign:firefox": "node scripts/sign-firefox.mjs"
+    "extensions:sign:firefox": "node scripts/sign-firefox.mjs",
+    "extensions:chrome:draft": "node scripts/build-browser-extensions.mjs --chrome-draft",
+    "extensions:chrome:release": "node scripts/build-browser-extensions.mjs --chrome-release",
+    "extensions:chrome:status": "node scripts/chrome-web-store.mjs status",
+    "extensions:chrome:upload": "node scripts/chrome-web-store.mjs upload"
   },
   "dependencies": {
     "@inlang/paraglide-js": "^2.19.0",

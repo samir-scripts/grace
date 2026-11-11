@@ -4,6 +4,7 @@
     listInstalledBrowsers,
     getInstalledApplicationIcon,
     registerNativeHost,
+    installChromeCompanion,
     installBrowserExtension,
     removeBrowserExtension,
     getBrowserSetup,
@@ -92,6 +93,12 @@
     statusMessage = '';
     statusType = '';
     try {
+      if (browser.kind === 'chrome') {
+        await installChromeCompanion();
+        statusMessage = m.browser_chrome_prepared();
+        statusType = 'success';
+        return;
+      }
       await registerNativeHost();
       await installBrowserExtension(browser.kind);
       statusMessage = m.browser_install_success();
@@ -99,7 +106,10 @@
       await loadBrowsers();
       await refreshSetup();
     } catch (e: any) {
-      statusMessage = typeof e === 'string' ? e : (e?.message || 'Failed to install extension');
+      const detail = typeof e === 'string' ? e : (e?.message || '');
+      statusMessage = browser.kind === 'chrome'
+        ? `${m.browser_chrome_error()}${detail ? ` (${detail})` : ''}`
+        : (detail || 'Failed to install extension');
       statusType = 'error';
     } finally {
       mutating = null;
@@ -214,13 +224,19 @@
                 <span class="badge active"><span class="connection-dot" aria-hidden="true"></span>{m.browser_status_active()}</span>
               {/if}
             </span>
-            {#if browser.kind === 'chrome' && browser.is_installed && !isActive(browser.kind)}
-              <p class="chrome-unpacked-hint">{m.browser_chrome_unpacked_hint()}</p>
-            {/if}
           </div>
         </div>
 
-        {#if browser.is_extension_installed}
+        {#if browser.kind === 'chrome'}
+          <button type="button" class="btn-install" disabled={mutating !== null || isLocked}
+            title={isLocked ? m.browser_locked_hint() : undefined} onclick={() => handleInstall(browser)}>
+            {#if mutating?.kind === browser.kind && mutating?.action === 'install'}
+              {m.browser_installing()}
+            {:else}
+              {m.browser_chrome_prepare()}
+            {/if}
+          </button>
+        {:else if browser.is_extension_installed}
           <div class="browser-actions">
           <button
             type="button"
@@ -478,13 +494,7 @@
     gap: 8px;
     align-items: center;
   }
-  .chrome-unpacked-hint {
-    font-size: 11px;
-    line-height: 1.4;
-    color: var(--color-foreground-darker);
-    margin: 4px 0 0;
-    word-break: break-word;
-  }
+
 
 
   .badge {

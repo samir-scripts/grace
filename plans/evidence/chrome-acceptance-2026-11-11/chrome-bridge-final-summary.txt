@@ -1,0 +1,11 @@
+✔ guest guard requires explicit opt-in, admin macOS context, and matching owned marker (0.433916ms)
+✔ prebuilt bridge fixture must be canonical, executable, owned, and inside the run directory (1.559458ms)
+✔ installed extension applies and releases policies from the Rust desktop bridge (1646.602834ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1847.56225

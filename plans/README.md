@@ -1,5 +1,9 @@
 # Implementation plans
 
+[Public Chrome companion release](chrome-extension-release-plan.md) — production identity, store onboarding, submission package and public policy/support preparation. Cross-platform store-installed acceptance gates remain open.
+
+[Chrome unpacked extension validation](chrome-extension-acceptance-plan.md) — setup correction, packaging and Chromium lifecycle regressions, and official Chrome provisioning in a fresh Tart clone. Native UI acceptance remains blocked by guest input; see the ledger for observed checks and evidence.
+
 [grace. UI consistency and accessibility](grace-ui-consistency-plan.md) — implementation and verification ledger. [Batch 5 native/signing report](grace-ui-batch5-report.md): native development checks, Clippy and production build pass; signed 1.1.0 is approved and a packaged Zen update/reconnect passed; Firefox 115 support is retained with its consent fallback; pre-consent appearance and remaining browser acceptance are open.
 
 [Reproducible Tart Zen/Discord acceptance](tart-focus-acceptance-plan.md) — implemented and verified in batches. [Evidence report](tart-focus-acceptance-report.md) records two-clone provisioning, native website/Discord checks, completion/reset repairs, explicit inconclusive cases and existing Clippy blockers.
