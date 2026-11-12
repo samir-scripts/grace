@@ -722,16 +722,16 @@ impl NativeEnforcer for BrowserBridge {
                     Some(c) => {
                         if c.last_seen.elapsed() > Duration::from_secs(BROWSER_LEASE_SECS) {
                             log::debug!("[focus-bridge] lease_failed reason=stale_heartbeat");
-                            return Err(EnforcerError::LeaseLost);
+                            return Err(EnforcerError::BrowserLeaseLost);
                         }
                         if c.last_acked_revision < current_rev {
                             log::debug!("[focus-bridge] lease_failed reason=stale_ack");
-                            return Err(EnforcerError::LeaseLost);
+                            return Err(EnforcerError::BrowserLeaseLost);
                         }
                     }
                     None => {
                         log::debug!("[focus-bridge] lease_failed reason=required_disconnected");
-                        return Err(EnforcerError::LeaseLost);
+                        return Err(EnforcerError::BrowserLeaseLost);
                     }
                 }
             }
@@ -740,15 +740,15 @@ impl NativeEnforcer for BrowserBridge {
             match clients.get(id) {
                 None => {
                     log::debug!("[focus-bridge] lease_failed reason=participant_disconnected");
-                    return Err(EnforcerError::LeaseLost);
+                    return Err(EnforcerError::BrowserLeaseLost);
                 }
                 Some(client) if client.last_seen.elapsed() > Duration::from_secs(BROWSER_LEASE_SECS) => {
                     log::debug!("[focus-bridge] lease_failed reason=stale_heartbeat");
-                    return Err(EnforcerError::LeaseLost);
+                    return Err(EnforcerError::BrowserLeaseLost);
                 }
                 Some(client) if client.last_acked_revision < current_rev => {
                     log::debug!("[focus-bridge] lease_failed reason=stale_ack");
-                    return Err(EnforcerError::LeaseLost);
+                    return Err(EnforcerError::BrowserLeaseLost);
                 }
                 Some(_) => {}
             }

@@ -31,6 +31,7 @@ pub struct FocusController {
     app_handle: Mutex<Option<AppHandle>>,
     transition: Mutex<()>,
     dnd_active: AtomicBool,
+    retained_policy_owned: AtomicBool,
     reset_pending: AtomicBool,
     reset_generation: AtomicU64,
     engine: Mutex<Option<crate::timer::engine::EngineHandle>>,
@@ -110,6 +111,7 @@ impl FocusController {
             app_handle: Mutex::new(None),
             transition: Mutex::new(()),
             dnd_active: AtomicBool::new(false),
+            retained_policy_owned: AtomicBool::new(false),
             reset_pending: AtomicBool::new(false),
             reset_generation: AtomicU64::new(0),
             engine: Mutex::new(None),
@@ -346,7 +348,7 @@ impl FocusController {
 
         let mut candidate = self.state_machine.lock().unwrap().clone();
         candidate.set_unblock_during_breaks(unblock);
-        self.commit_enforcement_transition(candidate)
+        self.commit_enforcement_transition(candidate, false)
     }
 
     pub fn set_emergency_passphrase(&self, passphrase: &str) -> Result<(), String> {
@@ -415,7 +417,7 @@ impl FocusController {
         }
         let mut candidate = self.state_machine.lock().unwrap().clone();
         let result = candidate.handle_emergency_released().map_err(|e| e.to_string())
-            .and_then(|()| self.commit_enforcement_transition(candidate));
+            .and_then(|()| self.commit_enforcement_transition(candidate, false));
         if result.is_ok() {
             if let Some(engine) = engine {
                 engine.send(crate::timer::engine::TimerCommand::ResetCycle);
@@ -458,36 +460,56 @@ impl FocusController {
         if round_type == "work" {
             candidate.handle_work_started().map_err(|e| e.to_string())?;
         }
-        self.commit_enforcement_transition(candidate)
+        self.commit_enforcement_transition(candidate, true)
     }
 
     // Call only while holding the transition gate. Native work never holds state or DB locks.
-    fn commit_enforcement_transition(&self, mut candidate: FocusStateMachine) -> Result<(), String> {
+    fn commit_enforcement_transition(&self, mut candidate: FocusStateMachine, resume_retained: bool) -> Result<(), String> {
         let original = self.state_machine.lock().unwrap().clone();
         let previous = original.snapshot();
         let next = candidate.snapshot();
         let was_blocking = previous.enforcement.state == EnforcementState::Active;
-        let should_block = next.blocking_active;
+        let retained_policy_owned = self.retained_policy_owned.load(Ordering::Relaxed);
+        let mut retain_on_failure = false;
+        let retained_phase_blocks = retained_policy_owned
+            && next.status == super::state::FocusStatus::Active
+            && next.current_phase.is_some_and(|phase| phase == FocusPhase::Work || !next.unblock_during_breaks);
+        let should_block = next.blocking_active || retained_phase_blocks;
+        if retained_policy_owned && should_block && !resume_retained {
+            // Preference and queued round changes must not implicitly resume a paused session.
+            candidate.set_enforcement(previous.enforcement.clone());
+            *self.state_machine.lock().unwrap() = candidate;
+            self.emit_changed();
+            return Ok(());
+        }
         self.state_machine.lock().unwrap().preparing();
 
         let result = (|| -> Result<(), String> {
             if should_block {
                 let profile = next.active_profile.as_ref().ok_or("No session is selected.")?;
                 if !was_blocking {
-                    let journal = FocusRunJournal {
-                        run_id: uuid::Uuid::new_v4().to_string(),
-                        profile_snapshot_json: serde_json::to_string(profile).map_err(|e| e.to_string())?,
-                        phase: next.current_phase.map(|p| p.as_str()).unwrap_or("work").into(),
-                        current_round: next.current_work_round,
-                        started_at: chrono_now_secs(),
-                        lease_expires_at: chrono_now_secs() + 15,
-                    };
-                    {
-                        let conn = self.db.lock().map_err(|e| e.to_string())?;
-                        self.repository.save_run_journal(&conn, &journal).map_err(|e| e.to_string())?;
+                    if retained_policy_owned {
+                        // Retry must verify the existing revision, not replace a still-owned policy.
+                        self.enforcer.renew_lease().map_err(|error| {
+                            retain_on_failure = matches!(&error, super::enforcer::EnforcerError::BrowserLeaseLost);
+                            error.to_string()
+                        })?;
+                    } else {
+                        let journal = FocusRunJournal {
+                            run_id: uuid::Uuid::new_v4().to_string(),
+                            profile_snapshot_json: serde_json::to_string(profile).map_err(|e| e.to_string())?,
+                            phase: next.current_phase.map(|p| p.as_str()).unwrap_or("work").into(),
+                            current_round: next.current_work_round,
+                            started_at: chrono_now_secs(),
+                            lease_expires_at: chrono_now_secs() + 15,
+                        };
+                        {
+                            let conn = self.db.lock().map_err(|e| e.to_string())?;
+                            self.repository.save_run_journal(&conn, &journal).map_err(|e| e.to_string())?;
+                        }
+                        self.enforcer.apply_blocking(&profile.blocked_apps, &profile.blocked_domains)
+                            .map_err(|e| e.to_string())?;
                     }
-                    self.enforcer.apply_blocking(&profile.blocked_apps, &profile.blocked_domains)
-                        .map_err(|e| e.to_string())?;
                     if let Ok(conn) = self.db.lock() {
                         if let Ok(settings) = crate::settings::load(&conn) {
                             if settings.dnd_enabled {
@@ -504,7 +526,7 @@ impl FocusController {
                     error_code: None,
                 });
             } else {
-                if was_blocking || previous.enforcement.state == EnforcementState::RecoveryRequired {
+                if was_blocking || retained_policy_owned || previous.enforcement.state == EnforcementState::RecoveryRequired {
                     self.enforcer.release_blocking().map_err(|e| e.to_string())?;
                 }
                 self.restore_dnd();
@@ -516,7 +538,16 @@ impl FocusController {
         })();
 
         if let Err(error) = result {
+            if retain_on_failure {
+                candidate.set_enforcement(previous.enforcement.clone());
+                *self.state_machine.lock().unwrap() = candidate;
+                self.emit_changed();
+                return Err(error);
+            }
             let cleanup_ok = should_block && self.enforcer.release_blocking().is_ok();
+            if cleanup_ok {
+                self.retained_policy_owned.store(false, Ordering::Relaxed);
+            }
             log::warn!("[focus] transition_failed action={} cleanup_ok={cleanup_ok}", if should_block { "apply" } else { "release" });
             let mut failed = if original.snapshot().status == super::state::FocusStatus::Idle {
                 original
@@ -535,6 +566,7 @@ impl FocusController {
             self.emit_changed();
             return Err(error);
         }
+        self.retained_policy_owned.store(false, Ordering::Relaxed);
         *self.state_machine.lock().unwrap() = candidate;
         self.emit_changed();
         Ok(())
@@ -549,21 +581,29 @@ impl FocusController {
     pub fn check_enforcement_health(&self) -> Result<(), String> {
         let _transition = self.transition.lock().unwrap();
         let snapshot = self.get_snapshot();
-        if snapshot.enforcement.state != EnforcementState::Active {
+        let retained_policy_owned = self.retained_policy_owned.load(Ordering::Relaxed);
+        if snapshot.enforcement.state != EnforcementState::Active
+            && !(retained_policy_owned && snapshot.enforcement.state == EnforcementState::Failed)
+        {
             return Ok(());
         }
         if let Err(error) = self.enforcer.renew_lease() {
-            if let Some(engine) = self.engine.lock().unwrap().as_ref() {
-                engine.send(crate::timer::engine::TimerCommand::Pause);
+            if snapshot.enforcement.state == EnforcementState::Active {
+                if let Some(engine) = self.engine.lock().unwrap().as_ref() {
+                    engine.send(crate::timer::engine::TimerCommand::Pause);
+                }
             }
-            let released = self.enforcer.release_blocking().is_ok();
+            let retained = (snapshot.enforcement.websites_active || retained_policy_owned)
+                && matches!(&error, super::enforcer::EnforcerError::BrowserLeaseLost);
+            let released = !retained && self.enforcer.release_blocking().is_ok();
+            self.retained_policy_owned.store(retained, Ordering::Relaxed);
             self.state_machine.lock().unwrap().set_enforcement(EnforcementStatus {
-                state: if released { EnforcementState::Failed } else { EnforcementState::RecoveryRequired },
+                state: if retained || released { EnforcementState::Failed } else { EnforcementState::RecoveryRequired },
                 error_code: Some(EnforcementErrorCode::LeaseLost),
                 ..Default::default()
             });
             self.emit_changed();
-            if released {
+            if retained || released {
                 self.restore_dnd();
             }
             return Err(error.to_string());
@@ -604,7 +644,11 @@ impl FocusController {
             };
             candidate.handle_round_completed(next_phase).map_err(|e| e.to_string())?;
         }
-        self.commit_enforcement_transition(candidate)
+        self.commit_enforcement_transition(candidate, false)?;
+        if self.retained_policy_owned.load(Ordering::Relaxed) {
+            return Err("Browser protection was interrupted. Reconnect, then retry.".into());
+        }
+        Ok(())
     }
 }
 
@@ -631,6 +675,9 @@ mod tests {
         fail_apply: std::sync::atomic::AtomicBool,
         fail_release: std::sync::atomic::AtomicBool,
         fail_renew: std::sync::atomic::AtomicBool,
+        browser_lease_loss: std::sync::atomic::AtomicBool,
+        release_calls: std::sync::atomic::AtomicUsize,
+        apply_calls: std::sync::atomic::AtomicUsize,
     }
 
     impl FailingEnforcer {
@@ -639,6 +686,9 @@ mod tests {
                 fail_apply: std::sync::atomic::AtomicBool::new(fail_apply),
                 fail_release: std::sync::atomic::AtomicBool::new(false),
                 fail_renew: std::sync::atomic::AtomicBool::new(false),
+                browser_lease_loss: std::sync::atomic::AtomicBool::new(false),
+                release_calls: std::sync::atomic::AtomicUsize::new(0),
+                apply_calls: std::sync::atomic::AtomicUsize::new(0),
             }
         }
     }
@@ -647,18 +697,24 @@ mod tests {
         fn apply_blocking(&self, _: &[super::super::model::AppTarget], _: &[String])
             -> Result<(), super::super::enforcer::EnforcerError>
         {
+            self.apply_calls.fetch_add(1, Ordering::SeqCst);
             if self.fail_apply.load(std::sync::atomic::Ordering::SeqCst) {
                 Err(super::super::enforcer::EnforcerError::NotAuthorized)
             } else { Ok(()) }
         }
         fn release_blocking(&self) -> Result<(), super::super::enforcer::EnforcerError> {
+            self.release_calls.fetch_add(1, Ordering::SeqCst);
             if self.fail_release.load(std::sync::atomic::Ordering::SeqCst) {
                 Err(super::super::enforcer::EnforcerError::HostsFileError("denied".into()))
             } else { Ok(()) }
         }
         fn renew_lease(&self) -> Result<(), super::super::enforcer::EnforcerError> {
             if self.fail_renew.load(std::sync::atomic::Ordering::SeqCst) {
-                Err(super::super::enforcer::EnforcerError::LeaseLost)
+                Err(if self.browser_lease_loss.load(Ordering::SeqCst) {
+                    super::super::enforcer::EnforcerError::BrowserLeaseLost
+                } else {
+                    super::super::enforcer::EnforcerError::LeaseLost
+                })
             } else { Ok(()) }
         }
     }
@@ -674,6 +730,127 @@ mod tests {
     }
 
     #[test]
+    fn retained_policy_retry_preserves_protected_breaks() {
+        for phase in ["short-break", "long-break"] {
+            let enforcer = Arc::new(FailingEnforcer::new(false));
+            let controller = controller_with_rules(enforcer.clone());
+            controller.on_timer_started("work").unwrap();
+            controller.on_round_completed(phase, false).unwrap();
+            enforcer.browser_lease_loss.store(true, Ordering::SeqCst);
+            enforcer.fail_renew.store(true, Ordering::SeqCst);
+            assert!(controller.check_enforcement_health().is_err());
+            enforcer.fail_renew.store(false, Ordering::SeqCst);
+            controller.on_timer_started(phase).unwrap();
+            assert_eq!(controller.get_snapshot().enforcement.state, EnforcementState::Active);
+            assert!(controller.get_snapshot().blocking_active);
+            assert_eq!(enforcer.apply_calls.load(Ordering::SeqCst), 1);
+            assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 0);
+            controller.execute_emergency_release().unwrap();
+        }
+    }
+
+    #[test]
+    fn retained_policy_still_detects_generic_health_failure() {
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        let controller = controller_with_rules(enforcer.clone());
+        controller.on_timer_started("work").unwrap();
+        enforcer.browser_lease_loss.store(true, Ordering::SeqCst);
+        enforcer.fail_renew.store(true, Ordering::SeqCst);
+        assert!(controller.check_enforcement_health().is_err());
+        enforcer.browser_lease_loss.store(false, Ordering::SeqCst);
+        assert!(controller.check_enforcement_health().is_err());
+        assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 1);
+        assert!(!controller.retained_policy_owned.load(Ordering::Relaxed));
+        controller.execute_emergency_release().unwrap();
+    }
+
+    #[test]
+    fn retained_policy_does_not_own_apps_only_sessions() {
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        let controller = controller_with_rules(enforcer.clone());
+        let mut profile = controller.get_profiles().unwrap().remove(0);
+        profile.blocked_domains.clear();
+        profile.blocked_apps = vec![super::super::model::AppTarget {
+            id: "fixture".into(), name: "Fixture".into(), identifier: "com.grace.fixture".into(), platform: "all".into(),
+        }];
+        controller.save_profile(profile).unwrap();
+        controller.on_timer_started("work").unwrap();
+        enforcer.browser_lease_loss.store(true, Ordering::SeqCst);
+        enforcer.fail_renew.store(true, Ordering::SeqCst);
+        assert!(controller.check_enforcement_health().is_err());
+        assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 1);
+        assert!(!controller.retained_policy_owned.load(Ordering::Relaxed));
+        controller.execute_emergency_release().unwrap();
+    }
+
+    #[test]
+    fn retained_policy_failure_preserves_completed_phase_and_round() {
+        for (next_round, expected_phase) in [
+            ("short-break", FocusPhase::ShortBreak),
+            ("long-break", FocusPhase::LongBreak),
+            ("work", FocusPhase::Work),
+        ] {
+            let enforcer = Arc::new(FailingEnforcer::new(false));
+            let controller = controller_with_rules(enforcer.clone());
+            controller.on_timer_started("work").unwrap();
+            if next_round == "work" { controller.on_round_completed("short-break", false).unwrap(); }
+            let previous_round = controller.get_snapshot().current_work_round;
+            enforcer.browser_lease_loss.store(true, Ordering::SeqCst);
+            enforcer.fail_renew.store(true, Ordering::SeqCst);
+            assert!(controller.check_enforcement_health().is_err());
+            assert!(controller.on_round_completed(next_round, false).is_err());
+            let snapshot = controller.get_snapshot();
+            assert_eq!(snapshot.current_phase, Some(expected_phase));
+            assert_eq!(snapshot.current_work_round, previous_round + u32::from(next_round == "work"));
+            assert_eq!(snapshot.enforcement.state, EnforcementState::Failed);
+            assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 0);
+            controller.execute_emergency_release().unwrap();
+        }
+    }
+
+    #[test]
+    fn retained_policy_preference_change_does_not_resume_enforcement() {
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        let controller = controller_with_rules(enforcer.clone());
+        controller.on_timer_started("work").unwrap();
+        enforcer.browser_lease_loss.store(true, Ordering::SeqCst);
+        enforcer.fail_renew.store(true, Ordering::SeqCst);
+        assert!(controller.check_enforcement_health().is_err());
+        enforcer.fail_renew.store(false, Ordering::SeqCst);
+        controller.set_unblock_during_breaks(true).unwrap();
+        let snapshot = controller.get_snapshot();
+        assert!(snapshot.unblock_during_breaks);
+        assert_eq!(snapshot.enforcement.state, EnforcementState::Failed);
+        assert!(controller.retained_policy_owned.load(Ordering::Relaxed));
+        assert_eq!(enforcer.apply_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 0);
+        controller.execute_emergency_release().unwrap();
+    }
+
+    #[test]
+    fn retained_policy_cleanup_failure_keeps_release_ownership() {
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        let controller = controller_with_rules(enforcer.clone());
+        controller.on_timer_started("work").unwrap();
+        enforcer.browser_lease_loss.store(true, Ordering::SeqCst);
+        enforcer.fail_renew.store(true, Ordering::SeqCst);
+        assert!(controller.check_enforcement_health().is_err());
+        enforcer.fail_release.store(true, Ordering::SeqCst);
+        assert!(controller.execute_emergency_release().is_err());
+        assert_eq!(controller.get_snapshot().enforcement.state, EnforcementState::RecoveryRequired);
+        controller.check_enforcement_health().unwrap();
+        assert_eq!(controller.get_snapshot().enforcement.state, EnforcementState::RecoveryRequired);
+        assert!(controller.retained_policy_owned.load(Ordering::Relaxed));
+        assert!(controller.repository.get_run_journal(&controller.db.lock().unwrap()).unwrap().is_some());
+        enforcer.fail_release.store(false, Ordering::SeqCst);
+        controller.execute_emergency_release().unwrap();
+        assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 2);
+        assert!(!controller.is_locked());
+        assert!(!controller.retained_policy_owned.load(Ordering::Relaxed));
+        assert!(controller.repository.get_run_journal(&controller.db.lock().unwrap()).unwrap().is_none());
+    }
+
+    #[test]
     #[ignore = "requires a disposable guest: native DND behavior is part of enforcement cleanup"]
     fn lease_loss_cannot_overtake_timer_start_command() {
         use crate::timer::engine::{self, TimerCommand, TimerEvent};
@@ -683,7 +860,8 @@ mod tests {
         assert_eq!(std::env::var("POMOTROID_DISPOSABLE_GUEST").as_deref(), Ok("1"));
         let enforcer = Arc::new(FailingEnforcer::new(false));
         enforcer.fail_renew.store(true, std::sync::atomic::Ordering::SeqCst);
-        let controller = Arc::new(controller_with_rules(enforcer));
+        enforcer.browser_lease_loss.store(true, Ordering::SeqCst);
+        let controller = Arc::new(controller_with_rules(enforcer.clone()));
         let (engine, events) = engine::spawn(60, Duration::from_secs(1));
         *controller.engine.lock().unwrap() = Some(engine.clone());
         let (entered_tx, entered_rx) = mpsc::channel();
@@ -717,6 +895,7 @@ mod tests {
         assert!(health_done_rx.recv_timeout(Duration::from_secs(10)).unwrap().is_err());
         assert!(matches!(events.recv_timeout(Duration::from_secs(2)), Ok(TimerEvent::Started { .. })));
         assert!(matches!(events.recv_timeout(Duration::from_secs(2)), Ok(TimerEvent::Paused { .. })));
+        assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 0);
         engine.send(TimerCommand::Shutdown);
     }
 

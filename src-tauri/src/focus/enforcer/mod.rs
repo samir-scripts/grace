@@ -22,6 +22,7 @@ pub enum EnforcerError {
     ProcessTerminationFailed(String),
     PlatformUnsupported,
     LeaseLost,
+    BrowserLeaseLost,
 }
 
 impl fmt::Display for EnforcerError {
@@ -33,6 +34,7 @@ impl fmt::Display for EnforcerError {
             Self::ProcessTerminationFailed(e) => write!(f, "Failed to terminate blocked application: {e}"),
             Self::PlatformUnsupported => write!(f, "Platform is not supported for native enforcement"),
             Self::LeaseLost => write!(f, "Focus enforcement lease was lost"),
+            Self::BrowserLeaseLost => write!(f, "Browser companion connection or policy acknowledgement was lost"),
         }
     }
 }
