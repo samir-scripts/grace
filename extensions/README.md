@@ -24,8 +24,10 @@ Firefox 140 and later also supports Firefox's built-in data consent prompt.
 2. Open `chrome://extensions` in your browser.
 3. Enable **Developer mode** toggle in top-right.
 4. Click **Load unpacked** and select `extensions/dist/chrome`.
-5. Click the extension icon or open extension Details > Extension options.
-6. Paste the **Pairing Token** from Pomotroid Settings > Sessions, and click **Save & Connect**.
+5. In the matching Grace desktop build, open Settings > Sessions and use Chrome's **Install Extension** action to register its native host.
+6. Open the companion's Details > Extension options and select **Accept & connect**.
+7. Assign the connected profile to Chrome in Grace Settings > Sessions. Manual
+   pairing under Advanced is a fallback, not proof that automatic pairing works.
 
 The unpacked Chrome companion uses the Chrome Web Store draft's public key and
 fixed ID `cgibenlmgmblmalggjalnoaikjkdnoid`. Chrome Web Store manages the signing

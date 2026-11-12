@@ -1,0 +1,117 @@
+{
+  "extension_id": "cgibenlmgmblmalggjalnoaikjkdnoid",
+  "extension_version": "1.1.0",
+  "desktop_version": "1.7.1",
+  "build_source_base": "dbdbdb70bd84cbf0cda3a0c3b8f1f12b625ddecb",
+  "build_source_status": "identity changes were uncommitted during build",
+  "archive_files": [
+    "MonaSansVF.woff2",
+    "appearance.js",
+    "background.js",
+    "blocked.html",
+    "blocked.js",
+    "bridge-auth.js",
+    "consent.js",
+    "manifest.json",
+    "native-pairing.js",
+    "options.css",
+    "options.html",
+    "options.js",
+    "policy.js",
+    "rules.json"
+  ],
+  "packaged_chrome_manifest_matches_source": true,
+  "packaged_native_host_present": true,
+  "artifacts": [
+    {
+      "path": "src-tauri/target/release/bundle/chrome/grace-focus-companion-1.1.0.zip",
+      "size_bytes": 538708,
+      "sha256": "bf71aff118eefdc887bdeb868402127268ceffb5feee457d7ff747b0c2d9d58b"
+    },
+    {
+      "path": "src-tauri/target/release/bundle/dmg/grace._1.7.1_aarch64.dmg",
+      "size_bytes": 12934507,
+      "sha256": "32161f15d25b43af540391f7ddb5549796091ae896a0a92ac0104e2ad59c75b3"
+    },
+    {
+      "path": "src-tauri/target/release/bundle/macos/grace..app/Contents/MacOS/pomotroid",
+      "size_bytes": 21021408,
+      "sha256": "e87f911469cc83644367977f3883523f79284683882f7c0b25cee0d8568369a0"
+    },
+    {
+      "path": "src-tauri/target/release/bundle/macos/grace..app/Contents/MacOS/pomotroid-native-host",
+      "size_bytes": 690704,
+      "sha256": "2fffacd06b5fc819b34bcf9436bfc45df7d4f965ae0359c31382470e67c01f5f"
+    }
+  ],
+  "native_acceptance": {
+    "macos": "blocked: no disposable guest available",
+    "windows": "blocked: no native disposable environment available",
+    "linux": "blocked: no native disposable environment available"
+  },
+  "submission": "held; no upload or review submission performed",
+  "identity_fix_commit": "8f425953fe080cd39d0f9166218c7c53aec62cd3",
+  "verification": {
+    "npm run check": {
+      "status": "passed",
+      "errors": 0,
+      "warnings": 0
+    },
+    "npm test": {
+      "status": "passed",
+      "passed": 116,
+      "skipped": 2,
+      "skip_reason": "optional capture tests"
+    },
+    "node --test extensions/tests/playwright-blocking.test.mjs": {
+      "status": "passed",
+      "passed": 2,
+      "limitation": "isolated Chromium broker fixture; not packaged native acceptance"
+    },
+    "cargo test --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_commands_callable": {
+      "status": "passed",
+      "passed": 198,
+      "ignored": 17,
+      "excluded": "test_accessibility_commands_callable"
+    },
+    "cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings": {
+      "status": "passed"
+    },
+    "npm run tauri build -- --bundles app,dmg": {
+      "status": "passed",
+      "platform": "macOS arm64",
+      "signed_extension_guard": "enabled"
+    },
+    "chrome_identity_regressions": {
+      "status": "RED -> GREEN",
+      "node_key_id": true,
+      "rust_store_origin": true,
+      "isolated_registration_replacement": true
+    },
+    "non_chrome_preservation": {
+      "status": "passed",
+      "source_artifact_hashes_unchanged": 17,
+      "signed_firefox_output_identical": true
+    }
+  },
+  "ignored_rust_tests": [
+    "test focus::app_catalog::tests::native_catalog_smoke ... ignored, reads the real device application catalog and native icons",
+    "test focus::controller::tests::lease_loss_cannot_overtake_timer_start_command ... ignored, requires a disposable guest: native DND behavior is part of enforcement cleanup",
+    "test disconnected_nonrequired_companion_causes_lease_loss ... ignored, native browser enforcement requires a disposable guest",
+    "test late_unmapped_browser_invalidates_active_protection ... ignored, native browser enforcement requires a disposable guest",
+    "test mixed_rules_require_browser_before_inspecting_applications ... ignored, native browser enforcement requires a disposable guest",
+    "test stale_same_profile_socket_cannot_update_or_remove_replacement ... ignored, native browser enforcement requires a disposable guest",
+    "test test_browser_bridge_applies_and_releases_with_ack ... ignored, native browser enforcement requires a disposable guest",
+    "test test_browser_bridge_detects_disconnect_for_required_profile ... ignored, native browser enforcement requires a disposable guest",
+    "test test_browser_bridge_fails_apply_on_client_error ... ignored, native browser enforcement requires a disposable guest",
+    "test test_browser_bridge_fails_when_domains_non_empty_and_no_clients ... ignored, native browser enforcement requires a disposable guest",
+    "test test_browser_bridge_heartbeat_does_not_forge_ack ... ignored, native browser enforcement requires a disposable guest",
+    "test test_browser_bridge_requires_all_connected_participants_even_with_required_profile ... ignored, native browser enforcement requires a disposable guest",
+    "test test_e2e_browser_onboarding_lifecycle ... ignored, native browser enforcement requires a disposable guest",
+    "test passphrase_clear_waits_until_inflight_emergency_release_finishes ... ignored, requires disposable guest: release invokes native Do Not Disturb controls",
+    "test valid_emergency_passphrase_releases_active_session_without_deadlock ... ignored, requires disposable guest: release invokes native Do Not Disturb controls",
+    "test blocked_app_relaunch_is_stopped_until_release ... ignored, launches a disposable macOS GUI application; requires swiftc and a GUI session",
+    "test occupied_bridge_port_shows_error_then_exits_without_aborting ... ignored, requires an exclusive disposable macOS guest GUI and native-dialog acknowledgement"
+  ],
+  "observed_at_utc": "2026-11-12T18:26:45.751348+00:00"
+}

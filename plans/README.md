@@ -1,5 +1,7 @@
 # Implementation plans
 
+[Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — store identity aligned and public privacy access verified; checks and macOS production packaging pass. Actual packaged Chrome acceptance on macOS/Windows/Linux remains blocked by missing disposable environments; no submission.
+
 [grace. UI consistency and accessibility](grace-ui-consistency-plan.md) — implementation and verification ledger. [Batch 5 native/signing report](grace-ui-batch5-report.md): native development checks, Clippy and production build pass; signed 1.1.0 is approved and a packaged Zen update/reconnect passed; Firefox 115 support is retained with its consent fallback; pre-consent appearance and remaining browser acceptance are open.
 
 [Reproducible Tart Zen/Discord acceptance](tart-focus-acceptance-plan.md) — implemented and verified in batches. [Evidence report](tart-focus-acceptance-report.md) records two-clone provisioning, native website/Discord checks, completion/reset repairs, explicit inconclusive cases and existing Clippy blockers.
