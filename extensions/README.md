@@ -27,12 +27,18 @@ Firefox 140 and later also supports Firefox's built-in data consent prompt.
 5. Click the extension icon or open extension Details > Extension options.
 6. Paste the **Pairing Token** from Pomotroid Settings > Sessions, and click **Save & Connect**.
 
-The unpacked Chrome companion uses the fixed ID `ddiojihepmbimcfoefnebpolgaljlcfn`.
-After upgrading from a path-derived unpacked ID, remove the old companion, load
-the new build, pair it again, and update any required browser profile in Sessions.
-Re-register the native host from Pomotroid so its allowed origin uses the new ID.
-This development public key does not include a private signing key; a published
-Chrome Web Store build requires a separately managed matching signing identity.
+The unpacked Chrome companion uses the Chrome Web Store draft's public key and
+fixed ID `cgibenlmgmblmalggjalnoaikjkdnoid`. Chrome Web Store manages the signing
+identity; the manifest contains only its public key.
+
+When upgrading from the old development ID `ddiojihepmbimcfoefnebpolgaljlcfn` or
+a path-derived unpacked ID, remove the old companion and load the rebuilt
+extension. Install the matching updated Grace desktop package and re-register
+the native host from Settings > Sessions so its allowed origin is replaced.
+Accept the companion disclosure to pair automatically, then assign the new
+connected profile to Chrome in Sessions and replace any old required profile.
+Older Grace packages authorize the previous ID and cannot pair automatically
+with this extension; updating the extension alone is insufficient.
 
 ### Firefox / Zen
 1. Run `node scripts/build-browser-extensions.mjs` to generate `extensions/dist/firefox`.

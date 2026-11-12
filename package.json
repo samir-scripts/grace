@@ -22,7 +22,7 @@
     "check": "npm run paraglide:compile && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "npm run paraglide:compile && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test:unit": "node --test src/lib/utils/theme.test.mjs src/lib/stores/navigation.test.mjs",
-    "test:extensions": "node --test extensions/tests/appearance.test.mjs extensions/tests/policy.test.mjs extensions/tests/policies.test.mjs extensions/tests/bridge-auth.test.mjs extensions/tests/background-auth.test.mjs extensions/tests/consent.test.mjs extensions/tests/native_pairing.test.mjs extensions/tests/unsigned-gecko-package.test.mjs extensions/tests/signed-gecko-package.test.mjs extensions/tests/sign-firefox.test.mjs",
+    "test:extensions": "node --test extensions/tests/chrome-identity.test.mjs extensions/tests/appearance.test.mjs extensions/tests/policy.test.mjs extensions/tests/policies.test.mjs extensions/tests/bridge-auth.test.mjs extensions/tests/background-auth.test.mjs extensions/tests/consent.test.mjs extensions/tests/native_pairing.test.mjs extensions/tests/unsigned-gecko-package.test.mjs extensions/tests/signed-gecko-package.test.mjs extensions/tests/sign-firefox.test.mjs",
     "test:motion": "node --test tests/motion.test.mjs",
     "test:stats-layout": "node --test tests/stats-layout.test.mjs",
     "test:browser-setup": "node --test tests/browser-setup.test.mjs",
