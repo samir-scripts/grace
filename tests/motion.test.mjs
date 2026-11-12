@@ -789,3 +789,65 @@ test('titlebar is 48px, displays grace. in settings and stats, and delegates dra
     await context.close();
   }
 });
+
+test('session selector has themed pill, no chevron, aligns with dial center, and animates dropdown pop', async () => {
+  const context = await browser.newContext({ viewport: { width: 360, height: 478 }, reducedMotion: 'no-preference' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/`);
+    await page.waitForSelector('.titlebar');
+
+    // 1. Chevron down-arrow is removed
+    assert.equal(await page.locator('.session-btn .chevron').count(), 0, 'Chevron down arrow must be removed');
+
+    // 2. Themed pill background
+    const pillTheme = await page.evaluate(() => {
+      const btn = document.querySelector('.session-btn');
+      const tb = document.querySelector('.titlebar');
+      return {
+        btnBg: btn ? window.getComputedStyle(btn).backgroundColor : null,
+        tbBg: tb ? window.getComputedStyle(tb).backgroundColor : null,
+      };
+    });
+    assert.ok(pillTheme.btnBg, 'Session button has background color');
+    assert.notEqual(pillTheme.btnBg, 'rgba(0, 0, 0, 0)', 'Session button background is not transparent');
+    assert.notEqual(pillTheme.btnBg, pillTheme.tbBg, 'Session button background is distinct from titlebar background');
+
+    // 3. Dial center alignment
+    const centers = await page.evaluate(() => {
+      const btn = document.querySelector('.session-btn');
+      const dial = document.querySelector('.dial-stack');
+      if (!btn || !dial) return null;
+      const b = btn.getBoundingClientRect();
+      const d = dial.getBoundingClientRect();
+      return {
+        btnCenter: (b.left + b.right) / 2,
+        dialCenter: (d.left + d.right) / 2,
+      };
+    });
+    assert.ok(centers, 'Button and dial exist');
+    assert.ok(
+      Math.abs(centers.btnCenter - centers.dialCenter) <= 1,
+      `Session button center (${centers.btnCenter}) must align with dial center (${centers.dialCenter})`
+    );
+
+    // 4. Dropdown pop animation when opened
+    await page.locator('.session-btn').click();
+    await page.waitForSelector('.dropdown-menu');
+    const anims = await page.evaluate(() => {
+      const menu = document.querySelector('.dropdown-menu');
+      const firstItem = document.querySelector('.dropdown-item');
+      return {
+        menuAnim: menu ? window.getComputedStyle(menu).animationName : null,
+        itemAnim: firstItem ? window.getComputedStyle(firstItem).animationName : null,
+      };
+    });
+    assert.ok(anims.menuAnim?.includes('dropdown-pop'), `Dropdown menu must use dropdown-pop animation (got ${anims.menuAnim})`);
+    assert.ok(anims.itemAnim?.includes('dropdown-item-rise'), `Dropdown items must use dropdown-item-rise animation (got ${anims.itemAnim})`);
+
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.dropdown-menu').count(), 0, 'Escape closes dropdown');
+  } finally {
+    await context.close();
+  }
+});

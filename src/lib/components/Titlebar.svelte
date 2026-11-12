@@ -380,7 +380,7 @@
 
   .center-selector {
     position: absolute;
-    left: 68px;
+    left: 100px;
     right: 100px;
     min-width: 0;
     display: flex;
@@ -415,9 +415,16 @@
       display: none;
     }
   }
-
   .titlebar.macos .center-selector {
-    right: 68px;
+    left: 72px;
+    right: 72px;
+  }
+
+  @media (max-width: 299px) {
+    .titlebar:not(.macos) .center-selector {
+      left: 72px;
+      right: 100px;
+    }
   }
 
   .btn-icon {

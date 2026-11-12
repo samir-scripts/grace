@@ -474,6 +474,9 @@ pub fn run() {
                 }
             }
 
+            #[cfg(target_os = "macos")]
+            sync_macos_traffic_lights(&main_window);
+
             // Persist window position/size on move and resize, and close child windows
             // when the main window is truly closed (not hidden to tray).
             let db_for_close = db.clone();
@@ -483,6 +486,10 @@ pub fn run() {
             let win_for_pos = main_window.clone();
             let view_state_for_pos = Arc::clone(&window_view_state);
             main_window.on_window_event(move |event| {
+                #[cfg(target_os = "macos")]
+                if matches!(event, tauri::WindowEvent::Resized(_)) {
+                    sync_macos_traffic_lights(&win_for_pos);
+                }
                 match event {
                     tauri::WindowEvent::CloseRequested { api, .. } => {
                         let min_to_tray = db_for_close
@@ -607,6 +614,54 @@ pub fn run() {
                 }
             }
         });
+}
+
+/// Keep native caption buttons on the 48px header's center line after AppKit layout.
+#[cfg(target_os = "macos")]
+pub(crate) fn sync_macos_traffic_lights(window: &tauri::WebviewWindow) {
+    let native_window = window.clone();
+    if let Err(error) = window.run_on_main_thread(move || {
+        use objc2::{msg_send, runtime::AnyObject};
+        use objc2_foundation::{NSPoint, NSRect};
+
+        let Ok(pointer) = native_window.ns_window() else { return; };
+        let ns_window = pointer as *mut AnyObject;
+        // SAFETY: Tauri owns this NSWindow and dispatches this closure on the AppKit thread.
+        unsafe {
+            let style: usize = msg_send![ns_window, styleMask];
+            if style & (1 << 14) != 0 { return; } // Fullscreen uses native caption layout.
+            let close: *mut AnyObject = msg_send![ns_window, standardWindowButton: 0usize];
+            if close.is_null() { return; }
+            let parent: *mut AnyObject = msg_send![close, superview];
+            if parent.is_null() { return; }
+            let container: *mut AnyObject = msg_send![parent, superview];
+            if container.is_null() { return; }
+            let bounds: NSRect = msg_send![close, bounds];
+            let base: NSRect = msg_send![close, convertRect: bounds, toView: std::ptr::null::<AnyObject>()];
+            let frame: NSRect = msg_send![ns_window, frame];
+            let delta = frame.size.height - 24.0 - (base.origin.y + base.size.height / 2.0);
+            if delta.abs() > 0.25 {
+                let mut caption: NSRect = msg_send![container, frame];
+                caption.origin.y += delta;
+                caption.size.height -= delta;
+                let _: () = msg_send![container, setFrame: caption];
+            }
+            let close_frame: NSRect = msg_send![close, frame];
+            let minimize: *mut AnyObject = msg_send![ns_window, standardWindowButton: 1usize];
+            if minimize.is_null() { return; }
+            let minimize_frame: NSRect = msg_send![minimize, frame];
+            let spacing = minimize_frame.origin.x - close_frame.origin.x;
+            for index in 0..3usize {
+                let button: *mut AnyObject = msg_send![ns_window, standardWindowButton: index];
+                if button.is_null() { continue; }
+                let rect: NSRect = msg_send![button, frame];
+                let origin = NSPoint { x: 14.0 + index as f64 * spacing, y: rect.origin.y };
+                let _: () = msg_send![button, setFrameOrigin: origin];
+            }
+        }
+    }) {
+        log::warn!("Could not align native caption buttons: {error}");
+    }
 }
 
 pub fn matches_macos_application_menu_title(

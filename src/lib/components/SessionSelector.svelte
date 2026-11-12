@@ -95,21 +95,19 @@
     <span class="session-name">
       {activeProfile ? activeProfile.name : 'Pomodoro'}
     </span>
-    {#if !isLocked}
-      <span class="chevron" class:rotated={isOpen} aria-hidden="true">▾</span>
-    {/if}
   </button>
 
   {#if isOpen && !isLocked}
     <div class="dropdown-menu" role="listbox">
       {#if profiles.length > 0}
-        {#each profiles as profile (profile.id)}
+        {#each profiles as profile, idx (profile.id)}
           {@const isSelected = activeProfile?.id === profile.id}
           <button
             class="dropdown-item"
             class:selected={isSelected}
             role="option"
             aria-selected={isSelected}
+            style="--delay: {idx * 25}ms"
             onclick={() => handleSelect(profile.id)}
           >
             <div class="profile-info">
@@ -139,7 +137,7 @@
       {/if}
 
       <div class="menu-divider"></div>
-      <button class="dropdown-item manage-link" onclick={openSettingsSessions}>
+      <button class="dropdown-item manage-link" style="--delay: {profiles.length * 25}ms" onclick={openSettingsSessions}>
         <svg
           class="manage-icon"
           width="13"
@@ -179,19 +177,26 @@
   }
 
   .session-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    padding: 3px 8px;
-    background: var(--color-background);
-    border: 1px solid transparent;
+    height: 26px;
+    padding: 0 12px;
+    background: var(--color-background-light);
+    border: 1px solid var(--color-separator);
     border-radius: 6px;
-    color: var(--color-foreground-darker);
+    color: var(--color-foreground);
     font-family: inherit;
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    transition: background var(--transition-snappy), color var(--transition-snappy), border-color var(--transition-snappy), transform 100ms ease-out;
+    transition:
+      background var(--transition-snappy),
+      color var(--transition-snappy),
+      border-color var(--transition-snappy),
+      transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
     min-width: 0;
     max-width: min(140px, 100%);
   }
@@ -201,13 +206,14 @@
   }
   .session-btn:hover {
     background: var(--color-hover);
+    border-color: var(--color-border);
     color: var(--color-foreground);
   }
 
   .session-btn.active {
-    background: var(--color-hover);
+    background: var(--color-selected, var(--color-hover));
+    border-color: var(--color-border);
     color: var(--color-foreground);
-    border-color: var(--color-separator);
   }
 
   .session-btn.locked {
@@ -220,6 +226,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: center;
   }
 
   .lock-indicator {
@@ -227,20 +234,13 @@
     flex-shrink: 0;
   }
 
-  .chevron {
-    font-size: 9px;
-    transition: transform var(--transition-snappy);
-  }
-
-  .chevron.rotated {
-    transform: rotate(180deg);
-  }
 
   .dropdown-menu {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 6px);
     left: 50%;
     transform: translateX(-50%);
+    transform-origin: top center;
     min-width: 180px;
     max-width: 240px;
     max-height: calc(100vh - 56px);
@@ -255,6 +255,18 @@
     flex-direction: column;
     gap: 2px;
     z-index: 100;
+    animation: dropdown-pop 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes dropdown-pop {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-6px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
   }
 
   .dropdown-item {
@@ -272,6 +284,19 @@
     text-align: left;
     width: 100%;
     transition: background var(--transition-snappy), color var(--transition-snappy);
+    animation: dropdown-item-rise 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--delay, 0ms);
+  }
+
+  @keyframes dropdown-item-rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .dropdown-item:hover {
@@ -330,10 +355,11 @@
 
   @media (prefers-reduced-motion: reduce) {
     .session-btn,
-    .chevron,
+    .dropdown-menu,
     .dropdown-item {
       transition: none !important;
       transform: none !important;
+      animation: none !important;
     }
   }
 </style>
