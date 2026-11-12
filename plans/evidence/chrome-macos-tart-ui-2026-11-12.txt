@@ -1,0 +1,618 @@
+CAPTURE native-crash-candidate-existing-tab.txt
+AXGroup | Focus Session Active - Google Chrome | 
+AXButton | Back | 
+AXButton | Forward | 
+AXButton | Reload | 
+AXPopUpButton | grace. Focus Companion | 
+AXButton | Bookmark this tab | 
+AXPopUpButton | grace. Focus Companion | 
+AXPopUpButton | Extensions | 
+AXButton | You | 
+AXPopUpButton | Chrome | 
+AXWebArea | Focus Session Active | 
+AXHeading | Focus Session Active | 1
+AXStaticText | Focus Session Active | Focus Session Active
+AXStaticText | This website is blocked while your Pomodoro work round is in progress. | This website is blocked while your Pomodoro work round is in progress.
+AXStaticText | example.com | example.com
+AXStaticText | Stay focused! This page will become accessible once your break begins or the session finishes. | Stay focused! This page will become accessible once your break begins or the session finishes.
+AXPopUpButton | Tab search | 
+AXRadioButton | Focus Session Active - Memory usage - 36.9 MB | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXRadioButton | Example Domain - Memory usage - 33.1 MB | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active - Memory usage - 29.4 MB | true
+AXButton | Close | 
+AXButton | New Tab |
+
+CAPTURE native-crash-recovered-browser.txt
+AXGroup | example.com - Network error - Google Chrome | 
+AXButton | Back | 
+AXButton | Forward | 
+AXButton | Reload | 
+AXPopUpButton | View site information | 
+AXButton | Bookmark this tab | 
+AXPopUpButton | grace. Focus Companion
+AXPopUpButton | Extensions | 
+AXButton | You | 
+AXPopUpButton | Chrome | 
+AXWebArea | example.com | 
+AXHeading | example.com is blocked | 1
+AXStaticText | example.com | example.com
+AXStaticText |  is blocked |  is blocked
+AXStaticText | This page has been blocked by an extension | This page has been blocked by an extension
+AXStaticText | Try disabling your extensions. | Try disabling your extensions.
+AXStaticText | ERR_BLOCKED_BY_CLIENT | ERR_BLOCKED_BY_CLIENT
+AXButton | Reload | 
+AXPopUpButton | Tab search | 
+AXRadioButton | Focus Session Active - Memory usage - 36.9 MB | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXRadioButton | Example Domain - Memory usage - 33.1 MB | false
+AXButton | Close | 
+AXRadioButton | Focus Session Active - Memory usage - 8.1 MB | false
+AXButton | Close | 
+AXRadioButton | example.com - Network error | true
+AXButton | Close | 
+AXButton | New Tab |
+
+CAPTURE native-crash-recovered-native.txt
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXPopUpButton | Chrome Acceptance | 
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 0
+AXGroup | missing value | 
+AXStaticText | 10:00 | 10:00
+AXGroup | missing value | 
+AXStaticText | FOCUS | FOCUS
+AXGroup | missing value | 
+AXStaticText | Distraction blocking disconnected and the timer paused. Reconnect, then retry. | Distraction blocking disconnected and the timer paused. Reconnect, then retry.
+AXButton | Retry | missing value
+AXButton | Restart round | missing value
+AXButton | Play | missing value
+AXButton | Skip round | missing value
+AXStaticText | 1  |  1 | 1  |  1
+AXButton | Reset | missing value
+AXButton | Mute | missing value
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value
+
+CAPTURE native-final-chrome-restart.txt
+AXGroup | grace. Focus Companion - Google Chrome | 
+AXButton | Back | 
+AXButton | Forward | 
+AXButton | Reload | 
+AXPopUpButton | grace. Focus Companion | 
+AXButton | Bookmark this tab | 
+AXPopUpButton | grace. Focus Companion | 
+AXPopUpButton | Extensions | 
+AXButton | You | 
+AXPopUpButton | Chrome | 
+AXWebArea | grace. Focus Companion | 
+AXStaticText | grace. / focus companion | grace. / focus companion
+AXHeading | A little space to focus. | 1
+AXStaticText | A little space to focus. | A little space to focus.
+AXStaticText | Connect this browser to grace. on your computer to protect your focus sessions. | Connect this browser to grace. on your computer to protect your focus sessions.
+AXGroup | Connect your browser | 
+AXHeading | Connect your browser | 2
+AXStaticText | Connect your browser | Connect your browser
+AXStaticText | Connected | Connected
+AXStaticText | Declining or stopping sharing disconnects the companion. Protected sessions cannot start or continue without their required browser. Existing blocking rules can remain until a later authenticated release. Disabling or uninstalling this extension removes its protection. | Declining or stopping sharing disconnects the companion. Protected sessions cannot start or continue without their required browser. Existing blocking rules can remain until a later authenticated release. Disabling or uninstalling this extension removes its protection.
+AXStaticText | Data sharing is enabled. | Data sharing is enabled.
+AXButton | Stop sharing and disconnect | 
+AXButton | Advanced pairing | 
+AXStaticText | Advanced pairing | Advanced pairing
+AXButton | Uninstall extension | 
+AXPopUpButton | Tab search | 
+AXRadioButton | grace. Focus Companion - Memory usage - 34.6 MB | true
+AXButton | Close | 
+AXButton | New Tab |
+
+CAPTURE native-final-emergency-browser.txt
+AXGroup | Example Domain - Google Chrome | 
+AXButton | Back | 
+AXButton | Forward | 
+AXButton | Reload | 
+AXPopUpButton | View site information | 
+AXButton | Bookmark this tab | 
+AXPopUpButton | grace. Focus Companion
+AXPopUpButton | Extensions | 
+AXButton | You | 
+AXPopUpButton | Chrome | 
+AXWebArea | Example Domain | 
+AXStaticText | This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes. | This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.
+AXStaticText | هذا النطاق مُخصص للاستخدام في أمثلة التوثيق دون الحاجة إلى إذن. هذه ليست خدمة، يُرجى تجنب الاعتماد عليها لأغراض الاختبار والمراقبة. | هذا النطاق مُخصص للاستخدام في أمثلة التوثيق دون الحاجة إلى إذن. هذه ليست خدمة، يُرجى تجنب الاعتماد عليها لأغراض الاختبار والمراقبة.
+AXStaticText | 该域名仅用于文档示例，无需获得许可。这并非一项服务，请勿将其用于测试和监控目的。 | 该域名仅用于文档示例，无需获得许可。这并非一项服务，请勿将其用于测试和监控目的。
+AXStaticText | L’usage de ce domaine est réservé à des exemples de documentation, sans autorisation préalable. Il ne s’agit pas d’un service ; son utilisation à des fins de test ou de surveillance est à éviter. | L’usage de ce domaine est réservé à des exemples de documentation, sans autorisation préalable. Il ne s’agit pas d’un service ; son utilisation à des fins de test ou de surveillance est à éviter.
+AXStaticText | Данный домен предназначен для использования в примерах документации без необходимости получения предварительного разрешения. Это не сервис; не рекомендуется его использование для тестирования и мониторинга. | Данный домен предназначен для использования в примерах документации без необходимости получения предварительного разрешения. Это не сервис; не рекомендуется его использование для тестирования и мониторинга.
+AXStaticText | Este dominio está destinado al uso en ejemplos de documentación sin necesidad de permiso. Esto no es un servicio; evitar utilizarlo para realizar pruebas o monitoreos. | Este dominio está destinado al uso en ejemplos de documentación sin necesidad de permiso. Esto no es un servicio; evitar utilizarlo para realizar pruebas o monitoreos.
+AXLink | Learn more | 
+AXStaticText | Learn more | Learn more
+AXPopUpButton | Tab search | 
+AXRadioButton | Example Domain - Memory usage - 21.3 MB | true
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXButton | New Tab |
+
+CAPTURE native-final-emergency-dialog.txt
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXPopUpButton | Chrome Acceptance | 
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 0
+AXGroup | missing value | 
+AXStaticText | 09:06 | 09:06
+AXGroup | missing value | 
+AXStaticText | FOCUS | FOCUS
+AXGroup | missing value | 
+AXStaticText | Distraction blocking disconnected and the timer paused. Reconnect, then retry. | Distraction blocking disconnected and the timer paused. Reconnect, then retry.
+AXButton | Retry | missing value
+AXButton | Restart round | missing value
+AXButton | Play | missing value
+AXButton | Skip round | missing value
+AXStaticText | 1  |  1 | 1  |  1
+AXButton | Reset | missing value
+AXButton | Mute | missing value
+AXGroup | missing value | 
+AXHeading | Emergency Exit | 2
+AXStaticText | Emergency Exit | Emergency Exit
+AXButton | Close dialog | missing value
+AXGroup | missing value | 
+AXStaticText | Focus session is currently locked. To exit early, you must perform a deliberate action. | Focus session is currently locked. To exit early, you must perform a deliberate action.
+AXButton | 60-Second Hold | missing value
+AXGroup | missing value | 
+AXStaticText | Press and hold the button below (or hold the  | Press and hold the button below (or hold the 
+AXGroup | missing value | 
+AXStaticText | Spacebar | Spacebar
+AXStaticText | ) continuously for  | ) continuously for 
+AXStaticText | 60 seconds | 60 seconds
+AXStaticText | . Releasing early resets the timer. | . Releasing early resets the timer.
+AXButton | Hold for 60 seconds to unlock | missing value
+AXGroup | missing value | 
+AXStaticText | 0% | 0%
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value
+
+CAPTURE native-final-emergency-native.txt
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXPopUpButton | Chrome Acceptance | 
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 0
+AXGroup | missing value | 
+AXStaticText | 10:00 | 10:00
+AXGroup | missing value | 
+AXStaticText | FOCUS | FOCUS
+AXButton | Restart round | missing value
+AXButton | Play | missing value
+AXButton | Skip round | missing value
+AXStaticText | 1  |  1 | 1  |  1
+AXButton | Reset | missing value
+AXButton | Mute | missing value
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value
+
+CAPTURE native-final-natural-break-browser.txt
+AXGroup | example.com - Network error - Google Chrome | 
+AXButton | Back | 
+AXButton | Forward | 
+AXButton | Reload | 
+AXPopUpButton | View site information | 
+AXButton | Bookmark this tab | 
+AXPopUpButton | grace. Focus Companion
+AXPopUpButton | Extensions | 
+AXButton | You | 
+AXPopUpButton | Chrome | 
+AXWebArea | example.com | 
+AXHeading | example.com is blocked | 1
+AXStaticText | example.com | example.com
+AXStaticText |  is blocked |  is blocked
+AXStaticText | This page has been blocked by an extension | This page has been blocked by an extension
+AXStaticText | Try disabling your extensions. | Try disabling your extensions.
+AXStaticText | ERR_BLOCKED_BY_CLIENT | ERR_BLOCKED_BY_CLIENT
+AXButton | Reload | 
+AXPopUpButton | Tab search | 
+AXRadioButton | example.com - Network error | true
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXButton | New Tab |
+
+CAPTURE native-final-natural-break-native.txt
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXPopUpButton | Chrome Acceptance | 
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 0
+AXGroup | missing value | 
+AXStaticText | 00:18 | 00:18
+AXGroup | missing value | 
+AXStaticText | LONG BREAK | LONG BREAK
+AXButton | Restart round | missing value
+AXButton | Pause | missing value
+AXButton | Skip round | missing value
+AXStaticText | 1  |  1 | 1  |  1
+AXButton | Reset | missing value
+AXButton | Mute | missing value
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value
+
+CAPTURE native-final-natural-complete-native.txt
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXPopUpButton | Chrome Acceptance | 
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 0
+AXGroup | missing value | 
+AXStaticText | 01:00 | 01:00
+AXGroup | missing value | 
+AXStaticText | FOCUS | FOCUS
+AXButton | Restart round | missing value
+AXButton | Play | missing value
+AXButton | Skip round | missing value
+AXStaticText | 1  |  1 | 1  |  1
+AXButton | Reset | missing value
+AXButton | Mute | missing value
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value
+
+CAPTURE native-final-natural-release-browser.txt
+AXGroup | Example Domain - Google Chrome | 
+AXButton | Back | 
+AXButton | Forward | 
+AXButton | Reload | 
+AXPopUpButton | View site information | 
+AXButton | Bookmark this tab | 
+AXPopUpButton | grace. Focus Companion
+AXPopUpButton | Extensions | 
+AXButton | You | 
+AXPopUpButton | Chrome | 
+AXWebArea | Example Domain | 
+AXStaticText | This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes. | This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.
+AXStaticText | هذا النطاق مُخصص للاستخدام في أمثلة التوثيق دون الحاجة إلى إذن. هذه ليست خدمة، يُرجى تجنب الاعتماد عليها لأغراض الاختبار والمراقبة. | هذا النطاق مُخصص للاستخدام في أمثلة التوثيق دون الحاجة إلى إذن. هذه ليست خدمة، يُرجى تجنب الاعتماد عليها لأغراض الاختبار والمراقبة.
+AXStaticText | 该域名仅用于文档示例，无需获得许可。这并非一项服务，请勿将其用于测试和监控目的。 | 该域名仅用于文档示例，无需获得许可。这并非一项服务，请勿将其用于测试和监控目的。
+AXStaticText | L’usage de ce domaine est réservé à des exemples de documentation, sans autorisation préalable. Il ne s’agit pas d’un service ; son utilisation à des fins de test ou de surveillance est à éviter. | L’usage de ce domaine est réservé à des exemples de documentation, sans autorisation préalable. Il ne s’agit pas d’un service ; son utilisation à des fins de test ou de surveillance est à éviter.
+AXStaticText | Данный домен предназначен для использования в примерах документации без необходимости получения предварительного разрешения. Это не сервис; не рекомендуется его использование для тестирования и мониторинга. | Данный домен предназначен для использования в примерах документации без необходимости получения предварительного разрешения. Это не сервис; не рекомендуется его использование для тестирования и мониторинга.
+AXStaticText | Este dominio está destinado al uso en ejemplos de documentación sin necesidad de permiso. Esto no es un servicio; evitar utilizarlo para realizar pruebas o monitoreos. | Este dominio está destinado al uso en ejemplos de documentación sin necesidad de permiso. Esto no es un servicio; evitar utilizarlo para realizar pruebas o monitoreos.
+AXLink | Learn more | 
+AXStaticText | Learn more | Learn more
+AXPopUpButton | Tab search | 
+AXRadioButton | Example Domain - Memory usage - 21.1 MB | true
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXButton | New Tab |
+
+CAPTURE native-final-natural-work-browser.txt
+AXGroup | example.com - Network error - Google Chrome | 
+AXButton | Back | 
+AXButton | Forward | 
+AXButton | Reload | 
+AXPopUpButton | View site information | 
+AXButton | Bookmark this tab | 
+AXPopUpButton | grace. Focus Companion
+AXPopUpButton | Extensions | 
+AXButton | You | 
+AXPopUpButton | Chrome | 
+AXWebArea | example.com | 
+AXHeading | example.com is blocked | 1
+AXStaticText | example.com | example.com
+AXStaticText |  is blocked |  is blocked
+AXStaticText | This page has been blocked by an extension | This page has been blocked by an extension
+AXStaticText | Try disabling your extensions. | Try disabling your extensions.
+AXStaticText | ERR_BLOCKED_BY_CLIENT | ERR_BLOCKED_BY_CLIENT
+AXButton | Reload | 
+AXPopUpButton | Tab search | 
+AXRadioButton | example.com - Network error | true
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXButton | New Tab |
+
+CAPTURE native-final-natural-work-native.txt
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXPopUpButton | Chrome Acceptance | 
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 0
+AXGroup | missing value | 
+AXStaticText | 00:24 | 00:24
+AXGroup | missing value | 
+AXStaticText | FOCUS | FOCUS
+AXButton | Restart round | missing value
+AXButton | Pause | missing value
+AXButton | Skip round | missing value
+AXStaticText | 1  |  1 | 1  |  1
+AXButton | Reset | missing value
+AXButton | Mute | missing value
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value
+
+CAPTURE native-final-quit-guard-native.txt
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXPopUpButton | Chrome Acceptance | 
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 0
+AXGroup | missing value | 
+AXStaticText | 00:05 | 00:05
+AXGroup | missing value | 
+AXStaticText | FOCUS | FOCUS
+AXButton | Restart round | missing value
+AXButton | Pause | missing value
+AXButton | Skip round | missing value
+AXStaticText | 1  |  1 | 1  |  1
+AXButton | Reset | missing value
+AXButton | Mute | missing value
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value
+
+CAPTURE native-final-reconsent.txt
+AXGroup | grace. Focus Companion - Google Chrome | 
+AXButton | Back | 
+AXButton | Forward | 
+AXButton | Reload | 
+AXPopUpButton | grace. Focus Companion | 
+AXButton | Bookmark this tab | 
+AXPopUpButton | grace. Focus Companion | 
+AXPopUpButton | Extensions | 
+AXButton | You | 
+AXPopUpButton | Chrome | 
+AXWebArea | grace. Focus Companion | 
+AXStaticText | grace. / focus companion | grace. / focus companion
+AXHeading | A little space to focus. | 1
+AXStaticText | A little space to focus. | A little space to focus.
+AXStaticText | Connect this browser to grace. on your computer to protect your focus sessions. | Connect this browser to grace. on your computer to protect your focus sessions.
+AXGroup | Connect your browser | 
+AXHeading | Connect your browser | 2
+AXStaticText | Connect your browser | Connect your browser
+AXStaticText | Connected | Connected
+AXStaticText | Declining or stopping sharing disconnects the companion. Protected sessions cannot start or continue without their required browser. Existing blocking rules can remain until a later authenticated release. Disabling or uninstalling this extension removes its protection. | Declining or stopping sharing disconnects the companion. Protected sessions cannot start or continue without their required browser. Existing blocking rules can remain until a later authenticated release. Disabling or uninstalling this extension removes its protection.
+AXStaticText | Data sharing is enabled. | Data sharing is enabled.
+AXButton | Stop sharing and disconnect | 
+AXButton | Advanced pairing | 
+AXStaticText | Advanced pairing | Advanced pairing
+AXButton | Uninstall extension | 
+AXPopUpButton | Tab search | 
+AXRadioButton | grace. Focus Companion - Memory usage - 34.6 MB | true
+AXButton | Close | 
+AXRadioButton | Focus Session Active | false
+AXButton | Close | 
+AXButton | New Tab |
+
+CAPTURE native-final-registration-native.txt
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXScrollArea | missing value | 
+AXWebArea | missing value | 
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXButton | Timer | missing value
+AXStaticText | grace. | grace.
+AXCheckBox | Statistics | 0
+AXCheckBox | Settings | 1
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXRadioButton | Timer & Sessions | true
+AXRadioButton | Appearance | false
+AXRadioButton | Notifications | false
+AXRadioButton | Shortcuts | false
+AXRadioButton | System | false
+AXRadioButton | About | false
+AXGroup | missing value | 
+AXStaticText | SESSION | SESSION
+AXStaticText | SESSION | SESSION
+AXPopUpButton | SESSION | Chrome Acceptance • Active
+AXButton | New Session | missing value
+AXStaticText | Session Name | Session Name
+AXStaticText | Session Name | Session Name
+AXGroup | missing value | 
+AXButton | Delete Session | missing value
+AXButton | Save Changes | missing value
+AXHeading | Timer durations | 3
+AXStaticText | Timer durations | Timer durations
+AXStaticText | Work Duration | Work Duration
+AXStaticText | 10m | 10m
+AXSlider | missing value | 10.0
+AXValueIndicator | missing value | 10.0
+AXGroup | missing value | 
+AXStaticText | Short Break Duration | Short Break Duration
+AXStaticText | 1m | 1m
+AXSlider | missing value | 1.0
+AXValueIndicator | missing value | 1.0
+AXGroup | missing value | 
+AXStaticText | Long Break Duration | Long Break Duration
+AXStaticText | 1m | 1m
+AXSlider | missing value | 1.0
+AXValueIndicator | missing value | 1.0
+AXGroup | missing value | 
+AXStaticText | Rounds per Cycle | Rounds per Cycle
+AXStaticText | 1 | 1
+AXSlider | missing value | 1.0
+AXValueIndicator | missing value | 1.0
+AXGroup | missing value | 
+AXHeading | Blocked Applications | 3
+AXStaticText | Blocked Applications | Blocked Applications
+AXPopUpButton | Select applications ▾ | 
+AXStaticText | No applications blocked | No applications blocked
+AXHeading | Blocked Websites | 3
+AXStaticText | Blocked Websites | Blocked Websites
+AXGroup | missing value | 
+AXButton | + Add Domain | missing value
+AXStaticText | example.com | example.com
+AXButton | Remove domain | missing value
+AXStaticText | Leave both lists empty for a timer without blocking. | Leave both lists empty for a timer without blocking.
+AXHeading | Browser Companions | 3
+AXStaticText | Browser Companions | Browser Companions
+AXButton | Refresh installed browsers | missing value
+AXGroup | missing value | 
+AXStaticText | Select an installed browser to place the distraction-blocking extension and pair automatically via Native Messaging. | Select an installed browser to place the distraction-blocking extension and pair automatically via Native Messaging.
+AXGroup | missing value | 
+AXStaticText | Extension installed! Restart your browser if needed. | Extension installed! Restart your browser if needed.
+AXStaticText | Google Chrome | Google Chrome
+AXStaticText | INSTALLED | INSTALLED
+AXStaticText | ACTIVE | ACTIVE
+AXButton | Update Extension | missing value
+AXButton | Remove Extension | missing value
+AXGroup | missing value | 
+AXStaticText | During focus sessions with website blocking, other installed browsers are blocked to prevent distraction bypass. | During focus sessions with website blocking, other installed browsers are blocked to prevent distraction bypass.
+AXStaticText | Connected Browser Profiles: | Connected Browser Profiles:
+AXGroup | missing value | 
+AXStaticText | Assign browser | Assign browser
+AXPopUpButton | Assign browser | Google Chrome
+AXStaticText | ACTIVE | ACTIVE
+AXGroup | missing value | 
+AXCheckBox | Required for session | 1
+AXStaticText | Required for session | Required for session
+AXHeading | Timer preferences | 3
+AXStaticText | Timer preferences | Timer preferences
+AXCheckBox | Disable Short Breaks | 0
+AXCheckBox | Disable Long Breaks | 0
+AXCheckBox | Auto-start Work | 0
+AXCheckBox | Auto-start Breaks | 1
+AXCheckBox | Countdown Dial | 1
+AXHeading | Session Preferences | 3
+AXStaticText | Session Preferences | Session Preferences
+AXCheckBox | Temporarily unblock during breaks | 0
+AXGroup | missing value | 
+AXStaticText | Minimum 30 characters. Required twice to unlock early if hold option is not used. | Minimum 30 characters. Required twice to unlock early if hold option is not used.
+AXGroup | missing value | 
+AXGroup | missing value | 
+AXButton | Clear | missing value
+AXGroup | missing value | 
+AXButton | missing value | missing value
+AXButton | missing value | missing value
+AXGroup | missing value | missing value
+AXGroup | missing value | missing value
+AXButton | missing value | missing value
+
+CAPTURE native-final-withdrawal-block.txt
+AXGroup | www.example.com - Network error - Google Chrome | 
+AXButton | Back | 
+AXButton | Forward | 
+AXButton | Reload | 
+AXPopUpButton | View site information | 
+AXButton | Bookmark this tab | 
+AXPopUpButton | grace. Focus Companion
+AXPopUpButton | Extensions | 
+AXButton | You | 
+AXPopUpButton | Chrome | 
+AXWebArea | www.example.com | 
+AXHeading | www.example.com is blocked | 1
+AXStaticText | www.example.com | www.example.com
+AXStaticText |  is blocked |  is blocked
+AXStaticText | This page has been blocked by an extension | This page has been blocked by an extension
+AXStaticText | Try disabling your extensions. | Try disabling your extensions.
+AXStaticText | ERR_BLOCKED_BY_CLIENT | ERR_BLOCKED_BY_CLIENT
+AXButton | Reload | 
+AXPopUpButton | Tab search | 
+AXRadioButton | grace. Focus Companion - Memory usage - 34.6 MB | false
+AXButton | Close | 
+AXRadioButton | www.example.com - Network error | true
+AXButton | Close | 
+AXButton | New Tab |
+
+CAPTURE native-final-withdrawal.txt
+AXGroup | grace. Focus Companion - Google Chrome | 
+AXButton | Back | 
+AXButton | Forward | 
+AXButton | Reload | 
+AXPopUpButton | grace. Focus Companion | 
+AXButton | Bookmark this tab | 
+AXPopUpButton | grace. Focus Companion | 
+AXPopUpButton | Extensions | 
+AXButton | You | 
+AXPopUpButton | Chrome | 
+AXWebArea | grace. Focus Companion | 
+AXStaticText | grace. / focus companion | grace. / focus companion
+AXHeading | A little space to focus. | 1
+AXStaticText | A little space to focus. | A little space to focus.
+AXStaticText | Connect this browser to grace. on your computer to protect your focus sessions. | Connect this browser to grace. on your computer to protect your focus sessions.
+AXGroup | Connect your browser | 
+AXHeading | Connect your browser | 2
+AXStaticText | Connect your browser | Connect your browser
+AXStaticText | Disconnected | Disconnected
+AXStaticText | Declining or stopping sharing disconnects the companion. Protected sessions cannot start or continue without their required browser. Existing blocking rules can remain until a later authenticated release. Disabling or uninstalling this extension removes its protection. | Declining or stopping sharing disconnects the companion. Protected sessions cannot start or continue without their required browser. Existing blocking rules can remain until a later authenticated release. Disabling or uninstalling this extension removes its protection.
+AXStaticText | Data sharing is disabled. | Data sharing is disabled.
+AXButton | Accept & connect | 
+AXButton | Keep disconnected | 
+AXButton | Uninstall extension | 
+AXPopUpButton | Tab search | 
+AXRadioButton | grace. Focus Companion - Memory usage - 34.6 MB | true
+AXButton | Close | 
+AXButton | New Tab |

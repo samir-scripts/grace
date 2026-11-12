@@ -113,5 +113,8 @@
     "test blocked_app_relaunch_is_stopped_until_release ... ignored, launches a disposable macOS GUI application; requires swiftc and a GUI session",
     "test occupied_bridge_port_shows_error_then_exits_without_aborting ... ignored, requires an exclusive disposable macOS guest GUI and native-dialog acknowledgement"
   ],
-  "observed_at_utc": "2026-11-12T18:26:45.751348+00:00"
+  "observed_at_utc": "2026-11-12T18:26:45.751348+00:00",
+  "historical_snapshot": true,
+  "superseded_desktop_evidence": "chrome-macos-tart-2026-11-12.json",
+  "note": "Historical identity candidate hashes. The desktop paths were rebuilt; use the superseding evidence for current files. Chrome upload archive bytes remain unchanged."
 }

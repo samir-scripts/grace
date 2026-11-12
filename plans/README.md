@@ -1,6 +1,8 @@
 # Implementation plans
 
-[Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — store identity aligned and public privacy access verified; checks and macOS production packaging pass. Actual packaged Chrome acceptance on macOS/Windows/Linux remains blocked by missing disposable environments; no submission.
+[macOS Chrome acceptance through Tart](chrome-tart-acceptance-plan.md) — passed actual packaged Chrome acceptance on macOS, including forced app recovery; evidence collected and clone stopped.
+
+[Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — store identity aligned and public privacy access verified; checks and macOS production packaging pass. Actual macOS packaged Chrome acceptance passed; Windows/Linux remain blocked by missing disposable desktops. Store stays Private and unsubmitted.
 
 [grace. UI consistency and accessibility](grace-ui-consistency-plan.md) — implementation and verification ledger. [Batch 5 native/signing report](grace-ui-batch5-report.md): native development checks, Clippy and production build pass; signed 1.1.0 is approved and a packaged Zen update/reconnect passed; Firefox 115 support is retained with its consent fallback; pre-consent appearance and remaining browser acceptance are open.
 

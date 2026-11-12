@@ -74,18 +74,22 @@
 - Saved 485-character reviewer instructions in Chrome dashboard, confirmed by its saved notice; username/password left empty. Exact matching desktop candidate URL remains pending until release handoff. Full instructions: [reviewer setup](chrome-extension-reviewer-instructions.md). Distribution was not changed and nothing was uploaded/submitted.
 - Chrome ZIP CRC, exact file allowlist and source-byte checks passed. Archive excludes hidden files, credentials, tests and unrelated distribution directories. Artifact hashes: [release artifacts](evidence/chrome-release-artifacts-2026-11-12.json).
 
-### Native acceptance matrix — BLOCKED
+### Native acceptance matrix — Windows/Linux blocked
+
+Current macOS result: **passed** in the owned Tart clone using packaged source `c373d55`, macOS 15.7.7 (24G720) arm64 and actual Google Chrome 157.0.8103.79. [Runbook and results](chrome-tart-acceptance-plan.md), [artifact/runtime evidence](evidence/chrome-macos-tart-2026-11-12.json), [sanitized UI](evidence/chrome-macos-tart-ui-2026-11-12.txt).
 
 | Scenario | macOS | Windows | Linux |
 | --- | --- | --- | --- |
-| Actual Google Chrome version / current packaged app | Not run | Not run | Not run |
-| Native registration and automatic consent pairing | Blocked | Blocked | Blocked |
-| Existing/fresh HTTP/HTTPS, subdomains and allowed controls | Blocked | Blocked | Blocked |
-| Browser/app restart and reconnect without duplicate profile | Blocked | Blocked | Blocked |
-| Natural completion and authorized emergency release | Blocked | Blocked | Blocked |
-| Withdrawal/disconnect retains rules; authenticated release restores access | Blocked | Blocked | Blocked |
+| Actual Google Chrome / current packaged app | Passed | Blocked | Blocked |
+| Native registration and automatic consent pairing | Passed | Blocked | Blocked |
+| Existing/fresh HTTP/HTTPS, subdomains and allowed controls | Passed | Blocked | Blocked |
+| Browser restart, forced app stop/relaunch and same profile reconnect | Passed | Blocked | Blocked |
+| Natural completion and authorized emergency release | Passed | Blocked | Blocked |
+| Withdrawal/disconnect retains rules; authenticated release restores access | Passed | Blocked | Blocked |
 
-Current inventory: no local Tart guests/baseline. Repo-local Tart 2.41.1 exists, but historic Zen guests are absent. No usable Windows/Linux disposable VM or host is available; VirtualBox app is missing and Docker daemon unavailable. CI build jobs are not interactive packaged Google Chrome acceptance. Personal host Chrome was not launched or reconfigured. Provision disposable native test environments and run the reviewer scenarios before submission. No native browser version or scenario result is inferred from isolated Chromium tests.
+Browser restart exposed live lease cleanup; repaired in `34a266b`. Expanded actual Force Quit exposed startup cleanup; repaired in `c373d55` with journal restoration before initial browser policy, locked stopped recovery and explicit Retry. Recovery conservatively restarts the interrupted phase at its full duration because elapsed time is not persisted. Review findings were fixed with failing regressions, then the full Rust suite passed (212 passed, 19 opt-in ignored, documented accessibility exclusion), Clippy passed, and three current authenticated/native guest regressions passed. Production app/DMG build passed with signed Firefox guard; exact Chrome archive bytes remain unchanged. No IPC or protocol serialization changes.
+
+Pinned baseline was restored without automatic pruning and never booted. Acceptance clone was collected and stopped; baseline remains unchanged/stopped. No usable Windows/Linux disposable desktop is available. CI/headless Chromium does not replace those gates. Store-installed acceptance remains separate after approval. OS reboot/power loss and app-update crash boundaries were not separately exercised.
 
 ### Final review
 
@@ -93,4 +97,9 @@ Independent whole-change review found no critical, important or minor code findi
 
 Review boundaries: native packaged scenarios and store-installed behavior were not judged as passed; live service changes and the historical full test runs rely on the recorded session evidence, not a second operation/rerun. Unrelated docs, nested Site source and credentials were excluded. No merge, push, upload, review submission or public store release was performed.
 
-Next required input is disposable native test capacity for all three operating systems. After those scenarios pass, supply exact matching desktop candidate downloads, update the pending reviewer note, upload the verified ZIP, and select Public distribution at the separate release handoff.
+Next required input is disposable Windows and Linux native test capacity. After those scenarios pass, supply exact matching desktop candidate downloads, update the pending reviewer note, upload the verified ZIP, and select Public distribution at the separate release handoff.
+
+
+### Current submission hold
+
+macOS packaged acceptance is complete, including authorized crash recovery repair and final candidate reruns. Public privacy/support evidence remains recorded above. Windows/Linux native acceptance and exact matching public desktop candidate downloads remain outstanding; distribution stays Private and no upload/submission was performed. Historical identity artifact hashes are explicitly marked superseded by the current Tart evidence.
