@@ -258,7 +258,19 @@ mockIPC((cmd, args: unknown) => {
 
 
   if (cmd === 'focus_profiles_get') {
-    return [];
+    return [
+      {
+        id: 'work-profile',
+        name: 'Work',
+        work_secs: 1500,
+        short_break_secs: 300,
+        long_break_secs: 600,
+        work_rounds: 4,
+        blocked_apps: [],
+        blocked_domains: [],
+        revision: 1,
+      }
+    ];
   }
 
   if (cmd === 'focus_browsers_list') {

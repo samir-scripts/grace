@@ -845,6 +845,11 @@ test('session selector has themed pill, no chevron, aligns with dial center, and
     assert.ok(anims.menuAnim?.includes('dropdown-pop'), `Dropdown menu must use dropdown-pop animation (got ${anims.menuAnim})`);
     assert.ok(anims.itemAnim?.includes('dropdown-item-rise'), `Dropdown items must use dropdown-item-rise animation (got ${anims.itemAnim})`);
 
+    // 5. Verify compact cadence notation (e.g. 25/5/10 × 4) and absence of verbose flavor text
+    assert.equal(await page.locator('.item-meta').count(), 0, 'Verbose item-meta flavor text is removed');
+    const cadenceText = await page.locator('.item-cadence').first().textContent();
+    assert.match(cadenceText?.trim() || '', /^\d+\/\d+\/\d+\s*[×x]\s*\d+$/, 'Cadence must match W/S/L x R format');
+
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.dropdown-menu').count(), 0, 'Escape closes dropdown');
   } finally {

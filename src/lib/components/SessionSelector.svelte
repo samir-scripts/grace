@@ -16,6 +16,13 @@
   let activeProfile = $derived($focusSnapshot.active_profile);
   let profiles = $derived($focusProfiles);
 
+  function formatProfileCadence(profile: { work_secs: number; short_break_secs: number; long_break_secs: number; work_rounds: number }): string {
+    const w = Math.round(profile.work_secs / 60);
+    const s = Math.round(profile.short_break_secs / 60);
+    const l = Math.round(profile.long_break_secs / 60);
+    return `${w}/${s}/${l} × ${profile.work_rounds}`;
+  }
+
   function toggleDropdown(e: MouseEvent) {
     e.stopPropagation();
     if (isLocked) {
@@ -110,12 +117,8 @@
             style="--delay: {idx * 25}ms"
             onclick={() => handleSelect(profile.id)}
           >
-            <div class="profile-info">
-              <span class="item-name">{profile.name}</span>
-              <span class="item-meta">
-                {Math.round(profile.work_secs / 60)}m • {profile.work_rounds} {m.timer_slider_rounds().toLowerCase()}
-              </span>
-            </div>
+            <span class="item-name">{profile.name}</span>
+            <span class="item-cadence">{formatProfileCadence(profile)}</span>
             {#if isSelected}
               <svg
                 class="checkmark"
@@ -241,8 +244,8 @@
     left: 50%;
     transform: translateX(-50%);
     transform-origin: top center;
-    min-width: 180px;
-    max-width: 240px;
+    min-width: 210px;
+    max-width: 270px;
     max-height: calc(100vh - 56px);
     overflow-y: auto;
     overflow-x: hidden;
@@ -273,7 +276,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 8px;
+    gap: 8px;
+    padding: 6px 10px;
+    min-height: 28px;
     background: var(--color-background);
     border: none;
     border-radius: 4px;
@@ -309,29 +314,35 @@
     font-weight: 600;
   }
 
-  .profile-info {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    overflow: hidden;
-  }
-
   .item-name {
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .item-meta {
-    font-size: 9px;
+  .item-cadence {
+    flex: 0 0 auto;
+    margin-left: auto;
+    font-family: 'Mona Sans Mono', monospace;
+    font-size: 9.5px;
+    font-variant-numeric: tabular-nums;
     color: var(--color-foreground-darker);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .dropdown-item:hover .item-cadence,
+  .dropdown-item.selected .item-cadence {
+    color: var(--color-foreground);
   }
 
   .checkmark {
     display: block;
     flex-shrink: 0;
     color: var(--color-accent, var(--color-foreground));
-    margin-left: 6px;
+    margin-left: 4px;
   }
 
   .menu-divider {
