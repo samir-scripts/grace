@@ -1,27 +1,33 @@
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::JoinHandle;
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 use std::time::{Duration, Instant};
 
 use super::EnforcerError;
 use crate::focus::model::AppTarget;
 
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct RunningProcess {
     pub pid: u32,
     pub start_id: u64,
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(super) trait ProcessBackend: Send {
     fn snapshot(&mut self) -> Result<Vec<RunningProcess>, EnforcerError>;
     fn request_exit(&mut self, process: &RunningProcess, force: bool) -> Result<(), EnforcerError>;
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 #[derive(Default)]
 struct Reconciler {
     pending: HashMap<RunningProcess, (Duration, bool)>,
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 impl Reconciler {
     fn reconcile(&mut self, backend: &mut dyn ProcessBackend, now: Duration) -> Result<bool, EnforcerError> {
         let running = backend.snapshot()?;
@@ -65,12 +71,13 @@ impl ApplicationMonitor {
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         {
             let _ = targets;
-            return Err(EnforcerError::PlatformUnsupported);
+            Err(EnforcerError::PlatformUnsupported)
         }
         #[cfg(any(target_os = "macos", target_os = "windows"))]
         Self::start_backend(Box::new(backend))
     }
 
+    #[cfg(any(target_os = "macos", target_os = "windows", test))]
     fn start_backend(mut backend: Box<dyn ProcessBackend>) -> Result<Self, EnforcerError> {
         let (stop_tx, stop_rx) = mpsc::channel();
         let (ready_tx, ready_rx) = mpsc::sync_channel(1);
@@ -147,6 +154,12 @@ impl Drop for ApplicationMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    #[test]
+    fn application_monitor_rejects_unsupported_platform() {
+        assert!(matches!(ApplicationMonitor::start(Vec::new()), Err(EnforcerError::PlatformUnsupported)));
+    }
 
     #[derive(Default)]
     struct Processes {

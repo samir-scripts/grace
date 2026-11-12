@@ -70,56 +70,56 @@ pub fn browsers_from_catalog(apps: &[InstalledApplication]) -> Vec<InstalledBrow
     browsers
 }
 
+#[cfg(target_os = "macos")]
 fn compute_policy_path(kind: BrowserKind, exec_path: &Path) -> Option<PathBuf> {
     match kind {
-        BrowserKind::Firefox => {
-            #[cfg(target_os = "macos")]
-            {
-                if exec_path.extension().is_some_and(|ext| ext == "app") {
-                    return Some(exec_path.join("Contents/Resources/distribution/policies.json"));
-                }
-            }
-            #[cfg(target_os = "linux")]
-            {
-                return Some(PathBuf::from("/etc/firefox/policies/policies.json"));
-            }
-            #[cfg(target_os = "windows")]
-            {
-                if let Some(parent) = exec_path.parent() {
-                    return Some(parent.join("distribution").join("policies.json"));
-                }
-            }
-            None
+        BrowserKind::Firefox | BrowserKind::Zen => {
+            exec_path.extension().filter(|ext| *ext == "app")
+                .map(|_| exec_path.join("Contents/Resources/distribution/policies.json"))
         }
-        BrowserKind::Zen => {
-            #[cfg(target_os = "macos")]
-            {
-                if exec_path.extension().is_some_and(|ext| ext == "app") {
-                    return Some(exec_path.join("Contents/Resources/distribution/policies.json"));
-                }
-            }
-            #[cfg(target_os = "linux")]
-            {
-                return Some(PathBuf::from("/etc/zen/policies/policies.json"));
-            }
-            #[cfg(target_os = "windows")]
-            {
-                if let Some(parent) = exec_path.parent() {
-                    return Some(parent.join("distribution").join("policies.json"));
-                }
-            }
-            None
-        }
-        BrowserKind::Chrome => {
-            #[cfg(target_os = "macos")]
-            {
-                if let Some(home) = std::env::var_os("HOME") {
-                    return Some(PathBuf::from(home).join("Library/Application Support/Google/Chrome/External Extensions"));
-                }
-            }
-            None
-        }
+        BrowserKind::Chrome => std::env::var_os("HOME").map(|home| {
+            PathBuf::from(home).join("Library/Application Support/Google/Chrome/External Extensions")
+        }),
         BrowserKind::Safari => None,
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn compute_policy_path(kind: BrowserKind, exec_path: &Path) -> Option<PathBuf> {
+    match kind {
+        BrowserKind::Firefox | BrowserKind::Zen => exec_path.parent()
+            .map(|parent| parent.join("distribution").join("policies.json")),
+        BrowserKind::Chrome | BrowserKind::Safari => None,
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn compute_policy_path(kind: BrowserKind, _exec_path: &Path) -> Option<PathBuf> {
+    match kind {
+        BrowserKind::Firefox => Some(PathBuf::from("/etc/firefox/policies/policies.json")),
+        BrowserKind::Zen => Some(PathBuf::from("/etc/zen/policies/policies.json")),
+        BrowserKind::Chrome | BrowserKind::Safari => None,
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+fn compute_policy_path(_kind: BrowserKind, _exec_path: &Path) -> Option<PathBuf> {
+    None
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod linux_policy_tests {
+    use super::*;
+
+    #[test]
+    fn policy_paths_match_linux_browser_locations() {
+        let executable = Path::new("/usr/bin/browser");
+        assert_eq!(compute_policy_path(BrowserKind::Firefox, executable),
+            Some(PathBuf::from("/etc/firefox/policies/policies.json")));
+        assert_eq!(compute_policy_path(BrowserKind::Zen, executable),
+            Some(PathBuf::from("/etc/zen/policies/policies.json")));
+        assert_eq!(compute_policy_path(BrowserKind::Chrome, executable), None);
+        assert_eq!(compute_policy_path(BrowserKind::Safari, executable), None);
     }
 }
 

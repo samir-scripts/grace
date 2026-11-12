@@ -1,5 +1,8 @@
 //! Read-only installed application catalog. IPC accepts catalog IDs, never filesystem paths.
-use std::collections::{BTreeMap, HashMap};
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
 
@@ -35,6 +38,7 @@ struct CatalogCache {
 }
 
 impl CatalogCache {
+    #[cfg(any(target_os = "macos", target_os = "windows", test))]
     fn replace(&mut self, catalog: ApplicationCatalog) {
         self.icons.retain(|id, _| {
             catalog.applications.iter().any(|new| {
@@ -66,6 +70,7 @@ fn cache() -> &'static Mutex<CatalogCache> {
     &CACHE
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 fn normalize_catalog(entries: Vec<Result<InstalledApplication, String>>) -> ApplicationCatalog {
     let mut catalog = ApplicationCatalog::default();
     let mut identities = BTreeMap::new();
@@ -100,6 +105,7 @@ fn normalize_catalog(entries: Vec<Result<InstalledApplication, String>>) -> Appl
 }
 
 // Do not follow directory links or descend into bundles. Missing roots are normal.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn walk_candidates(root: &Path, extension: &str, entries: &mut Vec<Result<PathBuf, String>>) {
     match root.symlink_metadata() {
         Ok(meta) if meta.file_type().is_symlink() => return,

@@ -1,4 +1,5 @@
 use std::process::Command;
+#[cfg(target_os = "macos")]
 use crate::focus::model::AppTarget;
 use super::EnforcerError;
 
