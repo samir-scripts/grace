@@ -847,8 +847,21 @@ test('session selector has themed pill, no chevron, aligns with dial center, and
 
     // 5. Verify compact cadence notation (e.g. 25/5/10 × 4) and absence of verbose flavor text
     assert.equal(await page.locator('.item-meta').count(), 0, 'Verbose item-meta flavor text is removed');
+    assert.equal(await page.locator('.checkmark').count(), 0, 'Checkmarks removed in favor of leading status dots');
+    assert.ok((await page.locator('.item-dot').count()) >= 2, 'Each session row has an item-dot indicator');
     const cadenceText = await page.locator('.item-cadence').first().textContent();
     assert.match(cadenceText?.trim() || '', /^\d+\/\d+\/\d+\s*[×x]\s*\d+$/, 'Cadence must match W/S/L x R format');
+
+    // 6. Verify column alignment of cadence numbers across rows
+    const cadenceAlign = await page.evaluate(() => {
+      const cadences = [...document.querySelectorAll('.dropdown-item .item-cadence')];
+      if (cadences.length < 2) return null;
+      const right0 = cadences[0].getBoundingClientRect().right;
+      const right1 = cadences[1].getBoundingClientRect().right;
+      return { right0, right1, diff: Math.abs(right0 - right1) };
+    });
+    assert.ok(cadenceAlign, 'At least 2 cadences found for alignment check');
+    assert.ok(cadenceAlign.diff <= 1, `Cadence numbers must align to the exact same right margin: ${JSON.stringify(cadenceAlign)}`);
 
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.dropdown-menu').count(), 0, 'Escape closes dropdown');

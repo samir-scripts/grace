@@ -117,24 +117,9 @@
             style="--delay: {idx * 25}ms"
             onclick={() => handleSelect(profile.id)}
           >
+            <span class="item-dot" class:active={isSelected} aria-hidden="true"></span>
             <span class="item-name">{profile.name}</span>
             <span class="item-cadence">{formatProfileCadence(profile)}</span>
-            {#if isSelected}
-              <svg
-                class="checkmark"
-                width="13"
-                height="13"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
-              </svg>
-            {/if}
           </button>
         {/each}
       {/if}
@@ -338,11 +323,18 @@
     color: var(--color-foreground);
   }
 
-  .checkmark {
-    display: block;
+  .item-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
     flex-shrink: 0;
-    color: var(--color-accent, var(--color-foreground));
-    margin-left: 4px;
+    background: transparent;
+    transition: background var(--transition-snappy), box-shadow var(--transition-snappy);
+  }
+
+  .item-dot.active {
+    background: var(--color-accent, var(--color-focus-round));
+    box-shadow: 0 0 5px color-mix(in oklch, var(--color-accent, var(--color-focus-round)) 40%, transparent);
   }
 
   .menu-divider {

@@ -269,10 +269,20 @@ mockIPC((cmd, args: unknown) => {
         blocked_apps: [],
         blocked_domains: [],
         revision: 1,
-      }
+      },
+      {
+        id: 'deep-profile',
+        name: 'Deep Focus',
+        work_secs: 3000,
+        short_break_secs: 600,
+        long_break_secs: 1200,
+        work_rounds: 3,
+        blocked_apps: [],
+        blocked_domains: [],
+        revision: 1,
+      },
     ];
   }
-
   if (cmd === 'focus_browsers_list') {
     return browserFixtureEnabled ? [{ kind: 'zen', name: 'Zen', executable_path: '/test/Zen.app', policy_path: null, is_installed: true, is_extension_installed: true }, { kind: 'firefox', name: 'Firefox', executable_path: '/test/Firefox.app', policy_path: null, is_installed: true, is_extension_installed: false }] : [];
   }
