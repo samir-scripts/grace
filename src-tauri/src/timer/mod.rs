@@ -17,6 +17,25 @@ use crate::focus::controller::{FocusController, TimerAction};
 use engine::{EngineHandle, TimerCommand, TimerEvent};
 use sequence::{RoundType, SequenceState};
 
+fn sequence_for_focus(snapshot: crate::focus::state::FocusSnapshot, long_breaks_enabled: bool) -> SequenceState {
+    let p = snapshot.active_profile.unwrap_or_default();
+    let mut sequence = SequenceState::new(p.work_rounds, p.work_secs, p.short_break_secs, p.long_break_secs);
+    if snapshot.is_locked {
+        use crate::focus::state::FocusPhase;
+        sequence.current_round = match snapshot.current_phase {
+            Some(FocusPhase::ShortBreak) => RoundType::ShortBreak,
+            Some(FocusPhase::LongBreak) => RoundType::LongBreak,
+            _ => RoundType::Work,
+        };
+        sequence.work_round_number = if sequence.current_round == RoundType::ShortBreak
+            && !long_breaks_enabled && snapshot.current_work_round >= sequence.work_rounds_total {
+            0 // SequenceState uses zero for the final substitute short break.
+        } else { snapshot.current_work_round.max(1) };
+        sequence.session_work_count = snapshot.current_work_round.max(1);
+    }
+    sequence
+}
+
 /// Advance the timer sequence and return the completed round, next round,
 /// next duration, and the cycle completion signal for focus enforcement.
 pub fn advance_focus_sequence(seq: &mut SequenceState, short_enabled: bool, long_enabled: bool) -> (RoundType, RoundType, u32, bool) {
@@ -34,6 +53,32 @@ pub fn advance_focus_sequence(seq: &mut SequenceState, short_enabled: bool, long
 mod reset_tests {
     use super::*;
     use crate::focus::{enforcer::MockEnforcer, model::FocusProfile};
+
+    #[test]
+    fn interrupted_substitute_break_still_finishes_the_cycle() {
+        let mut state = crate::focus::state::FocusStateMachine::new();
+        state.restore_interrupted(FocusProfile {
+            work_rounds: 2, blocked_domains: vec!["example.com".into()], ..Default::default()
+        }, crate::focus::state::FocusPhase::ShortBreak, 2);
+        let mut sequence = sequence_for_focus(state.snapshot(), false);
+        let (_, next, _, finished) = advance_focus_sequence(&mut sequence, true, false);
+        assert!(finished, "substitute final short break must release on completion after recovery");
+        assert_eq!(next, RoundType::Work);
+        assert_eq!(sequence.work_round_number, 1);
+    }
+
+    #[test]
+    fn interrupted_phase_restarts_at_its_full_duration_and_same_round() {
+        let mut state = crate::focus::state::FocusStateMachine::new();
+        state.restore_interrupted(FocusProfile {
+            work_rounds: 4, work_secs: 600, short_break_secs: 60, long_break_secs: 120,
+            blocked_domains: vec!["example.com".into()], ..Default::default()
+        }, crate::focus::state::FocusPhase::LongBreak, 4);
+        let sequence = sequence_for_focus(state.snapshot(), true);
+        assert_eq!(sequence.current_round, RoundType::LongBreak);
+        assert_eq!(sequence.work_round_number, 4);
+        assert_eq!(sequence.current_duration_secs(), 120);
+    }
 
     #[test]
     fn round_restart_preserves_focus_and_emergency_reset_starts_first_work_round() {
@@ -173,12 +218,7 @@ impl TimerController {
         db: DbState,
         focus: Arc<FocusController>,
     ) -> Self {
-        let (rounds, work, short_b, long_b) = {
-            let snap = focus.get_snapshot();
-            let p = snap.active_profile.unwrap_or_default();
-            (p.work_rounds, p.work_secs, p.short_break_secs, p.long_break_secs)
-        };
-        let seq = SequenceState::new(rounds, work, short_b, long_b);
+        let seq = sequence_for_focus(focus.get_snapshot(), settings.long_breaks_enabled);
         let duration = seq.current_duration_secs();
         let (engine, event_rx) = engine::spawn(duration, Duration::from_secs(1));
         focus.start_supervisor(engine.clone());

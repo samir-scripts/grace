@@ -165,7 +165,7 @@ pub fn run() {
                 .expect("failed to create app data directory");
 
             let browser_bridge = match tauri::async_runtime::block_on(
-                focus::browser::BrowserBridge::new_persistent(
+                focus::browser::BrowserBridge::new_persistent_deferred(
                     &app_data_dir,
                     focus::browser::BROWSER_PORT_DEFAULT,
                 ),

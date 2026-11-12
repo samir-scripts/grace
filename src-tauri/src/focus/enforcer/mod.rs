@@ -45,6 +45,12 @@ pub trait NativeEnforcer: Send + Sync {
     fn apply_blocking(&self, apps: &[AppTarget], domains: &[String]) -> Result<(), EnforcerError>;
     fn release_blocking(&self) -> Result<(), EnforcerError>;
     fn renew_lease(&self) -> Result<(), EnforcerError>;
+    /// Reconstruct an interrupted policy before accepting browser connections.
+    fn restore_blocking(&self, apps: &[AppTarget], domains: &[String]) -> Result<(), EnforcerError> {
+        self.apply_blocking(apps, domains)
+    }
+    fn finish_startup(&self) {}
+
 }
 
 pub struct SystemEnforcer {

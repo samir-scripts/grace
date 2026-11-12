@@ -32,9 +32,31 @@ pub struct FocusController {
     transition: Mutex<()>,
     dnd_active: AtomicBool,
     retained_policy_owned: AtomicBool,
+    interrupted_recovery_owned: AtomicBool,
+    interrupted_restore_failed: AtomicBool,
     reset_pending: AtomicBool,
     reset_generation: AtomicU64,
     engine: Mutex<Option<crate::timer::engine::EngineHandle>>,
+}
+
+fn interrupted_session(repo: &FocusRepository, conn: &rusqlite::Connection)
+    -> Result<Option<(FocusRunJournal, FocusProfile, FocusPhase)>, ()>
+{
+    let Some(journal) = repo.get_run_journal(conn).map_err(|_| ())? else { return Ok(None); };
+    let profile: FocusProfile = serde_json::from_str(&journal.profile_snapshot_json).map_err(|_| ())?;
+    let phase = match journal.phase.as_str() {
+        "work" => FocusPhase::Work,
+        "short_break" => FocusPhase::ShortBreak,
+        "long_break" => FocusPhase::LongBreak,
+        _ => return Err(()),
+    };
+    if journal.current_round == 0 || journal.current_round > profile.work_rounds { return Err(()); }
+    validate_profile_durations(profile.work_secs, profile.short_break_secs, profile.long_break_secs, profile.work_rounds).map_err(|_| ())?;
+    validate_domain_count(profile.blocked_domains.len()).map_err(|_| ())?;
+    for domain in &profile.blocked_domains {
+        if normalize_domain(domain).map_err(|_| ())? != *domain { return Err(()); }
+    }
+    Ok(Some((journal, profile, phase)))
 }
 
 impl FocusController {
@@ -42,6 +64,9 @@ impl FocusController {
         let repo = FocusRepository::new();
         let enforcer = enforcer.unwrap_or_else(|| Arc::new(SystemEnforcer::new()));
         let mut sm = FocusStateMachine::new();
+        let mut interrupted = false;
+        let mut restore_failed = false;
+        let mut startup_ready = true;
 
         // Load preferences on startup, ensuring valid profile selection
         if let Ok(conn) = db.lock() {
@@ -82,25 +107,46 @@ impl FocusController {
             };
             let _ = sm.select_profile(Some(profile));
 
-            // Check if there was an interrupted dirty run in journal
-            if let Ok(Some(journal)) = repo.get_run_journal(&conn) {
-                log::warn!(
-                    "[focus] Found leftover focus journal run_id={}. Cleaning up dangling enforcement.",
-                    journal.run_id
-                );
-                if enforcer.release_blocking().is_ok() {
-                    if let Err(e) = repo.clear_run_journal(&conn) {
-                        log::error!("[focus] Failed to clear recovered journal: {e}");
-                    }
-                } else {
-                    sm.set_enforcement(EnforcementStatus {
-                        state: EnforcementState::RecoveryRequired,
-                        error_code: Some(EnforcementErrorCode::ReleaseFailed),
-                        ..Default::default()
-                    });
+            match interrupted_session(&repo, &conn) {
+                Ok(Some((journal, profile, phase))) if !profile.blocked_domains.is_empty() => {
+                    interrupted = true;
+                    sm.restore_interrupted(profile.clone(), phase, journal.current_round);
+                    restore_failed = enforcer.restore_blocking(&profile.blocked_apps, &profile.blocked_domains).is_err();
+                    log::warn!("[focus] interrupted browser session retained; explicit retry or emergency release required");
                 }
+                Ok(Some(_)) => {
+                    // Application-only recovery keeps the existing cleanup behavior.
+                    if enforcer.release_blocking().is_ok() {
+                        if let Err(error) = repo.clear_run_journal(&conn) {
+                            log::error!("[focus] failed to clear recovered journal: {error}");
+                        }
+                    } else {
+                        sm.set_enforcement(EnforcementStatus {
+                            state: EnforcementState::RecoveryRequired,
+                            error_code: Some(EnforcementErrorCode::ReleaseFailed),
+                            ..Default::default()
+                        });
+                    }
+                }
+                Ok(None) => {}
+                Err(()) => { interrupted = true; restore_failed = true; startup_ready = false; }
             }
+        } else {
+            interrupted = true;
+            restore_failed = true;
+            startup_ready = false;
         }
+        if !startup_ready {
+            // No inactive snapshot is safe when the interrupted targets cannot be read.
+            sm.preparing();
+            sm.set_enforcement(EnforcementStatus {
+                state: EnforcementState::Failed,
+                error_code: Some(EnforcementErrorCode::LeaseLost),
+                ..Default::default()
+            });
+            log::error!("[focus] interrupted session cannot be restored; authorized release required");
+        }
+        if startup_ready { enforcer.finish_startup(); }
 
         Self {
             state_machine: Mutex::new(sm),
@@ -111,7 +157,9 @@ impl FocusController {
             app_handle: Mutex::new(None),
             transition: Mutex::new(()),
             dnd_active: AtomicBool::new(false),
-            retained_policy_owned: AtomicBool::new(false),
+            retained_policy_owned: AtomicBool::new(interrupted),
+            interrupted_recovery_owned: AtomicBool::new(interrupted),
+            interrupted_restore_failed: AtomicBool::new(restore_failed),
             reset_pending: AtomicBool::new(false),
             reset_generation: AtomicU64::new(0),
             engine: Mutex::new(None),
@@ -132,7 +180,7 @@ impl FocusController {
 
     pub fn get_snapshot(&self) -> FocusSnapshot {
         let mut snapshot = self.state_machine.lock().unwrap().snapshot();
-        snapshot.is_locked |= self.reset_pending();
+        snapshot.is_locked |= self.reset_pending() || self.interrupted_recovery_owned.load(Ordering::Relaxed);
         snapshot
     }
 
@@ -141,7 +189,7 @@ impl FocusController {
     }
 
     pub fn is_locked(&self) -> bool {
-        self.reset_pending() || self.state_machine.lock().unwrap().is_locked()
+        self.reset_pending() || self.interrupted_recovery_owned.load(Ordering::Relaxed) || self.state_machine.lock().unwrap().is_locked()
     }
 
     pub(crate) fn reset_pending(&self) -> bool {
@@ -309,6 +357,7 @@ impl FocusController {
     }
 
     pub fn select_profile(&self, id: &str) -> Result<FocusProfile, String> {
+        if self.is_locked() { return Err("Session is locked while active".into()); }
         let conn = self.db.lock().map_err(|e| e.to_string())?;
         let profile = self.repository.get_profile(&conn, id)
             .map_err(|e| e.to_string())?
@@ -339,6 +388,9 @@ impl FocusController {
 
     pub fn set_unblock_during_breaks(&self, unblock: bool) -> Result<(), String> {
         let _transition = self.transition.lock().unwrap();
+        if self.interrupted_recovery_owned.load(Ordering::Relaxed) {
+            return Err("Retry or authorize emergency release before changing interrupted protection.".into());
+        }
         {
             let conn = self.db.lock().map_err(|e| e.to_string())?;
             let mut prefs = self.repository.get_preferences(&conn).unwrap_or_default();
@@ -450,6 +502,9 @@ impl FocusController {
         if self.reset_pending() {
             return Err("Timer reset is still completing.".into());
         }
+        if self.interrupted_restore_failed.load(Ordering::Relaxed) {
+            return Err("Interrupted protection could not be restored. Use the authorized emergency exit.".into());
+        }
         let mut candidate = self.state_machine.lock().unwrap().clone();
         if candidate.snapshot().status == super::state::FocusStatus::RecoveryRequired {
             return Err("Blocking cleanup is required before starting the timer.".into());
@@ -475,6 +530,15 @@ impl FocusController {
             && next.status == super::state::FocusStatus::Active
             && next.current_phase.is_some_and(|phase| phase == FocusPhase::Work || !next.unblock_during_breaks);
         let should_block = next.blocking_active || retained_phase_blocks;
+        if should_block {
+            let conn = self.db.lock().map_err(|error| error.to_string())?;
+            if let Some(mut journal) = self.repository.get_run_journal(&conn).map_err(|error| error.to_string())? {
+                journal.phase = next.current_phase.map(|phase| phase.as_str()).unwrap_or("work").into();
+                journal.current_round = next.current_work_round;
+                self.repository.save_run_journal(&conn, &journal).map_err(|error| error.to_string())?;
+            }
+        }
+
         if retained_policy_owned && should_block && !resume_retained {
             // Preference and queued round changes must not implicitly resume a paused session.
             candidate.set_enforcement(previous.enforcement.clone());
@@ -491,7 +555,8 @@ impl FocusController {
                     if retained_policy_owned {
                         // Retry must verify the existing revision, not replace a still-owned policy.
                         self.enforcer.renew_lease().map_err(|error| {
-                            retain_on_failure = matches!(&error, super::enforcer::EnforcerError::BrowserLeaseLost);
+                            retain_on_failure = self.interrupted_recovery_owned.load(Ordering::Relaxed)
+                                || matches!(&error, super::enforcer::EnforcerError::BrowserLeaseLost);
                             error.to_string()
                         })?;
                     } else {
@@ -547,6 +612,9 @@ impl FocusController {
             let cleanup_ok = should_block && self.enforcer.release_blocking().is_ok();
             if cleanup_ok {
                 self.retained_policy_owned.store(false, Ordering::Relaxed);
+                self.interrupted_recovery_owned.store(false, Ordering::Relaxed);
+                self.interrupted_restore_failed.store(false, Ordering::Relaxed);
+                self.enforcer.finish_startup();
             }
             log::warn!("[focus] transition_failed action={} cleanup_ok={cleanup_ok}", if should_block { "apply" } else { "release" });
             let mut failed = if original.snapshot().status == super::state::FocusStatus::Idle {
@@ -567,6 +635,9 @@ impl FocusController {
             return Err(error);
         }
         self.retained_policy_owned.store(false, Ordering::Relaxed);
+        self.interrupted_recovery_owned.store(false, Ordering::Relaxed);
+        self.interrupted_restore_failed.store(false, Ordering::Relaxed);
+        self.enforcer.finish_startup();
         *self.state_machine.lock().unwrap() = candidate;
         self.emit_changed();
         Ok(())
@@ -593,8 +664,9 @@ impl FocusController {
                     engine.send(crate::timer::engine::TimerCommand::Pause);
                 }
             }
-            let retained = (snapshot.enforcement.websites_active || retained_policy_owned)
-                && matches!(&error, super::enforcer::EnforcerError::BrowserLeaseLost);
+            let retained = self.interrupted_recovery_owned.load(Ordering::Relaxed)
+                || ((snapshot.enforcement.websites_active || retained_policy_owned)
+                    && matches!(&error, super::enforcer::EnforcerError::BrowserLeaseLost));
             let released = !retained && self.enforcer.release_blocking().is_ok();
             self.retained_policy_owned.store(retained, Ordering::Relaxed);
             self.state_machine.lock().unwrap().set_enforcement(EnforcementStatus {
@@ -727,6 +799,87 @@ mod tests {
         profile.blocked_domains = vec!["example.com".into()];
         controller.save_profile(profile).unwrap();
         controller
+    }
+
+    #[test]
+    fn interrupted_browser_session_restores_locked_snapshot_without_release() {
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        let first = controller_with_rules(enforcer.clone());
+        first.on_timer_started("work").unwrap();
+        first.on_round_completed("long-break", false).unwrap();
+        let db = first.db.clone();
+        let expected = first.get_snapshot().active_profile.unwrap();
+        // Mutable settings must not replace the journal's protected targets.
+        let mut changed = expected.clone();
+        changed.blocked_domains.clear();
+        first.repository.save_profile(&db.lock().unwrap(), &changed).unwrap();
+        drop(first);
+        let recovered = FocusController::new(db, Some(enforcer.clone()));
+        let snapshot = recovered.get_snapshot();
+        assert!(snapshot.is_locked, "crash recovery must not unlock an interrupted session");
+        assert_eq!(snapshot.active_profile, Some(expected));
+        assert_eq!(snapshot.current_phase, Some(FocusPhase::LongBreak));
+        assert_eq!(snapshot.enforcement.state, EnforcementState::Failed);
+        assert!(recovered.retained_policy_owned.load(Ordering::Relaxed));
+        assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 0);
+        assert!(recovered.repository.get_run_journal(&recovered.db.lock().unwrap()).unwrap().is_some());
+        recovered.execute_emergency_release().unwrap();
+        assert!(!recovered.get_snapshot().is_locked);
+        assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn unreadable_or_invalid_journal_stays_locked_until_release() {
+        for corruption in ["current_round = 'bad'", "phase = 'unknown'", "current_round = 999"] {
+            let enforcer = Arc::new(FailingEnforcer::new(false));
+            let first = controller_with_rules(enforcer.clone());
+            first.on_timer_started("work").unwrap();
+            let db = first.db.clone();
+            db.lock().unwrap().execute(&format!("UPDATE focus_run_journal SET {corruption}"), []).unwrap();
+            drop(first);
+            let recovered = FocusController::new(db, Some(enforcer.clone()));
+            assert!(recovered.is_locked(), "invalid journal must remain locked: {corruption}");
+            assert!(recovered.on_timer_started("work").is_err(), "invalid journal cannot resume: {corruption}");
+            assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 0);
+            recovered.execute_emergency_release().unwrap();
+        }
+    }
+
+    #[test]
+    fn invalid_interrupted_snapshot_requires_authorized_release() {
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        let first = controller_with_rules(enforcer.clone());
+        first.on_timer_started("work").unwrap();
+        let db = first.db.clone();
+        let mut journal = first.repository.get_run_journal(&db.lock().unwrap()).unwrap().unwrap();
+        journal.profile_snapshot_json = "invalid".into();
+        first.repository.save_run_journal(&db.lock().unwrap(), &journal).unwrap();
+        drop(first);
+        let recovered = FocusController::new(db, Some(enforcer.clone()));
+        assert!(recovered.is_locked());
+        assert!(recovered.on_timer_started("work").is_err());
+        assert!(recovered.set_unblock_during_breaks(true).is_err());
+        assert!(recovered.select_profile("default").is_err());
+        assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 0);
+        recovered.execute_emergency_release().unwrap();
+        assert!(!recovered.is_locked());
+    }
+
+    #[test]
+    fn interrupted_retry_requires_health_and_retains_native_restore_failure() {
+        let enforcer = Arc::new(FailingEnforcer::new(false));
+        let first = controller_with_rules(enforcer.clone());
+        first.on_timer_started("work").unwrap();
+        let db = first.db.clone();
+        drop(first);
+        enforcer.fail_apply.store(true, Ordering::SeqCst);
+        let recovered = FocusController::new(db, Some(enforcer.clone()));
+        enforcer.fail_renew.store(true, Ordering::SeqCst);
+        assert!(recovered.check_enforcement_health().is_err());
+        assert!(recovered.on_timer_started("work").is_err());
+        assert_eq!(enforcer.release_calls.load(Ordering::SeqCst), 0);
+        assert!(recovered.is_locked());
+        recovered.execute_emergency_release().unwrap();
     }
 
     #[test]

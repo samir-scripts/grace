@@ -620,3 +620,69 @@ async fn controller_retains_browser_policy_until_authorized_release() {
     third.abort();
     bridge.shutdown().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "native browser enforcement requires a disposable guest"]
+async fn interrupted_browser_session_recovers_after_process_restart() {
+    use std::sync::Mutex;
+    use pomotroid_lib::focus::controller::FocusController;
+    use pomotroid_lib::focus::enforcer::protocol::EnforcementState;
+    use pomotroid_lib::focus::model::{FocusProfile, FocusRunJournal};
+    use pomotroid_lib::focus::repository::FocusRepository;
+
+    require_disposable_guest();
+    let dir = std::env::temp_dir().join(format!("grace-recovery-test-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir(&dir).unwrap();
+    std::fs::write(dir.join("focus_browser_config.json"), json!({
+        "token": "retention-fixture", "port": 29318,
+        "profiles": [{"profile_id": "retention-profile", "browser": "chrome", "is_required": true}]
+    }).to_string()).unwrap();
+    let db_path = dir.join("focus.db");
+    let profile = FocusProfile {
+        id: "recovery".into(), name: "Recovery".into(), work_secs: 120,
+        short_break_secs: 60, long_break_secs: 60, work_rounds: 2,
+        blocked_apps: vec![], blocked_domains: vec!["example.com".into()], revision: 1,
+    };
+    {
+        let conn = rusqlite::Connection::open(&db_path).unwrap();
+        pomotroid_lib::db::migrations::run(&conn).unwrap();
+        FocusRepository::new().save_run_journal(&conn, &FocusRunJournal {
+            run_id: "interrupted".into(), profile_snapshot_json: serde_json::to_string(&profile).unwrap(),
+            phase: "work".into(), current_round: 1, started_at: 1, lease_expires_at: 16,
+        }).unwrap();
+    }
+    let db = Arc::new(Mutex::new(rusqlite::Connection::open(&db_path).unwrap()));
+    let bridge = Arc::new(BrowserBridge::new_persistent_deferred(&dir, 29318).await.unwrap());
+    let controller = Arc::new(FocusController::new(db.clone(), Some(bridge.clone())));
+    assert!(controller.is_locked());
+    assert_eq!(controller.get_snapshot().enforcement.state, EnforcementState::Failed);
+    let c = controller.clone();
+    assert!(tokio::task::spawn_blocking(move || c.on_timer_started("work")).await.unwrap().is_err());
+    assert!(controller.is_locked());
+    assert!(bridge.is_active());
+    assert!(FocusRepository::new().get_run_journal(&db.lock().unwrap()).unwrap().is_some());
+
+    let (peer, mut policies) = retention_peer("ws://127.0.0.1:29318/focus-browser").await;
+    let restored = tokio::time::timeout(Duration::from_secs(2), policies.recv()).await.unwrap().unwrap();
+    assert_eq!(restored["active"], true);
+    assert_eq!(restored["domains"], json!(["example.com"]));
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while bridge.renew_lease().is_err() { tokio::time::sleep(Duration::from_millis(10)).await; }
+    }).await.unwrap();
+    let c = controller.clone();
+    tokio::task::spawn_blocking(move || c.on_timer_started("work")).await.unwrap().unwrap();
+    assert_eq!(controller.get_snapshot().enforcement.state, EnforcementState::Active);
+    assert!(policies.try_recv().is_err(), "Retry must not replace or release the restored policy");
+    controller.set_emergency_passphrase("public test fixture passphrase for recovery only").unwrap();
+    let c = controller.clone();
+    assert!(tokio::task::spawn_blocking(move || c.submit_emergency_passphrase("public test fixture passphrase for recovery only")).await.unwrap().unwrap());
+    let released = tokio::time::timeout(Duration::from_secs(2), policies.recv()).await.unwrap().unwrap();
+    assert_eq!(released["active"], false);
+    assert!(!controller.is_locked());
+    assert!(FocusRepository::new().get_run_journal(&db.lock().unwrap()).unwrap().is_none());
+    peer.abort();
+    bridge.shutdown().await;
+    drop(controller);
+    drop(db);
+    std::fs::remove_dir_all(dir).unwrap();
+}

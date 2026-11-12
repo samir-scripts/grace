@@ -283,7 +283,7 @@ fn passphrase_clear_waits_until_inflight_emergency_release_finishes() {
 }
 
 #[test]
-fn test_dirty_journal_cleanup_on_startup() {
+fn test_application_only_dirty_journal_cleanup_on_startup() {
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     migrations::run(&conn).unwrap();
 
@@ -291,7 +291,7 @@ fn test_dirty_journal_cleanup_on_startup() {
     let repo = FocusRepository::new();
     let journal = FocusRunJournal {
         run_id: "crashed-run-1".to_string(),
-        profile_snapshot_json: "{}".to_string(),
+        profile_snapshot_json: serde_json::to_string(&FocusProfile::default()).unwrap(),
         phase: "work".to_string(),
         current_round: 1,
         started_at: 1000,

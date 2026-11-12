@@ -13,7 +13,7 @@ use axum::Router;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Notify};
 use tokio::task::JoinHandle;
 use rand_core::{OsRng, RngCore};
 use super::browser_auth::{self, AuthenticatedChannel};
@@ -111,6 +111,9 @@ struct SharedState {
     active_participants: Mutex<HashSet<String>>,
     ack_condvar: Condvar,
     apps: Mutex<Option<ApplicationMonitor>>,
+    startup_ready: AtomicBool,
+    recovery_apps: Mutex<Option<Vec<AppTarget>>>,
+    startup_notify: Notify,
 }
 
 pub struct BrowserBridge {
@@ -125,10 +128,18 @@ impl BrowserBridge {
     }
 
     pub async fn new_in_memory(token: String, port: u16) -> Result<Self, String> {
-        Self::init_bridge(token, port, None, HashMap::new()).await
+        Self::init_bridge(token, port, None, HashMap::new(), true).await
     }
 
     pub async fn new_persistent(app_data_dir: &std::path::Path, port: u16) -> Result<Self, String> {
+        Self::new_persistent_impl(app_data_dir, port, true).await
+    }
+
+    pub async fn new_persistent_deferred(app_data_dir: &std::path::Path, port: u16) -> Result<Self, String> {
+        Self::new_persistent_impl(app_data_dir, port, false).await
+    }
+
+    async fn new_persistent_impl(app_data_dir: &std::path::Path, port: u16, startup_ready: bool) -> Result<Self, String> {
         let config_path = app_data_dir.join("focus_browser_config.json");
         let (token, profiles) = if config_path.exists() {
             if let Ok(content) = std::fs::read_to_string(&config_path) {
@@ -148,7 +159,7 @@ impl BrowserBridge {
             (Self::generate_token(), HashMap::new())
         };
 
-        let bridge = Self::init_bridge(token, port, Some(config_path), profiles).await?;
+        let bridge = Self::init_bridge(token, port, Some(config_path), profiles, startup_ready).await?;
         bridge.save_config();
         Ok(bridge)
     }
@@ -158,6 +169,7 @@ impl BrowserBridge {
         port: u16,
         config_path: Option<PathBuf>,
         required_profiles: HashMap<String, (BrowserKind, bool)>,
+        startup_ready: bool,
     ) -> Result<Self, String> {
         let (broadcast_tx, _) = broadcast::channel(32);
         let shared = Arc::new(SharedState {
@@ -173,6 +185,9 @@ impl BrowserBridge {
             active_participants: Mutex::new(HashSet::new()),
             ack_condvar: Condvar::new(),
             apps: Mutex::new(None),
+            startup_ready: AtomicBool::new(startup_ready),
+            recovery_apps: Mutex::new(None),
+            startup_notify: Notify::new(),
         });
 
         let addr: SocketAddr = ([127, 0, 0, 1], port).into();
@@ -354,6 +369,18 @@ fn advance_outbound_revision(revision: &mut u64, payload: &str) -> Result<bool, 
     Ok(true)
 }
 
+async fn wait_for_startup(shared: &SharedState) {
+    // Register the waiter before checking the flag to avoid a missed notification.
+    loop {
+        let notified = shared.startup_notify.notified();
+        tokio::pin!(notified);
+        notified.as_mut().enable();
+        if shared.startup_ready.load(Ordering::SeqCst) { break; }
+        notified.await;
+    }
+
+}
+
 async fn handle_socket(
     mut socket: WebSocket,
     shared: Arc<SharedState>,
@@ -371,6 +398,8 @@ async fn handle_socket(
     };
     log::debug!("[focus-bridge] hello_accepted connection={connection} version={BROWSER_PROTOCOL_VERSION}");
 
+    wait_for_startup(&shared).await;
+
     // Subscribe before registration and snapshot so concurrent policies cannot be lost.
     let mut rx = broadcast_tx.subscribe();
     let (rev, active, domains) = {
@@ -378,9 +407,15 @@ async fn handle_socket(
         if shared.is_active.load(Ordering::SeqCst)
             && !shared.current_domains.lock().unwrap().is_empty()
             && !shared.active_participants.lock().unwrap().contains(&profile_id) {
-            shared.late_participant.store(true, Ordering::SeqCst);
-            shared.ack_condvar.notify_all();
-            return;
+            if shared.recovery_apps.lock().unwrap().is_some()
+                && shared.required_profiles.lock().unwrap().contains_key(&profile_id) {
+                // Reconstruct observed optional participants while the recovered timer is stopped.
+                shared.active_participants.lock().unwrap().insert(profile_id.clone());
+            } else {
+                shared.late_participant.store(true, Ordering::SeqCst);
+                shared.ack_condvar.notify_all();
+                return;
+            }
         }
         clients.insert(profile_id.clone(), ConnectedClient {
             connection,
@@ -521,6 +556,27 @@ fn effective_blocked_apps(
 
  
 impl NativeEnforcer for BrowserBridge {
+    fn finish_startup(&self) {
+        self.shared.startup_ready.store(true, Ordering::SeqCst);
+        self.shared.startup_notify.notify_waiters();
+    }
+
+    fn restore_blocking(&self, apps: &[AppTarget], domains: &[String]) -> Result<(), EnforcerError> {
+        let configured = self.shared.required_profiles.lock().unwrap().clone();
+        {
+            let _clients = self.shared.connected_clients.lock().unwrap();
+            self.shared.current_revision.fetch_add(1, Ordering::SeqCst);
+            *self.shared.current_domains.lock().unwrap() = domains.to_vec();
+            *self.shared.active_participants.lock().unwrap() = configured.iter().filter(|(_, (_, required))| *required).map(|(id, _)| id.clone()).collect();
+            self.shared.late_participant.store(false, Ordering::SeqCst);
+            self.shared.is_active.store(true, Ordering::SeqCst);
+        }
+        // Re-arm native interception only after the restored participants acknowledge.
+        // Until then the timer remains stopped and retained browser rules stay active.
+        *self.shared.recovery_apps.lock().unwrap() = Some(apps.to_vec());
+        Ok(())
+    }
+
     fn apply_blocking(&self, apps: &[AppTarget], domains: &[String]) -> Result<(), EnforcerError> {
         log::debug!("[focus-bridge] apply apps={} domains={}", apps.len(), domains.len());
         // 2. Process domain blocking
@@ -654,6 +710,7 @@ impl NativeEnforcer for BrowserBridge {
     }
 
     fn release_blocking(&self) -> Result<(), EnforcerError> {
+        self.shared.recovery_apps.lock().unwrap().take();
         // Stop app monitor
         if let Some(monitor) = self.shared.apps.lock().unwrap().take() {
             let _ = monitor.stop();
@@ -714,6 +771,11 @@ impl NativeEnforcer for BrowserBridge {
         let current_rev = self.shared.current_revision.load(Ordering::SeqCst);
         let clients = self.shared.connected_clients.lock().unwrap();
         let required = self.shared.required_profiles.lock().unwrap();
+        if !self.shared.current_domains.lock().unwrap().is_empty()
+            && self.shared.active_participants.lock().unwrap().is_empty()
+        {
+            return Err(EnforcerError::BrowserLeaseLost);
+        }
 
         for (req_id, (_, is_req)) in required.iter() {
             if *is_req {
@@ -751,6 +813,24 @@ impl NativeEnforcer for BrowserBridge {
                     return Err(EnforcerError::BrowserLeaseLost);
                 }
                 Some(_) => {}
+            }
+        }
+
+        let recovery = self.shared.recovery_apps.lock().unwrap().take();
+        let kinds = self.shared.active_participants.lock().unwrap().iter()
+            .filter_map(|id| required.get(id).map(|(kind, _)| *kind)).collect();
+        drop(required);
+        drop(clients);
+        if let Some(apps) = recovery {
+            let targets = effective_blocked_apps(&apps, &self.shared.current_domains.lock().unwrap(), &kinds);
+            if !targets.is_empty() {
+                match ApplicationMonitor::start(targets) {
+                    Ok(monitor) => *self.shared.apps.lock().unwrap() = Some(monitor),
+                    Err(error) => {
+                        *self.shared.recovery_apps.lock().unwrap() = Some(apps);
+                        return Err(error);
+                    }
+                }
             }
         }
 
@@ -815,6 +895,38 @@ mod effective_blocked_apps_tests {
 #[cfg(test)]
 mod policy_publication_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn restored_policy_waits_for_startup_and_requires_a_participant() {
+        let bridge = BrowserBridge::init_bridge("test".into(), 0, None, HashMap::new(), false).await.unwrap();
+        assert!(!bridge.shared.startup_ready.load(Ordering::SeqCst));
+        // Seed directly to avoid starting any native application monitor on the host.
+        bridge.shared.is_active.store(true, Ordering::SeqCst);
+        *bridge.shared.current_domains.lock().unwrap() = vec!["example.com".into()];
+        assert!(matches!(bridge.renew_lease(), Err(EnforcerError::BrowserLeaseLost)));
+        assert!(tokio::time::timeout(Duration::from_millis(20), wait_for_startup(&bridge.shared)).await.is_err());
+        bridge.finish_startup();
+        tokio::time::timeout(Duration::from_secs(1), wait_for_startup(&bridge.shared)).await.unwrap();
+        assert!(bridge.shared.startup_ready.load(Ordering::SeqCst));
+        assert_eq!(*bridge.shared.current_domains.lock().unwrap(), vec!["example.com"]);
+        bridge.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn restore_seeds_policy_before_startup_finishes() {
+        let configured = [BrowserKind::Chrome, BrowserKind::Firefox, BrowserKind::Zen, BrowserKind::Safari]
+            .into_iter().enumerate().map(|(i, kind)| (format!("profile-{i}"), (kind, kind == BrowserKind::Chrome))).collect();
+        let bridge = BrowserBridge::init_bridge("test".into(), 0, None, configured, false).await.unwrap();
+        bridge.restore_blocking(&[], &["example.com".into()]).unwrap();
+        assert!(!bridge.shared.startup_ready.load(Ordering::SeqCst));
+        assert!(bridge.is_active());
+        assert_eq!(bridge.shared.current_revision.load(Ordering::SeqCst), 1);
+        assert_eq!(*bridge.shared.current_domains.lock().unwrap(), vec!["example.com"]);
+        assert_eq!(bridge.shared.active_participants.lock().unwrap().len(), 1, "closed optional browsers must not become required participants");
+        assert!(matches!(bridge.renew_lease(), Err(EnforcerError::BrowserLeaseLost)));
+        bridge.finish_startup();
+        bridge.shutdown().await;
+    }
 
     #[tokio::test]
     async fn unmapped_participant_cannot_start_domain_enforcement() {
