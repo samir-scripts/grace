@@ -39,3 +39,63 @@ test('connected guidance requires authenticated background status', () => {
  assert.match(connectionGuidance('ready',true),/^Connected/);
  assert.doesNotMatch(connectionGuidance('ready',false),/^Connected/);
 });
+
+// Exercise the Chrome wrapper separately from the signed, shared options page.
+import vm from 'node:vm';
+import { readFileSync } from 'node:fs';
+function optionsFixture() {
+ const targets = new Map();
+ const target = id => {
+  if (!targets.has(id)) targets.set(id, { textContent: '', listeners: {}, setAttribute() {}, after() {}, addEventListener(event, listener) { (this.listeners[event] ??= []).push(listener); } });
+  return targets.get(id);
+ };
+ let interval, storageChanged, messageReceived;
+ const probes = [];
+ const context = {
+  document: { hidden: false, createElement: () => target('help'), getElementById: target, addEventListener() {} },
+  window: { addEventListener() {} }, AbortController,
+  setInterval(callback) { interval = callback; },
+  chrome: {
+   runtime: { sendMessage: async () => ({connected:false}), connectNative() {}, onMessage: { addListener(listener) { messageReceived = listener; } } },
+   storage: { onChanged: { addListener(listener) { storageChanged = listener; } } },
+  },
+  getConsentState: async () => ({decision:'accepted'}),
+  connectionGuidance: () => 'Ready to connect',
+  probeNativeHost(connect, signal) { return new Promise(resolve => probes.push({signal, resolve})); },
+ };
+ const source = readFileSync(new URL('../chrome/chrome-options.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
+ vm.runInNewContext(source, context);
+ return { probes, help: target('help'),
+  click(id) { for (const listener of target(id).listeners.click ?? []) listener(); },
+  poll() { interval(); },
+  changed(decision) { storageChanged({focus_data_consent:{newValue:{version:1,decision}}}, 'local'); },
+  message(message) { messageReceived?.(message); },
+ };
+}
+const flush = () => new Promise(resolve => setImmediate(resolve));
+test('Chrome options abort immediately when withdrawal persistence is delayed or fails', async () => {
+ const f = optionsFixture(); await flush();
+ assert.equal(f.probes.length, 1);
+ f.click('consentStop');
+ assert.equal(f.probes[0].signal.aborted, true);
+ f.probes[0].resolve('ready'); await flush();
+ f.changed('accepted'); await flush();
+ f.poll(); await flush();
+ assert.equal(f.probes.length, 1, 'old accepted storage must not reopen diagnostics');
+ assert.equal(f.help.textContent, '');
+});
+test('only a persisted acceptance resumes diagnostics after withdrawal', async () => {
+ const f = optionsFixture(); await flush();
+ f.click('consentDecline');
+ f.message({type:'consent:accept'}); f.poll(); await flush();
+ assert.equal(f.probes.length, 1);
+ f.changed('accepted'); await flush();
+ assert.equal(f.probes.length, 2);
+});
+test('withdrawal from another options page aborts this page diagnostics', async () => {
+ const f = optionsFixture(); await flush();
+ f.message({type:'consent:stop'}); await flush();
+ assert.equal(f.probes[0].signal.aborted, true);
+ f.poll(); await flush();
+ assert.equal(f.probes.length, 1);
+});

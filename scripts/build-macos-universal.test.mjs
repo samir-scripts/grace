@@ -77,3 +77,26 @@ test('propagates command execution errors', () => {
     rmSync(cwd, { recursive: true, force: true });
   }
 });
+
+test('resolves a relative Cargo target from src-tauri and passes it to every command', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'universal relative '));
+  const oldTarget = process.env.CARGO_TARGET_DIR;
+  const target = join(cwd, 'src-tauri', 'relative target');
+  process.env.CARGO_TARGET_DIR = 'relative target';
+  for (const arch of ['aarch64-apple-darwin', 'x86_64-apple-darwin']) {
+    const dir = join(target, arch, 'release');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'pomotroid-native-host'), 'host');
+  }
+  const calls = [];
+  try {
+    buildUniversal({ cwd, run: (cmd, args, options) => { calls.push({ cmd, args, options }); return { status: 0 }; } });
+    assert.equal(calls.length, 5);
+    assert.ok(calls.every(({ options }) => options.env.CARGO_TARGET_DIR === target));
+    assert.deepEqual(calls[1].args, ['-create', join(target, 'aarch64-apple-darwin', 'release', 'pomotroid-native-host'), join(target, 'x86_64-apple-darwin', 'release', 'pomotroid-native-host'), '-output', join(target, 'universal-apple-darwin', 'release', 'pomotroid-native-host')]);
+    assert.deepEqual(calls.map(({ cmd }) => cmd), ['npm', 'lipo', 'lipo', 'lipo', 'npm']);
+  } finally {
+    if (oldTarget === undefined) delete process.env.CARGO_TARGET_DIR; else process.env.CARGO_TARGET_DIR = oldTarget;
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});

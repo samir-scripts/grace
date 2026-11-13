@@ -8,8 +8,30 @@ help.setAttribute('role', 'status');
 help.setAttribute('aria-live', 'polite');
 document.getElementById('consentStatus').after(help);
 let generation = 0, controller;
+let sharingStopped = false, acceptanceRequested = false;
+
+function stopDiagnostics() {
+  sharingStopped = true;
+  acceptanceRequested = false;
+  generation++;
+  controller?.abort();
+  help.textContent = '';
+}
+
+// Withdrawal takes effect before the shared page attempts to persist it.
+for (const id of ['consentStop', 'consentDecline']) {
+  document.getElementById(id).addEventListener('click', stopDiagnostics, { capture: true });
+}
+document.getElementById('consentAccept').addEventListener('click', () => {
+  acceptanceRequested = true;
+}, { capture: true });
+chrome.runtime.onMessage.addListener(message => {
+  if (message?.type === 'consent:stop') stopDiagnostics();
+  if (message?.type === 'consent:accept') acceptanceRequested = true;
+});
 
 async function refresh() {
+  if (sharingStopped) return;
   const current = ++generation;
   controller?.abort();
   const attempt = new AbortController();
@@ -36,7 +58,17 @@ async function refresh() {
   }
 }
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.focus_data_consent) refresh();
+  if (area !== 'local' || !changes.focus_data_consent) return;
+  if (changes.focus_data_consent.newValue?.decision !== 'accepted') {
+    stopDiagnostics();
+    return;
+  }
+  // Ignore an old accepted write arriving after withdrawal. A new acceptance
+  // request and its successful persisted decision are both required to resume.
+  if (sharingStopped && !acceptanceRequested) return;
+  sharingStopped = false;
+  acceptanceRequested = false;
+  refresh();
 });
 window.addEventListener('focus', refresh);
 document.addEventListener('visibilitychange', refresh);

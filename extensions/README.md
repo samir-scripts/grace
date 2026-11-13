@@ -24,7 +24,7 @@ Firefox 140 and later also supports Firefox's built-in data consent prompt.
 2. Open `chrome://extensions` in your browser.
 3. Enable **Developer mode** toggle in top-right.
 4. Click **Load unpacked** and select `extensions/dist/chrome`.
-5. In the matching Grace desktop build, open Settings > Timer & Sessions and use Chrome's **Set Up Extension** (or **Repair Connection**) action to register its native host.
+5. In the matching Grace desktop build, open Settings > Timer & Sessions and use Chrome's **Install Chrome Companion** (or **Repair Connection**) action to register its native host.
 6. Open the companion's Details > Extension options and select **Accept & connect**.
 7. Assign the connected profile to Chrome in Grace Settings > Sessions. Manual
    pairing under Advanced is a fallback, not proof that automatic pairing works.

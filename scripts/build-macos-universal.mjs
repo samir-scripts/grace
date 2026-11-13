@@ -4,11 +4,11 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export function buildUniversal({ run, cwd, updater = false }) {
-  const target = resolve(cwd, process.env.CARGO_TARGET_DIR || 'src-tauri/target');
+  const target = resolve(cwd, 'src-tauri', process.env.CARGO_TARGET_DIR || 'target');
   const release = join(target, 'universal-apple-darwin', 'release');
   const config = updater ? ['--config', '{"bundle":{"createUpdaterArtifacts":true}}'] : [];
   const execute = (command, args) => {
-    const result = run(command, args, { cwd, stdio: 'inherit' });
+    const result = run(command, args, { cwd, stdio: 'inherit', env: { ...process.env, CARGO_TARGET_DIR: target } });
     if (result.error) throw result.error;
     if (result.status !== 0) throw new Error(`${command} failed with status ${result.status}`);
   };
