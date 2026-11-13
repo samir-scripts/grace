@@ -111,3 +111,10 @@ macOS packaged acceptance is complete, including authorized crash recovery repai
 - Host checks after these changes: `npm run check` passed with zero errors and warnings; `npm test` passed with two optional captures skipped; Rust tests passed 212 with 19 ignored and the documented accessibility exclusion; Clippy passed. The Chrome store was not modified.
 - An isolated custom Chrome `--user-data-dir` could not discover the native host because Grace registers the default Chrome data directory. The fresh standard guest profile paired automatically; custom-directory support remains unverified beyond that observed failure.
 - Controlled HTTP and fresh HTTPS blocking, reconnect/retry and forced app recovery with retained active revision, protected tray Exit, natural completion and emergency release were observed with authenticated ACKs. The owned VM was stopped after release. The separate custom Chrome data-directory limitation remains open.
+
+
+### Staged Chrome companion candidate
+
+Chrome 1.1.1 adds immediate consent-withdrawal protection for diagnostics. The reviewed implementation passed all feature PR checks and merged through dev; see [current staging plan](chrome-companion-release-plan.md). Windows/macOS packaging blockers are repaired and cross-platform CI packages pass. Historical macOS/Linux ARM64 guest passes do not prove final-candidate native behavior. Windows and Linux x64 disposable packaged acceptance remain unavailable, so release promotion, public desktop downloads and Web Store submission remain held.
+
+After all native gates pass, the owner has authorized Public distribution and automatic publication after Google approval. Until then preserve the existing Private draft and do not upload or submit the new candidate.

@@ -1,0 +1,24 @@
+{
+  "feature_sha": "7dd768ad58a7e1bea39e19cf23995dcfb286d152",
+  "dev_merge_sha": "57fd50040c01368f3007101546085d6f72a8370b",
+  "pr": "https://github.com/samir-scripts/grace/pull/2",
+  "ci_runs": {
+    "pull_request": 43368622286,
+    "push": 43368614806,
+    "codeql": 43368622291
+  },
+  "all_feature_checks": "passed",
+  "chrome_version": "1.1.1",
+  "desktop_version": "1.7.1",
+  "chrome_zip_sha256": "133ebfe4a7a472caaf3398cf95973ee15f7b5ec9322e1be7727c35122dd75b93",
+  "local_universal_build": "passed",
+  "bundle_architectures": [
+    "x86_64",
+    "arm64"
+  ],
+  "native_runtime_acceptance": "required; not established for final candidate",
+  "windows_native_capacity": "unavailable",
+  "linux_x64_native_capacity": "unavailable",
+  "store_state": "Private draft; not uploaded or submitted by this task",
+  "release_promotion": "held"
+}
