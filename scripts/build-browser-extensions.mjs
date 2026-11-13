@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { geckoPayload } from './gecko-payload.mjs';
 import { verifySignedGeckoArtifact } from './gecko-signed-artifact.mjs';
 import { readChromeReleaseConfig } from './chrome-release-config.mjs';
 import { assertSafeExtensionTree } from './extension-source-guard.mjs';
@@ -144,8 +145,16 @@ for (const browser of browsers) {
   fs.mkdirSync(browserDist, { recursive: true });
 
   // Copy shared files
-  for (const file of fs.readdirSync(sharedDir)) {
-    fs.copyFileSync(path.join(sharedDir, file), path.join(browserDist, file));
+  if (browser === 'firefox') {
+    for (const [name, bytes] of geckoPayload(sharedDir, path.join(rootDir, 'extensions/firefox/manifest.json'))) {
+      const target = path.join(browserDist, name);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, bytes);
+    }
+  } else {
+    for (const file of fs.readdirSync(sharedDir)) {
+      fs.copyFileSync(path.join(sharedDir, file), path.join(browserDist, file));
+    }
   }
 
   // Copy browser manifest
@@ -157,7 +166,7 @@ for (const browser of browsers) {
       fs.copyFileSync(path.join(chromeSource, 'chrome-background.js'), path.join(browserDist, 'chrome-background.js'));
       for (const name of ['chrome-options.js', 'chrome-diagnostics.js']) fs.copyFileSync(path.join(chromeSource, name), path.join(browserDist, name));
       const options = fs.readFileSync(path.join(browserDist, 'options.html'), 'utf8');
-      fs.writeFileSync(path.join(browserDist, 'options.html'), options.replace('</body>', '<script type="module" src="chrome-options.js"></script>\n</body>'));
+      fs.writeFileSync(path.join(browserDist, 'options.html'), options.replace('<footer>', '<footer><a class="text-button" href="https://grace-focus.github.io/" target="_blank" rel="noopener noreferrer">Website</a> <a class="text-button" href="https://grace-focus.github.io/privacy/" target="_blank" rel="noopener noreferrer">Privacy</a> ').replace('</body>', '<script type="module" src="chrome-options.js"></script>\n</body>'));
     } else fs.copyFileSync(manifestPath, path.join(browserDist, 'manifest.json'));
   }
 

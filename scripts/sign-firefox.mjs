@@ -6,25 +6,13 @@ import { spawn } from 'node:child_process';
 import { parseEnv } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { verifySignedGeckoArtifact } from './gecko-signed-artifact.mjs';
+import { geckoPayload } from './gecko-payload.mjs';
 import { assertSafeExtensionTree } from './extension-source-guard.mjs';
 
 const id = 'focus@pomotroid.local';
 const managementUrl = 'https://addons.mozilla.org/en-US/developers/addon/3f4853f52b9c427ba24c/versions';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
-function snapshot(dir) {
-  const result = new Map();
-  function collect(base, prefix = '') {
-    for (const entry of fs.readdirSync(base, { withFileTypes: true })) {
-      const name = prefix + entry.name, full = path.join(base, entry.name);
-      if (entry.isDirectory()) collect(full, name + '/');
-      else if (entry.isFile() && !/\.(xpi|zip)$/i.test(name)) result.set(name, fs.readFileSync(full));
-      else throw new Error('Unsupported source entry');
-    }
-  }
-  collect(dir);
-  return result;
-}
 function matches(a, b) {
   return a.size === b.size && [...a].every(([key, value]) => b.has(key) && value.equals(b.get(key)));
 }
@@ -80,7 +68,7 @@ export async function signFirefox({ root = process.cwd(), env = process.env, run
   const manifest = JSON.parse(manifestBytes);
   if (manifest.browser_specific_settings?.gecko?.id !== id || !manifest.version) throw new Error('Unexpected Firefox extension identity');
   assertSafeExtensionTree(sourceDir);
-  const sources = snapshot(sourceDir);
+  const sources = geckoPayload(sourceDir, manifestPath);
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'grace-amo-'));
   try {
     const staged = path.join(temp, 'source'), artifacts = path.join(temp, 'artifacts');
@@ -93,7 +81,7 @@ export async function signFirefox({ root = process.cwd(), env = process.env, run
     const childEnv = Object.fromEntries(Object.entries(env).filter(([key]) => !key.startsWith('WEB_EXT_')));
     await run(['sign', '--channel', 'unlisted', '--source-dir', staged, '--artifacts-dir', artifacts], { ...childEnv, ...secrets });
     assertSafeExtensionTree(sourceDir);
-    if (!manifestBytes.equals(fs.readFileSync(manifestPath)) || !matches(sources, snapshot(sourceDir))) throw new Error('Extension source changed during signing');
+    if (!manifestBytes.equals(fs.readFileSync(manifestPath)) || !matches(sources, geckoPayload(sourceDir, manifestPath))) throw new Error('Extension source changed during signing');
     const files = fs.readdirSync(artifacts).filter(name => name.endsWith('.xpi'));
     if (files.length !== 1) throw new Error('Expected exactly one signed XPI');
     const input = path.join(artifacts, files[0]);
@@ -102,7 +90,7 @@ export async function signFirefox({ root = process.cwd(), env = process.env, run
     fs.writeFileSync(provenanceTemp, JSON.stringify(provenance, null, 2) + '\n');
     verifySignedGeckoArtifact({ artifactPath: input, provenancePath: provenanceTemp, sharedDir: sourceDir, manifestPath });
     assertSafeExtensionTree(sourceDir);
-    if (!manifestBytes.equals(fs.readFileSync(manifestPath)) || !matches(sources, snapshot(sourceDir))) throw new Error('Extension source changed during signing');
+    if (!manifestBytes.equals(fs.readFileSync(manifestPath)) || !matches(sources, geckoPayload(sourceDir, manifestPath))) throw new Error('Extension source changed during signing');
     const dest = path.join(root, 'extensions/signed/firefox'); fs.mkdirSync(dest, { recursive: true });
     const targets = [path.join(dest, `${id}.xpi`), path.join(dest, 'provenance.json')];
     const contents = [fs.readFileSync(input), fs.readFileSync(provenanceTemp)];

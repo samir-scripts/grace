@@ -66,3 +66,7 @@ Windows and Linux x64 disposable packaged acceptance capacity is unavailable. CI
 - Feature PR CodeQL passed, but dev/stage push analyses failed while uploading results: Resource not accessible by integration. The workflow requested no explicit token permissions. GitHub permits PR SARIF uploads specially; normal branch pushes need security-events write.
 - Owner explicitly approved contents read, actions read and security-events write for the analyze job after automatic approval review requested authorization. No repository-wide defaults, credentials, triggers or analysis checks change. Independent Terra review confirmed the scope.
 - The repeated dev/stage failures are the observed regression. A reviewed CI follow-up PR and successful push analyses are required before the staging checkpoint is considered green. Application source and extension payload remain unchanged.
+
+
+### Superseding experimental beta policy (2026-11-13)
+The owner explicitly replaced the Windows/Ubuntu x64 packaged-runtime publication hold with an experimental beta waiver. Those platforms remain **unverified / deferred to contributors**, never passed. The new plan is [experimental betas and branded pages](experimental-beta-release-plan.md). Automated quality gates, signed Gecko correspondence, packaging verification and independent code review remain required. Stable publication requires reviewed reports matching tested source and actual package hashes. No first-party x64 packaged runtime checks or new x64 VMs are authorized in this work.

@@ -1,2 +1,5 @@
 # Signed Gecko payload correspondence requires exact source bytes on every OS.
 extensions/focus/** -text
+
+# Firefox overlay bytes are included in the signed archive.
+extensions/firefox/payload/** -text

@@ -16,3 +16,7 @@ extensions/dist/
 .env
 .env.*
 !.env.example
+
+# Per-plan execution logs and local release staging.
+.superpowers/
+release-assets/

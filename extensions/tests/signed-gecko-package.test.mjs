@@ -27,6 +27,8 @@ function fixture(t) {
     for (const name of fs.readdirSync(path.join(root, 'extensions/focus'))) {
       files[name] = new Uint8Array(fs.readFileSync(path.join(root, 'extensions/focus', name)));
     }
+    const override = path.join(root, 'extensions/firefox/payload/options.html');
+    if (fs.existsSync(override)) files['options.html'] = new Uint8Array(fs.readFileSync(override));
     files['manifest.json'] = new Uint8Array(fs.readFileSync(path.join(root, 'extensions/firefox/manifest.json')));
     files['META-INF/mozilla.rsa'] = new Uint8Array([1, 2, 3]); // Synthetic: not Mozilla signed.
     return files;
@@ -174,4 +176,18 @@ test('signed artifact verification rejects credential filenames inside archive',
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Credential file/);
   assert.doesNotMatch(result.stderr, /synthetic-private-value/);
+});
+
+
+test('signed release rejects changed, removed and extra Firefox overrides', t => {
+  for (const mutation of ['changed', 'removed', 'extra']) {
+    const f = fixture(t);
+    f.stage(f.payload());
+    const overlay = path.join(f.root, 'extensions/firefox/payload');
+    if (mutation === 'changed') fs.appendFileSync(path.join(overlay, 'options.html'), '<p>changed</p>');
+    if (mutation === 'removed') fs.rmSync(overlay, { recursive: true });
+    if (mutation === 'extra') fs.writeFileSync(path.join(overlay, 'extra.js'), 'unexpected');
+    assert.notEqual(f.run('--require-signed').status, 0, mutation);
+    assert.equal(fs.existsSync(f.output), false);
+  }
 });

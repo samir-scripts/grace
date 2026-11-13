@@ -82,3 +82,17 @@ test('signer diagnostics report only safe categories and never reflected credent
  assert.equal(classifySigningFailure('Approval: timeout exceeded. When approved', []), 'pending-review');
  assert.equal(classifySigningFailure('secret-credential unknown details', ['secret-credential']), 'unknown');
 });
+
+
+test('signer stages Firefox override and rejects mutation during signing', async t => {
+ const root = fixture(t);
+ fs.writeFileSync(path.join(root, 'extensions/focus/options.html'), '<footer>shared</footer>');
+ const overlay = path.join(root, 'extensions/firefox/payload');
+ fs.mkdirSync(overlay); fs.writeFileSync(path.join(overlay, 'options.html'), '<footer>Firefox links</footer>');
+ await assert.rejects(signFirefox({root,env:{WEB_EXT_API_KEY:'key',WEB_EXT_API_SECRET:'secret'},run:async(a)=>{
+   const staged=a[a.indexOf('--source-dir')+1];
+   assert.equal(fs.readFileSync(path.join(staged, 'options.html'), 'utf8'), '<footer>Firefox links</footer>');
+   fs.writeFileSync(path.join(overlay, 'options.html'), '<footer>changed</footer>');
+ }}), /source changed/i);
+ assert.equal(fs.readFileSync(path.join(root,'extensions/signed/firefox/focus@pomotroid.local.xpi'),'utf8'),'old artifact');
+});

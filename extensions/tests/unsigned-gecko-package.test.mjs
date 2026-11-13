@@ -28,11 +28,11 @@ test('unsigned Gecko package contains exactly the current source and declaration
   const manifest = JSON.parse(Buffer.from(archive['manifest.json']).toString());
   assert.equal(manifest.browser_specific_settings.gecko.id, 'focus@pomotroid.local');
   assert.equal(manifest.browser_specific_settings.gecko.strict_min_version, '115.0');
-  assert.equal(manifest.version, '1.1.0');
+  assert.equal(manifest.version, '1.1.1');
   assert.deepEqual(manifest.browser_specific_settings.gecko.data_collection_permissions, { required: ['authenticationInfo', 'personallyIdentifyingInfo'] });
   assert.equal(manifest.permissions.includes('management'), false);
   const matchesSource = () => files.every(file => fs.existsSync(path.join(root, 'extensions/focus', file)) &&
-    Buffer.from(archive[file]).equals(fs.readFileSync(path.join(root, 'extensions/focus', file)))) &&
+    Buffer.from(archive[file]).equals(fs.readFileSync(path.join(root, file === 'options.html' ? 'extensions/firefox/payload' : 'extensions/focus', file)))) &&
     Buffer.from(archive['manifest.json']).equals(fs.readFileSync(path.join(root, 'extensions/firefox/manifest.json')));
   assert.equal(matchesSource(), true);
   const source = path.join(root, 'extensions/focus/consent.js');

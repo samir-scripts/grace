@@ -2,6 +2,8 @@
 
 # Implementation plans
 
+[Experimental betas and branded pages](experimental-beta-release-plan.md) — active. Windows/Ubuntu x64 packaged runtime acceptance is explicitly unverified / deferred to contributors under the owner-approved beta waiver. Stable promotion remains gated by reviewed exact-artifact native evidence.
+
 [macOS Chrome acceptance through Tart](chrome-tart-acceptance-plan.md) — passed actual packaged Chrome acceptance on macOS, including forced app recovery; evidence collected and clone stopped.
 
 [Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — macOS and Linux ARM64 packaged Chrome matrices passed on disposable guests; Linux x64 and Windows have not been tested. A custom Chrome data directory cannot discover the default native-host registration. Store stays Private and unsubmitted.
