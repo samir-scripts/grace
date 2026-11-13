@@ -1,12 +1,12 @@
-[Chrome companion release](chrome-companion-release-plan.md) — promoted through reviewed dev PR to stage; release held for Windows/Linux x64 packaged acceptance.
+[Chrome companion release](chrome-companion-release-plan.md) — historical acceptance plan. The owner-approved [experimental beta policy](experimental-beta-release-plan.md) supersedes its Windows/Ubuntu x64 runtime hold for the beta only; stable promotion still requires contributor evidence.
 
 # Implementation plans
 
-[Experimental betas and branded pages](experimental-beta-release-plan.md) — active. Windows/Ubuntu x64 packaged runtime acceptance is explicitly unverified / deferred to contributors under the owner-approved beta waiver. Stable promotion remains gated by reviewed exact-artifact native evidence.
+[Experimental betas and branded pages](experimental-beta-release-plan.md) — desktop 1.7.2-beta.1 and branded website/privacy pages published; Chrome 1.1.2 submitted Public with automatic publication after approval and currently Pending Review. Signed Firefox 1.1.1 remains unlisted/manual. Windows/Ubuntu x64 packaged runtime acceptance is explicitly unverified / deferred to contributors. Stable promotion remains gated by reviewed exact-artifact native evidence; store-installed acceptance follows approval.
 
 [macOS Chrome acceptance through Tart](chrome-tart-acceptance-plan.md) — passed actual packaged Chrome acceptance on macOS, including forced app recovery; evidence collected and clone stopped.
 
-[Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — macOS and Linux ARM64 packaged Chrome matrices passed on disposable guests; Linux x64 and Windows have not been tested. A custom Chrome data directory cannot discover the default native-host registration. Store stays Private and unsubmitted.
+[Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — macOS and Linux ARM64 packaged Chrome matrices passed on disposable guests; Linux x64 and Windows have not been tested. A custom Chrome data directory cannot discover the default native-host registration. The historical Private/unsubmitted status is superseded by the current experimental release plan: Chrome 1.1.2 is Public / Pending Review, with automatic publication after approval.
 
 [grace. UI consistency and accessibility](grace-ui-consistency-plan.md) — implementation and verification ledger. [Batch 5 native/signing report](grace-ui-batch5-report.md): native development checks, Clippy and production build pass; signed 1.1.0 is approved and a packaged Zen update/reconnect passed; Firefox 115 support is retained with its consent fallback; pre-consent appearance and remaining browser acceptance are open.
 
