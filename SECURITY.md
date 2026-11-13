@@ -1,76 +1,36 @@
 # Security
 
-## Release artifact signing
+## Verify direct downloads
 
-Linux release artifacts (`.deb`, `.rpm`, `.AppImage`) published to GitHub Releases are signed with GPG. Each package is accompanied by a detached ASCII-armored signature file (`.asc`) that you can use to verify authenticity before installing.
+Release automation requires a verified detached Tauri/Minisign signature (`.sig`) for every published desktop package. Releases include `grace-updater.pub`, the decoded public verification key, and `SHA256SUMS`. Checksums detect changed bytes; verify the signature before installing.
 
-### Import the public key
+Obtain the package, its matching `.sig`, and `grace-updater.pub` from the same versioned Grace release. Compare the public key with the updater key in `src-tauri/tauri.conf.json` at that release's source revision; that configuration stores the same key as base64-encoded text. The public-key fingerprint is recorded in the release plan.
+
+Tauri wraps its Minisign signature text in base64. With Python 3 and [Minisign](https://jedisct1.github.io/minisign/) installed, replace `PACKAGE` with the downloaded filename:
 
 ```sh
-gpg --import public.asc
+python3 -c "import base64; from pathlib import Path; Path('PACKAGE.minisig').write_bytes(base64.b64decode(Path('PACKAGE.sig').read_bytes().strip(), validate=True))"
+minisign -Vm PACKAGE -p grace-updater.pub -x PACKAGE.minisig
 ```
 
-Or by fingerprint from a key server:
+A successful verification authenticates the exact package bytes against that public key. Missing, invalid, or mismatched signatures must stop installation. Do not treat a checksum alone as publisher authentication.
 
-```sh
-gpg --keyserver keys.openpgp.org --recv-keys 2E6C4B1F9538A929690710C704A45C72F8B93EC2
-```
+These detached signatures are distinct from Windows Authenticode, Apple Developer ID signing/notarization, and Linux repository signing. They do not establish operating-system publisher trust or prove native runtime acceptance. Windows x64 and Ubuntu x64 beta blocking and recovery remain unverified / deferred to contributors.
 
-**Key fingerprint:** `2E6C4B1F9538A929690710C704A45C72F8B93EC2`
+### Optional GPG signatures
 
-### Verify a downloaded package
+A release may additionally include ASCII-armored GPG signatures (`.asc`) when a maintainer has configured that separate key. They are optional and do not replace the required `.sig` files. Verify any GPG key's fingerprint through a trusted maintainer source before importing it, then use `gpg --verify PACKAGE.asc PACKAGE`.
 
-Download both the package and its `.asc` signature file from the release page, then run the appropriate command:
+APT/RPM repository, Flatpak, Snap, and AUR signing are separate distribution mechanisms; direct-download signatures do not establish those channels.
 
-```sh
-# Debian package
-gpg --verify grace_<version>_amd64.deb.asc grace_<version>_amd64.deb
+## Maintainer key handling
 
-# RPM package
-gpg --verify grace-<version>-1.x86_64.rpm.asc grace-<version>-1.x86_64.rpm
+Keep private signing material in an owner-readable ignored file or a secure secret store. Configure `TAURI_SIGNING_PRIVATE_KEY` and, if applicable, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` in GitHub Actions. Transfer values through secure input rather than command-line arguments; never commit or print them. The public updater key belongs in `src-tauri/tauri.conf.json`.
 
-# AppImage
-gpg --verify grace_<version>_amd64.AppImage.asc grace_<version>_amd64.AppImage
+Before publication, the release job signs packages without changing their bytes, verifies every detached signature against the configured public key, and includes the public key and signature hashes in the release checksums. Existing signatures are verified rather than silently replaced. Stable publication additionally requires exact-source, exact-package, independently reviewed platform acceptance.
 
-A `Good signature` message confirms the file is genuine and unmodified.
+### Grace signing identity transition
 
-### Note on repository-based distribution
+The original updater public key was inherited from upstream Pomotroid. Grace's owner approved a new signing identity for `1.7.2-beta.1`. Existing installations using the inherited key need a manually downloaded installer before they can accept future Grace-key-signed updates. The beta does not publish or modify a stable updater feed. There is no unsigned-update fallback.
 
-Signing for package repository channels (APT, RPM repo, Flatpak, Snap, AUR) is handled separately at the repository level when those distribution channels are set up. The GPG signatures on GitHub Release artifacts are for direct-download verification only.
-
----
-
-## Maintainer: key setup
-
-### Generate the signing keypair (one-time)
-
-```sh
-# Generate the keypair (choose RSA 4096 or Ed25519)
-gpg --full-gen-key
-
-# List the new key and note the fingerprint
-gpg --list-secret-keys --keyid-format LONG
-
-# Export the public key and commit it to the repository
-gpg --armor --export <FINGERPRINT> > public.asc
-
-# Export the private key for CI (keep this secure — do not commit)
-gpg --armor --export-secret-keys <FINGERPRINT>
-```
-
-### Configure repository secrets
-
-Add the following secrets to the GitHub repository (Settings → Secrets and variables → Actions):
-
-| Secret name       | Value                                                               |
-| ----------------- | ------------------------------------------------------------------- |
-| `GPG_PRIVATE_KEY` | The full output of `gpg --armor --export-secret-keys <FINGERPRINT>` |
-| `GPG_PASSPHRASE`  | The passphrase chosen during key generation                         |
-
-### Key rotation
-
-1. Generate a new keypair following the steps above
-2. Update `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` in repository secrets
-3. Replace `public.asc` with the new public key and commit
-4. Update the fingerprint in this file
-5. Optionally revoke the old key and upload the revocation certificate to key servers
+Back up the private key through an owner-controlled secure store. A future key change requires an explicit trust transition; changing only the public key in new source does not authorize updates for already installed clients.

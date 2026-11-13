@@ -14,7 +14,7 @@ const cases = Object.fromEntries(['installation','automatic_pairing','profile_as
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'release-prep-'));
   mkdirSync(join(root, 'dist', 'nested'), { recursive: true });
-  for (const [file, bytes] of Object.entries({ 'nested/app-setup.exe': 'windows', 'nested/app-setup.exe.sig': 'signature', 'nested/app.deb': 'linux', 'app.dmg': 'mac', 'app.AppImage': 'appimage', 'latest.json': 'unsafe feed' })) writeFileSync(join(root, 'dist', file), bytes);
+  for (const [file, bytes] of Object.entries({ 'nested/app-setup.exe': 'windows', 'nested/app-setup.exe.sig': 'signature', 'nested/app.deb': 'linux', 'nested/app.deb.sig': 'signature', 'app.dmg': 'mac', 'app.dmg.sig': 'signature', 'app.AppImage': 'appimage', 'app.AppImage.sig': 'signature', 'grace-updater.pub': 'public verification key', 'latest.json': 'unsafe feed' })) writeFileSync(join(root, 'dist', file), bytes);
   return root;
 }
 function reports(root) {
@@ -132,7 +132,7 @@ test('renamed package keeps its detached signature under the matching public nam
   const root = mkdtempSync(join(tmpdir(), 'grace-signature-name-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   mkdirSync(join(root, 'dist'));
-  for (const name of ['grace-setup.exe','grace.deb','grace.dmg','grace.deb.asc']) writeFileSync(join(root,'dist',name),'synthetic '+name);
+  for (const name of ['grace-setup.exe','grace-setup.exe.sig','grace.deb','grace.deb.sig','grace.dmg','grace.dmg.sig','grace.deb.asc','grace-updater.pub']) writeFileSync(join(root,'dist',name),'synthetic '+name);
   const result=await prepareRelease({root,tag:'v1.7.2-beta.1',sourceRevision:'a'.repeat(40)});
   assert.ok(result.assets.includes('grace-ubuntu-x64-1.7.2-beta.1.deb.asc'));
   assert.equal(result.assets.includes('grace.deb.asc'),false);
@@ -145,4 +145,18 @@ test('stable Ubuntu DEB evidence does not publish unaccepted Linux formats', asy
  writeFileSync(join(root,'dist/app.AppImage.sig'),'unaccepted format signature');
  const result=await prepareRelease(opts(root));
  assert.equal(result.assets.some(name=>/\.(?:AppImage|rpm)(?:\.(?:sig|asc))?$/.test(name)),false);
+});
+
+
+test('all public package formats require a detached signature before assembly', async () => {
+  for (const file of ['nested/app-setup.exe', 'nested/app.deb', 'app.dmg', 'app.AppImage', 'extra.rpm', 'extra.app.tar.gz']) {
+    const root = fixture();
+    try {
+      for (const path of ['nested/app-setup.exe', 'nested/app.deb', 'app.dmg', 'app.AppImage']) writeFileSync(join(root, 'dist', path + '.sig'), 'signature');
+      if (file.startsWith('extra.')) writeFileSync(join(root, 'dist', file), 'extra package');
+      rmSync(join(root, 'dist', file + '.sig'), { force: true });
+      await assert.rejects(prepareRelease({ root, tag: 'v1.7.2-beta.1', sourceRevision: source }), /signature/i);
+      assert.equal(existsSync(join(root, 'release-assets')), false);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  }
 });

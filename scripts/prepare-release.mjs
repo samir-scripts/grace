@@ -34,7 +34,9 @@ export async function prepareRelease({ root = process.cwd(), tag, artifactDir = 
     ['ubuntu-x64', (name) => name.endsWith('.deb'), `grace-ubuntu-x64-${version}.deb`],
     ['macos-universal', (name) => name.endsWith('.dmg'), `grace-macos-universal-${version}.dmg`],
   ];
-  const selected = new Map();
+  const keys = files.filter((file) => basename(file) === 'grace-updater.pub');
+  if (keys.length !== 1) throw new Error('Expected exactly one public verification key');
+  const selected = new Map([[keys[0], 'grace-updater.pub']]);
   for (const [platform, match, output] of required) {
     const matches = files.filter((file) => match(basename(file)));
     if (matches.length !== 1) throw new Error(`Expected exactly one ${platform} package`);
@@ -56,6 +58,12 @@ export async function prepareRelease({ root = process.cwd(), tag, artifactDir = 
     if (names.has(asset.file)) throw new Error(`Duplicate asset name: ${asset.file}`);
     names.add(asset.file);
     asset.sha256 = sha256(asset.bytes);
+  }
+  for (const asset of assets) {
+    if (/(?:-setup\.exe|\.deb|\.dmg|\.AppImage|\.rpm|\.app\.tar\.gz)$/.test(asset.file)) {
+      const signature = assets.find((item) => item.file === asset.file + '.sig');
+      if (!signature || signature.bytes.length === 0) throw new Error('Missing detached package signature');
+    }
   }
   const platformAssets = Object.fromEntries(required.map(([platform, , file]) => [platform, assets.find((asset) => asset.file === file)]));
   const artifactHashes = Object.fromEntries(required.map(([platform]) => [platform, platformAssets[platform].sha256]));

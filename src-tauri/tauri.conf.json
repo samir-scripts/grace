@@ -36,7 +36,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdDMTE5MDhGMEMyMDNDNjYKUldSbVBDQU1qNUFSZkc4SXhsOGx6Q1d6UkNPbHlBTUU3Qzhlb0cwa2pZZjk0S1RxNVUweS9YNlQK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFEMjNFMzYzMDRCQUI1RUQKUldUdHRib0VZK01qSFg3UWpEL0NlalVOR1BtVEVTMDRLVmNhZk1WZ0N4MHBKY05qT2trRHNWUVEK",
       "endpoints": [
         "https://raw.githubusercontent.com/samir-scripts/grace/main/latest.json"
       ]

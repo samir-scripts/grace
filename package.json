@@ -34,7 +34,7 @@
     "extensions:sign:firefox": "node scripts/sign-firefox.mjs",
     "test:chrome-integration": "npm run extensions:build -- --development && node --test extensions/tests/playwright-blocking.test.mjs",
     "extensions:chrome:release": "node scripts/build-browser-extensions.mjs --chrome-release",
-    "test:packaging": "node --test scripts/build-macos-universal.test.mjs scripts/release-policy.test.mjs scripts/native-acceptance.test.mjs scripts/prepare-release.test.mjs scripts/verify-candidate-run.test.mjs",
+    "test:packaging": "node --test scripts/build-macos-universal.test.mjs scripts/release-policy.test.mjs scripts/native-acceptance.test.mjs scripts/prepare-release.test.mjs scripts/verify-candidate-run.test.mjs scripts/sign-release-artifacts.test.mjs",
     "build:macos-universal": "node scripts/build-macos-universal.mjs"
   },
   "dependencies": {
