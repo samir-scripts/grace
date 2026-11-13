@@ -43,7 +43,7 @@ test('connected guidance requires authenticated background status', () => {
 // Exercise the Chrome wrapper separately from the signed, shared options page.
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
-function optionsFixture() {
+function optionsFixture({ crlf = false } = {}) {
  const targets = new Map();
  const target = id => {
   if (!targets.has(id)) targets.set(id, { textContent: '', listeners: {}, setAttribute() {}, after() {}, addEventListener(event, listener) { (this.listeners[event] ??= []).push(listener); } });
@@ -63,7 +63,8 @@ function optionsFixture() {
   connectionGuidance: () => 'Ready to connect',
   probeNativeHost(connect, signal) { return new Promise(resolve => probes.push({signal, resolve})); },
  };
- const source = readFileSync(new URL('../chrome/chrome-options.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
+ const raw = readFileSync(new URL('../chrome/chrome-options.js', import.meta.url), 'utf8');
+ const source = (crlf ? raw.replace(/\r?\n/g, '\r\n') : raw).replace(/^import .*;\r?\n/gm, '');
  vm.runInNewContext(source, context);
  return { probes, help: target('help'),
   click(id) { for (const listener of target(id).listeners.click ?? []) listener(); },
@@ -98,4 +99,11 @@ test('withdrawal from another options page aborts this page diagnostics', async 
  assert.equal(f.probes[0].signal.aborted, true);
  f.poll(); await flush();
  assert.equal(f.probes.length, 1);
+});
+
+test('Chrome wrapper fixture accepts Windows checkout line endings', async () => {
+ const f = optionsFixture({crlf:true}); await flush();
+ assert.equal(f.probes.length, 1);
+ f.click('consentStop');
+ assert.equal(f.probes[0].signal.aborted, true);
 });

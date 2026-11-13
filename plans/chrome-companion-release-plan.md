@@ -50,3 +50,7 @@ Windows and Linux x64 disposable packaged acceptance capacity is unavailable. CI
 - CI at 73f30ac compiled the universal application and created the helper, then rejected the lipo verification argument order. Corrected the input-before-command syntax.
 - A real local macOS regression compiles tiny arm64/x86_64 Mach-O objects, exercises lipo through the helper, accepts universal binaries, and rejects a thin main before bundling. It failed before the fix and now passes; all 6 packaging tests pass. Independent Terra review found no issue.
 - Full npm suite after this fix passed 147 tests with 2 optional captures skipped. Required Rust suite after Windows fix passed 214 with 19 opt-in ignored and documented accessibility exclusion. Final all-platform CI is still pending.
+
+### Windows test harness portability
+- Added a CRLF fixture for the Chrome options VM harness. It reproduced an import-stripping SyntaxError on Windows line endings; accepting CRLF fixed it. All 9 diagnostic tests pass, with independent Terra review finding no issue. Production extension bytes are unchanged.
+- At 1cb0a6a, both Ubuntu quality gates, CodeQL, Linux packaging, Windows packaging and the push-run macOS universal package passed. The test-only portability follow-up still requires final exact-head CI before promotion.
