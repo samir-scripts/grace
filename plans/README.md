@@ -1,4 +1,4 @@
-[Chrome companion release](chrome-companion-release-plan.md) — implementation active; release held for Windows/Linux x64 packaged acceptance.
+[Chrome companion release](chrome-companion-release-plan.md) — promoted through reviewed dev PR to stage; release held for Windows/Linux x64 packaged acceptance.
 
 # Implementation plans
 

@@ -1,0 +1,11 @@
+{
+  "source_revision": "1cb0a6ab6107bddec4da7af72d434de9d04cb07a",
+  "ci_run": 43367247974,
+  "dmg_sha256": "0c12056594966aad70338b8ce48b5b892ae638faeb2a192fc5c489630f9ba826",
+  "architectures": {
+    "pomotroid": "x86_64 arm64",
+    "pomotroid-native-host": "x86_64 arm64"
+  },
+  "chrome_version": "1.1.1",
+  "native_execution": "not performed"
+}

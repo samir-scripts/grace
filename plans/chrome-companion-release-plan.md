@@ -8,8 +8,8 @@ Complete Chrome packaging/onboarding, repair Windows signed-source correspondenc
 ## Tasks
 - [x] Reconcile Chrome packaging, diagnostics, typed IPC and setup controls.
 - [x] Add Windows exact-byte checkout and universal macOS helper plus Chromium CI coverage; remote packaging proof pending.
-- [ ] Pass local gates and independent review; push feature PR and follow exact-commit checks.
-- [ ] Merge tested development PR and promote to stage.
+- [x] Pass local gates and independent review; push feature PR and follow exact-commit checks.
+- [x] Merge tested development PR and promote to stage.
 - [ ] Complete packaged Windows and Linux x64 acceptance.
 - [ ] Promote accepted candidate to release, publish desktop packages, finish store assets and submit.
 
@@ -54,3 +54,10 @@ Windows and Linux x64 disposable packaged acceptance capacity is unavailable. CI
 ### Windows test harness portability
 - Added a CRLF fixture for the Chrome options VM harness. It reproduced an import-stripping SyntaxError on Windows line endings; accepting CRLF fixed it. All 9 diagnostic tests pass, with independent Terra review finding no issue. Production extension bytes are unchanged.
 - At 1cb0a6a, both Ubuntu quality gates, CodeQL, Linux packaging, Windows packaging and the push-run macOS universal package passed. The test-only portability follow-up still requires final exact-head CI before promotion.
+
+### Reviewed staging promotion
+- Feature head 7dd768ad58a7e1bea39e19cf23995dcfb286d152 passed all PR checks: both quality gates, CodeQL, both Linux x64 builds, both Windows x64 builds and both macOS universal builds. Runs: 43368622286 (PR), 43368614806 (push), 43368622291 (CodeQL).
+- PR #2 merged into dev as 57fd50040c01368f3007101546085d6f72a8370b. Stage fast-forwards existing local stage history from this dev merge; this follow-up changes only plans/evidence. No force push or branch deletion.
+- Local full universal app/DMG build passed; packaged app and native host both contain x86_64 and arm64. CI DMG inspection at preceding application revision 1cb0a6a independently confirmed both binaries and Chrome 1.1.1 without executing the application.
+- Staging automation runs on the resulting stage commit; its live GitHub checks are the authoritative result for that build. A successful package build does not count as native acceptance.
+- STOP: disposable Windows and Linux x64 packaged runtime capacity remains unavailable. Final-candidate native acceptance, matching public downloads, Public store distribution and automatic publication after review remain pending. Store draft stays Private/unsubmitted; remote release is not created or pushed.
