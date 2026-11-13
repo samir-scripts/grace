@@ -78,7 +78,7 @@
   // Base window dimensions (natural/default size).
   const BASE_W = 360;
   const BASE_H = 478;
-  const TITLEBAR_H = 40;
+  const TITLEBAR_H = 48;
 
   // Compact mode: when either dimension drops below this threshold,
   // hide non-essential elements (footer, label, play/pause) to show
@@ -335,6 +335,20 @@
       for (const fn of cleanups) fn();
     };
   });
+
+  async function handleCanvasMouseDown(e: MouseEvent) {
+    if ($activeView !== 'timer') return;
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    if (
+      target?.closest(
+        'button, a, input, select, textarea, [role="button"], .dial-stack, .controls-wrapper, .mini-controls, [data-no-drag]'
+      )
+    ) {
+      return;
+    }
+    await getCurrentWebviewWindow().startDragging();
+  }
 </script>
 
 <!-- Resize handles — invisible edge/corner strips for decorations-free windows.
@@ -362,10 +376,13 @@
   <Titlebar onEmergencyClick={() => (showEscapeDialog = true)} />
   {#if !viewResizing}
   {#key $activeView}
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <main
       class="view-enter"
       class:compact={isCompact}
       class:view-panel={$activeView !== 'timer'}
+      onmousedown={handleCanvasMouseDown}
+      data-tauri-drag-region
     >
       {#if $activeView === 'timer'}
         <Timer {isCompact} {uiScale} />

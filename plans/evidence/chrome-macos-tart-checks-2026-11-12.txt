@@ -1,0 +1,27 @@
+Source c373d55
+Rust: 212 passed; 19 opt-in ignored; documented accessibility exclusion.
+Clippy: passed with warnings denied.
+Production app/DMG build: passed; signed Firefox guard preserved.
+
+crash-recovery-final-guest.log
+
+running 1 test
+test interrupted_browser_session_recovers_after_process_restart ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.57s
+
+
+retention-final-guest.log
+
+running 1 test
+test controller_retains_browser_policy_until_authorized_release ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.05s
+
+
+pause-order-final-guest.log
+
+running 1 test
+test focus::controller::tests::lease_loss_cannot_overtake_timer_start_command ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 1.02s

@@ -729,8 +729,143 @@ test('updating an installed companion preserves participants and is disabled whi
     });
     await page.waitForFunction(() => document.querySelector('button[title="Extensions cannot be changed while a focus session is active."]')?.disabled);
     assert.equal(await update.isDisabled(), true);
-    assert.equal(await page.getByRole('button', { name: 'Remove Extension' }).isDisabled(), true);
-    assert.equal(await page.getByRole('button', { name: 'Install Extension' }).isDisabled(), true);
+    assert.equal(await page.locator('.browser-card .btn-remove').first().isDisabled(), true);
+    assert.equal(await page.locator('.browser-card').nth(1).locator('.btn-install').first().isDisabled(), true);
     assert.deepEqual(await page.evaluate(() => window.__motionTest.getBrowserSetupCalls()), ['focus_native_host_register', 'focus_browser_extension_install']);
   } finally { await context.close(); }
+});
+
+test('titlebar is 48px, displays grace. in settings and stats, and delegates dragging outside buttons', async () => {
+  const context = await browser.newContext({ viewport: { width: 360, height: 478 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/`);
+    await page.waitForSelector('.titlebar');
+
+    // 1. Verify Titlebar height is 48px
+    const titlebarHeight = await page.locator('.titlebar').evaluate(el => window.getComputedStyle(el).height);
+    assert.equal(titlebarHeight, '48px', 'Titlebar computed height must be 48px');
+
+    // 2. In Timer view: .center-selector has pointer-events: none while .session-btn has pointer-events: auto
+    const pointerEvents = await page.evaluate(() => {
+      const selector = document.querySelector('.center-selector');
+      const btn = document.querySelector('.session-btn');
+      return {
+        selector: selector ? window.getComputedStyle(selector).pointerEvents : null,
+        btn: btn ? window.getComputedStyle(btn).pointerEvents : null,
+      };
+    });
+    assert.equal(pointerEvents.selector, 'none', '.center-selector must have pointer-events: none to avoid blocking drags');
+    assert.equal(pointerEvents.btn, 'auto', '.session-btn must have pointer-events: auto to stay clickable');
+
+    // 3. Clear drag count, then click empty titlebar space -> startDragging is called
+    await page.evaluate(() => window.__motionTest.clearStartDraggingCount());
+    const titlebarBox = await page.locator('.titlebar').boundingBox();
+    assert.ok(titlebarBox, 'Titlebar box exists');
+    // Click at x: 100, y: 24 (empty titlebar space inside .center-selector, to the left of session-btn)
+    await page.mouse.click(titlebarBox.x + 100, titlebarBox.y + 24);
+    const dragsAfterHeaderClick = await page.evaluate(() => window.__motionTest.getStartDraggingCount());
+    assert.ok(dragsAfterHeaderClick > 0, 'Clicking empty titlebar area must invoke startDragging');
+
+    // 4. Click upper canvas whitespace above the timer dial -> startDragging is called
+    await page.evaluate(() => window.__motionTest.clearStartDraggingCount());
+    // Click at x: 30, y: 56 (upper canvas whitespace above/beside the dial)
+    await page.mouse.click(30, 56);
+    const dragsAfterCanvasClick = await page.evaluate(() => window.__motionTest.getStartDraggingCount());
+    assert.ok(dragsAfterCanvasClick > 0, 'Clicking upper canvas whitespace above dial must invoke startDragging');
+
+    // 5. In Settings view: brand title grace. is rendered and visible
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.waitForSelector('.brand-title');
+    const brandInSettings = await page.locator('.brand-title').textContent();
+    assert.equal(brandInSettings?.trim(), 'grace.', 'Settings view titlebar must display grace.');
+
+    // 6. In Stats view: brand title grace. is rendered and visible
+    await page.getByRole('button', { name: 'Statistics' }).click();
+    await page.waitForSelector('.brand-title');
+    const brandInStats = await page.locator('.brand-title').textContent();
+    assert.equal(brandInStats?.trim(), 'grace.', 'Stats view titlebar must display grace.');
+  } finally {
+    await context.close();
+  }
+});
+
+test('session selector has themed pill, no chevron, aligns with dial center, and animates dropdown pop', async () => {
+  const context = await browser.newContext({ viewport: { width: 360, height: 478 }, reducedMotion: 'no-preference' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/`);
+    await page.waitForSelector('.titlebar');
+
+    // 1. Chevron down-arrow is removed
+    assert.equal(await page.locator('.session-btn .chevron').count(), 0, 'Chevron down arrow must be removed');
+
+    // 2. Themed pill background
+    const pillTheme = await page.evaluate(() => {
+      const btn = document.querySelector('.session-btn');
+      const tb = document.querySelector('.titlebar');
+      return {
+        btnBg: btn ? window.getComputedStyle(btn).backgroundColor : null,
+        tbBg: tb ? window.getComputedStyle(tb).backgroundColor : null,
+      };
+    });
+    assert.ok(pillTheme.btnBg, 'Session button has background color');
+    assert.notEqual(pillTheme.btnBg, 'rgba(0, 0, 0, 0)', 'Session button background is not transparent');
+    assert.notEqual(pillTheme.btnBg, pillTheme.tbBg, 'Session button background is distinct from titlebar background');
+
+    // 3. Dial center alignment
+    const centers = await page.evaluate(() => {
+      const btn = document.querySelector('.session-btn');
+      const dial = document.querySelector('.dial-stack');
+      if (!btn || !dial) return null;
+      const b = btn.getBoundingClientRect();
+      const d = dial.getBoundingClientRect();
+      return {
+        btnCenter: (b.left + b.right) / 2,
+        dialCenter: (d.left + d.right) / 2,
+      };
+    });
+    assert.ok(centers, 'Button and dial exist');
+    assert.ok(
+      Math.abs(centers.btnCenter - centers.dialCenter) <= 1,
+      `Session button center (${centers.btnCenter}) must align with dial center (${centers.dialCenter})`
+    );
+
+    // 4. Dropdown pop animation when opened
+    await page.locator('.session-btn').click();
+    await page.waitForSelector('.dropdown-menu');
+    const anims = await page.evaluate(() => {
+      const menu = document.querySelector('.dropdown-menu');
+      const firstItem = document.querySelector('.dropdown-item');
+      return {
+        menuAnim: menu ? window.getComputedStyle(menu).animationName : null,
+        itemAnim: firstItem ? window.getComputedStyle(firstItem).animationName : null,
+      };
+    });
+    assert.ok(anims.menuAnim?.includes('dropdown-pop'), `Dropdown menu must use dropdown-pop animation (got ${anims.menuAnim})`);
+    assert.ok(anims.itemAnim?.includes('dropdown-item-rise'), `Dropdown items must use dropdown-item-rise animation (got ${anims.itemAnim})`);
+
+    // 5. Verify compact cadence notation (e.g. 25/5/10 × 4) and absence of verbose flavor text
+    assert.equal(await page.locator('.item-meta').count(), 0, 'Verbose item-meta flavor text is removed');
+    assert.equal(await page.locator('.checkmark').count(), 0, 'Checkmarks removed in favor of leading status dots');
+    assert.ok((await page.locator('.item-dot').count()) >= 2, 'Each session row has an item-dot indicator');
+    const cadenceText = await page.locator('.item-cadence').first().textContent();
+    assert.match(cadenceText?.trim() || '', /^\d+\/\d+\/\d+\s*[×x]\s*\d+$/, 'Cadence must match W/S/L x R format');
+
+    // 6. Verify column alignment of cadence numbers across rows
+    const cadenceAlign = await page.evaluate(() => {
+      const cadences = [...document.querySelectorAll('.dropdown-item .item-cadence')];
+      if (cadences.length < 2) return null;
+      const right0 = cadences[0].getBoundingClientRect().right;
+      const right1 = cadences[1].getBoundingClientRect().right;
+      return { right0, right1, diff: Math.abs(right0 - right1) };
+    });
+    assert.ok(cadenceAlign, 'At least 2 cadences found for alignment check');
+    assert.ok(cadenceAlign.diff <= 1, `Cadence numbers must align to the exact same right margin: ${JSON.stringify(cadenceAlign)}`);
+
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.dropdown-menu').count(), 0, 'Escape closes dropdown');
+  } finally {
+    await context.close();
+  }
 });

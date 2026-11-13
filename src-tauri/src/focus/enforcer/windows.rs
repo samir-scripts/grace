@@ -2,8 +2,9 @@
 mod application {
     use crate::focus::model::AppTarget;
     use super::super::{apps::{ProcessBackend, RunningProcess}, EnforcerError};
+    use windows::core::BOOL;
     use windows::Win32::{
-        Foundation::{CloseHandle, HANDLE, FILETIME, ERROR_NO_MORE_FILES, ERROR_INVALID_PARAMETER, HWND, LPARAM, BOOL},
+        Foundation::{CloseHandle, HANDLE, FILETIME, ERROR_NO_MORE_FILES, ERROR_INVALID_PARAMETER, HWND, LPARAM},
         Security::{EqualSid, GetTokenInformation, TokenSessionId, TokenUser, TOKEN_QUERY, TOKEN_USER},
         System::{Diagnostics::ToolHelp::{CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS},
             Threading::{GetCurrentProcess, GetProcessTimes, OpenProcess, OpenProcessToken, TerminateProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE}},

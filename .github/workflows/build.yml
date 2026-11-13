@@ -49,6 +49,9 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Install Playwright Chromium and system dependencies
+        run: npx playwright install --with-deps chromium
+
       - name: Verify signed extension correspondence
         run: node scripts/build-browser-extensions.mjs --require-signed
 
@@ -60,6 +63,9 @@ jobs:
 
       - name: Frontend and extension tests
         run: npm test
+
+      - name: Chromium extension integration tests
+        run: npm run test:chrome-integration
 
       - name: Rust clippy
         run: cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings
@@ -155,7 +161,7 @@ jobs:
         run: npm ci
 
       - name: Build (release, universal binary)
-        run: npm run tauri build -- --bundles dmg --target universal-apple-darwin
+        run: npm run build:macos-universal
         env:
           CI: true
 

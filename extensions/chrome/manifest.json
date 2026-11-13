@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "grace. Focus Companion",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "minimum_chrome_version": "116",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApLkBE4/ZTkyVy2ymxu4bK/7cr+SXRZQmTyuqEqOH9xUOq3bv41NO/VjzSepRoF1ee4E5D2pZunEVJa/E+Tmi76Nrl80TtJ9eeqLRqB2fF2YoT7Gh1+UPonUBhmCrFj31/Qtca/+CW1KZ2C+gmPFP8vuATNmBeAvt3uUy7DreHhTSKAIQtmehnGO7J1TdH3vfUHFEemkxKHjuOQVaVvHFi8VdAkMRP7kqIVx3qQJ2b+G3zD1IpC13+cukozi0ofmGZeou2vPwRBEcL+eSMGH6wDa3graSaf8xEuLIw6NaP6sS8x5KI9qX2mtY/pRszHdBVKpphm3AGDy/p8ZeJdGmGQIDAQAB",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnbDJidFskZDHAVq41nfLbjtFNqJfWXY6/SJcBUlnCR7w8thXM9z0AglU3AASRgv83fKnc16UT3QznL/BlE3nn7X0QSFo/RLAHu5DSV7yZSYSjVK62MTwac2YB9NE+cFb8hfz+Th6XdGRaiKvUQwsxvoa3vpG/BNA3sPngWYfsuvUAjEUHZSWtUuQcaqGTcBP4MmmYWY+ZyMp6J+YGb2HoweN7qdrrXEzBZmJv4uz66sRWedMIAxExKNbRSpEoIpHKg14+Grv2D27v1ATuvWd/nRfa0EDsn5H4vHFXcDoUgbBY+MBRDlRV50Vn7wxjWOeG+/8IUX8krDCZZF+izLiawIDAQAB",
   "description": "Enforces distraction blocking during grace. focus sessions.",
   "permissions": [
     "alarms",
@@ -16,11 +16,26 @@
     "*://*/*"
   ],
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "chrome-background.js",
     "type": "module"
   },
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "action": {
+    "default_title": "Open grace. Focus Companion",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
   }
 }

@@ -24,15 +24,25 @@ Firefox 140 and later also supports Firefox's built-in data consent prompt.
 2. Open `chrome://extensions` in your browser.
 3. Enable **Developer mode** toggle in top-right.
 4. Click **Load unpacked** and select `extensions/dist/chrome`.
-5. Click the extension icon or open extension Details > Extension options.
-6. Paste the **Pairing Token** from Pomotroid Settings > Sessions, and click **Save & Connect**.
+5. In the matching Grace desktop build, open Settings > Timer & Sessions and use Chrome's **Install Chrome Companion** (or **Repair Connection**) action to register its native host.
+6. Open the companion's Details > Extension options and select **Accept & connect**.
+7. Assign the connected profile to Chrome in Grace Settings > Sessions. Manual
+   pairing under Advanced is a fallback, not proof that automatic pairing works.
 
-The unpacked Chrome companion uses the fixed ID `ddiojihepmbimcfoefnebpolgaljlcfn`.
-After upgrading from a path-derived unpacked ID, remove the old companion, load
-the new build, pair it again, and update any required browser profile in Sessions.
-Re-register the native host from Pomotroid so its allowed origin uses the new ID.
-This development public key does not include a private signing key; a published
-Chrome Web Store build requires a separately managed matching signing identity.
+To disconnect Grace, first stop sharing in the companion or uninstall it; otherwise saved credentials can reconnect. Then use **Remove Setup** in Timer & Sessions to remove Grace's browser policy and assigned profiles. Native messaging registration may be retained for another browser. Remove the companion in `chrome://extensions` or select **Uninstall extension** in its options. For Firefox and Zen, remove it under `about:addons` → Extensions.
+
+The unpacked Chrome companion uses the Chrome Web Store draft's public key and
+fixed ID `cgibenlmgmblmalggjalnoaikjkdnoid`. Chrome Web Store manages the signing
+identity; the manifest contains only its public key.
+
+When upgrading from the old development ID `ddiojihepmbimcfoefnebpolgaljlcfn` or
+a path-derived unpacked ID, remove the old companion and load the rebuilt
+extension. Install the matching updated Grace desktop package and re-register
+the native host from Settings > Sessions so its allowed origin is replaced.
+Accept the companion disclosure to pair automatically, then assign the new
+connected profile to Chrome in Sessions and replace any old required profile.
+Older Grace packages authorize the previous ID and cannot pair automatically
+with this extension; updating the extension alone is insufficient.
 
 ### Firefox / Zen
 1. Run `node scripts/build-browser-extensions.mjs` to generate `extensions/dist/firefox`.
@@ -121,3 +131,11 @@ the downloaded archive against the source before replacing the local signed
 artifact and provenance. It does not independently verify Mozilla's cryptographic
 signature; Firefox acceptance still requires testing. The provenance URL points to
 the add-on's AMO version management page, not a specific version record.
+
+## Chrome release candidate setup
+
+Grace uses the same Chrome identity for unpacked acceptance and the Web Store: `cgibenlmgmblmalggjalnoaikjkdnoid`. In Settings > Timer & Sessions, Install Chrome Companion registers the bundled native host and opens the listing in Google Chrome. Repair Connection repeats registration and opens the listing; Remove Setup removes Grace registration/profile assignment, not the extension itself. Stop sharing or uninstall the companion separately after an authenticated release.
+
+The listing is still an unpublished Private draft. During staged acceptance, load the packaged `extensions/dist/chrome` directory through Chrome Developer mode after registering the native host. Accept & connect requires no pasted token. Windows and Linux x64 packaged acceptance are required before Public submission. Custom Chrome data directories remain unsupported by this acceptance claim.
+
+Build the inspected Chrome ZIP with `npm run extensions:chrome:release`. Chrome-only diagnostics are injected into the Chrome output; the shared Gecko payload and signed XPI remain unchanged. CI runs `npm run test:chrome-integration` with Chromium installed. Universal macOS packaging uses `npm run build:macos-universal`; release signing uses `-- --updater`.

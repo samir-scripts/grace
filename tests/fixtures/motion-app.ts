@@ -182,6 +182,7 @@ function readField(obj: unknown, key: string): unknown {
 export const windowResizeCalls: Array<{ view: string; animate?: boolean; renderedBeforeResize?: boolean }> = [];
 
 const appearanceMotionCalls: boolean[] = [];
+let startDraggingCount = 0;
 let holdResize = false;
 let resizeResolve: (() => void) | null = null;
 
@@ -257,9 +258,31 @@ mockIPC((cmd, args: unknown) => {
 
 
   if (cmd === 'focus_profiles_get') {
-    return [];
+    return [
+      {
+        id: 'work-profile',
+        name: 'Work',
+        work_secs: 1500,
+        short_break_secs: 300,
+        long_break_secs: 600,
+        work_rounds: 4,
+        blocked_apps: [],
+        blocked_domains: [],
+        revision: 1,
+      },
+      {
+        id: 'deep-profile',
+        name: 'Deep Focus',
+        work_secs: 3000,
+        short_break_secs: 600,
+        long_break_secs: 1200,
+        work_rounds: 3,
+        blocked_apps: [],
+        blocked_domains: [],
+        revision: 1,
+      },
+    ];
   }
-
   if (cmd === 'focus_browsers_list') {
     return browserFixtureEnabled ? [{ kind: 'zen', name: 'Zen', executable_path: '/test/Zen.app', policy_path: null, is_installed: true, is_extension_installed: true }, { kind: 'firefox', name: 'Firefox', executable_path: '/test/Firefox.app', policy_path: null, is_installed: true, is_extension_installed: false }] : [];
   }
@@ -296,7 +319,12 @@ mockIPC((cmd, args: unknown) => {
     return false;
   }
 
-  if (cmd === 'plugin:window|show' || cmd === 'plugin:window|minimize' || cmd === 'plugin:window|close') {
+  if (cmd === 'plugin:window|show' || cmd === 'plugin:window|minimize' || cmd === 'plugin:window|close' || cmd === 'plugin:window|toggle_maximize') {
+    return;
+  }
+
+  if (cmd === 'plugin:window|start_dragging') {
+    startDraggingCount++;
     return;
   }
 
@@ -356,6 +384,8 @@ export interface MotionTestController {
   releaseResize: () => void;
   setFocusSnapshot: (snap: FocusSnapshot) => Promise<void>;
   getBrowserSetupCalls: () => string[];
+  getStartDraggingCount: () => number;
+  clearStartDraggingCount: () => void;
 }
 
 const controller: MotionTestController = {
@@ -410,6 +440,8 @@ const controller: MotionTestController = {
     currentFocus = snap;
     await emit('focus:changed', currentFocus);
   },
+  getStartDraggingCount: () => startDraggingCount,
+  clearStartDraggingCount: () => { startDraggingCount = 0; },
 };
 
 window.__motionTest = controller;

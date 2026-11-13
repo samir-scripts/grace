@@ -1,0 +1,604 @@
+{
+  "run_id": "bebf88ce-791e-4aba-b648-08821e76efe5",
+  "vm_name": "grace-acceptance-bebf88ce-791e-4aba-b648-08821e76efe5",
+  "baseline": "pomotroid-zen-clean",
+  "baseline_was_booted": false,
+  "baseline_image": "ghcr.io/cirruslabs/macos-sequoia-base@sha256:eee659985b01e4df2a6c0754bd8d25e54969933c43fdcd4edef8bea337b3d354",
+  "os_version": "15.7.7",
+  "os_build": "24G720",
+  "chrome_version": "157.0.8103.79",
+  "chrome_signature": {
+    "publisher": "Google LLC",
+    "team": "EQHXZ8M8AV",
+    "strict_deep_verification": "passed after FinderInfo-only metadata cleanup",
+    "baseline_security_assessment": "baseline reported security disabled; not relied on as signature proof",
+    "installer_sha256": "890cbc357d91cc8b0de87033edee89534da385a97ec2b21e3c80b2125f45e4fd"
+  },
+  "setup": {
+    "safe_source_transfer": "passed",
+    "chrome_profile": "Fresh owned guest profile at standard Chrome user-data path; no host profile copied",
+    "normal_load_unpacked": "completed via folder picker using packaged Chrome resource directory",
+    "consent_page": "Accepted using normal Accept & connect; automatically paired, no manual credential input",
+    "guest_only_automation": "user approved; granted via normal guest prompt",
+    "host_ui_access": "user unlocked; guest UI access restored",
+    "registration": "Final packaged Update Extension action displayed Extension installed; native host path and exact single store origin verified after action. Original initial registration and automatic consent pairing used normal Install Extension flow."
+  },
+  "scenarios": [
+    {
+      "id": "runtime-extension-id",
+      "status": "passed"
+    },
+    {
+      "id": "native-registration",
+      "status": "passed"
+    },
+    {
+      "id": "automatic-pairing",
+      "status": "passed"
+    },
+    {
+      "id": "profile-assignment",
+      "status": "passed"
+    },
+    {
+      "id": "existing-tab-blocking",
+      "status": "passed"
+    },
+    {
+      "id": "fresh-http",
+      "status": "passed"
+    },
+    {
+      "id": "fresh-https",
+      "status": "passed"
+    },
+    {
+      "id": "subdomain-blocking",
+      "status": "passed"
+    },
+    {
+      "id": "allowed-control",
+      "status": "passed"
+    },
+    {
+      "id": "browser-restart-retained-policy",
+      "status": "passed"
+    },
+    {
+      "id": "failed-retry-retention",
+      "status": "passed"
+    },
+    {
+      "id": "consent-withdrawal-retention",
+      "status": "passed"
+    },
+    {
+      "id": "reconsent-automatic-reconnect",
+      "status": "passed"
+    },
+    {
+      "id": "explicit-retry-retained-revision",
+      "status": "passed"
+    },
+    {
+      "id": "forced-app-stop-and-relaunch-retained-policy",
+      "status": "passed"
+    },
+    {
+      "id": "emergency-hold-authenticated-release",
+      "status": "passed"
+    },
+    {
+      "id": "natural-cycle-authenticated-release",
+      "status": "passed"
+    },
+    {
+      "id": "protected-quit-guard",
+      "status": "passed",
+      "source_commit": "c373d55",
+      "note": "Normal Quit refused during running protected work; actual forced-stop/relaunch independently passed."
+    }
+  ],
+  "focus_session_started": false,
+  "store_submission": "not performed",
+  "recorded_at_utc": "2026-11-12T20:08:34.284384+00:00",
+  "artifacts_original_candidate": {
+    "source_head": "a0c52b5fe4efa0794b4c26c02f1e70647ad3e4e7",
+    "desktop_version": "1.7.1",
+    "artifacts": [
+      {
+        "path": "src-tauri/target/release/bundle/macos/grace..app/Contents/MacOS/pomotroid",
+        "sha256": "2d3fe6b071b1ed33a2a1eb89e771bdc44efedf7469109e39c826311ed4efb7b0",
+        "size_bytes": 21021408
+      },
+      {
+        "path": "src-tauri/target/release/bundle/macos/grace..app/Contents/MacOS/pomotroid-native-host",
+        "sha256": "2fffacd06b5fc819b34bcf9436bfc45df7d4f965ae0359c31382470e67c01f5f",
+        "size_bytes": 690704
+      },
+      {
+        "path": "src-tauri/target/release/bundle/dmg/grace._1.7.1_aarch64.dmg",
+        "sha256": "dab1ed89442b1104f3b734eb0b540a3a3f9c42e3eb27fb2409623c5b1a9abcc7",
+        "size_bytes": 12934613
+      }
+    ]
+  },
+  "artifacts": {
+    "source_commit": "c373d55",
+    "app_sha256": "e598c87a6973b8195271102ff7105dbceaa47481dc1cd2dd4029886169bbda04",
+    "native_host_sha256": "7ae75677e7b34fcb25c8653ee1954a8799ab4ed3ae17455efb6c3bf760e8535f",
+    "dmg_sha256": "78c16fb2de95941b87427c658e3f2e0783f2bcbe91f9dd400e726af4003b52fd"
+  },
+  "guest_verification": {
+    "app_sha256": "e598c87a6973b8195271102ff7105dbceaa47481dc1cd2dd4029886169bbda04",
+    "native_host_sha256": "7ae75677e7b34fcb25c8653ee1954a8799ab4ed3ae17455efb6c3bf760e8535f",
+    "allowed_origins": [
+      "chrome-extension://cgibenlmgmblmalggjalnoaikjkdnoid/"
+    ],
+    "registered_current_package": true,
+    "latest_build_version": "1.7.1+c373d55.dirty",
+    "latest_build_sha": "c373d5583ac73c2b5aa662694ac623cf893d9684",
+    "journal_rows": 0,
+    "latest_completed_sessions": [
+      {
+        "round_type": "long-break",
+        "duration_secs": 60,
+        "completed": true
+      },
+      {
+        "round_type": "work",
+        "duration_secs": 60,
+        "completed": true
+      },
+      {
+        "round_type": "work",
+        "duration_secs": 600,
+        "completed": false
+      },
+      {
+        "round_type": "work",
+        "duration_secs": 600,
+        "completed": false
+      }
+    ]
+  },
+  "regressions": {
+    "rust": "212 passed; 19 opt-in ignored; documented accessibility exclusion",
+    "clippy": "passed with warnings denied",
+    "real_guest_controller_bridge": "passed",
+    "guest_timer_pause_order": "passed",
+    "production_app_dmg": "passed signed Firefox guard",
+    "guest_reopened_sqlite_authenticated_recovery": "passed"
+  },
+  "browser_profile": {
+    "profile_count": 1,
+    "profiles_sha256": "82dd81f65657bfe9b4d79d97012a25246287e449d3717e2eb7911a69de46be84"
+  },
+  "observations": [
+    "Original build a0c52b5 released rules on Chrome restart; repair34a266b retained rules through browser reconnect.",
+    "Candidate34a266b released rules after actual macOS Force Quit/relaunch; c373d55 repaired durable startup recovery.",
+    "Final candidate actual macOS Force Quit verified process absent, then same app relaunched. Native timer stopped at conservative full interrupted work duration10:00, session remained locked, browser received authenticated active revision1 and ACKed. Fresh example.com returned ERR_BLOCKED_BY_CLIENT. Explicit Retry resumed without policy replacement.",
+    "Final candidate fresh HTTP, HTTPS, www subdomain blocked; example.org allowed. Existing example.com tab was replaced by Focus Session Active.",
+    "Final candidate normal Chrome Quit, unsuccessful Retry with browser closed, then automatic reconnect retained active revision1. Consent withdrawal showed sharing disabled while fresh HTTP subdomain remained blocked. Reaccept restored pairing automatically.",
+    "Final real continuous 62-second emergency hold returned native timer to idle10:00 and direct example.com loaded. Final natural 1-minute work plus protected 1-minute long break completed, returned timer to idle01:00, authenticated inactive policy was ACKed, direct example.com loaded, and dirty journal cleared.",
+    "Current profile count1 and fingerprint unchanged across browser and forced app restarts. No personal host profiles or pairing data copied."
+  ],
+  "release_ready": false,
+  "remaining_gates": [
+    "Windows packaged Chrome acceptance",
+    "Linux packaged Chrome acceptance",
+    "Store-installed acceptance after distribution approval"
+  ],
+  "store_state": "Private and unsubmitted",
+  "candidate_history": [
+    {
+      "source_head": "a0c52b5fe4efa0794b4c26c02f1e70647ad3e4e7",
+      "desktop_version": "1.7.1",
+      "artifacts": [
+        {
+          "path": "src-tauri/target/release/bundle/macos/grace..app/Contents/MacOS/pomotroid",
+          "sha256": "2d3fe6b071b1ed33a2a1eb89e771bdc44efedf7469109e39c826311ed4efb7b0",
+          "size_bytes": 21021408
+        },
+        {
+          "path": "src-tauri/target/release/bundle/macos/grace..app/Contents/MacOS/pomotroid-native-host",
+          "sha256": "2fffacd06b5fc819b34bcf9436bfc45df7d4f965ae0359c31382470e67c01f5f",
+          "size_bytes": 690704
+        },
+        {
+          "path": "src-tauri/target/release/bundle/dmg/grace._1.7.1_aarch64.dmg",
+          "sha256": "dab1ed89442b1104f3b734eb0b540a3a3f9c42e3eb27fb2409623c5b1a9abcc7",
+          "size_bytes": 12934613
+        }
+      ]
+    },
+    {
+      "source_commit": "34a266b",
+      "app_sha256": "135233a5168e3614f0dc1b1f0519012b8bb4b9e64a9f1820b75e58cb8209cb5b",
+      "native_host_sha256": "d49fb0d2f639841fe6f27fc9c8f57ccb27c87967b3d35d4d445f1dbdfc175b61",
+      "dmg_sha256": "dfc1cb6b4a9154f1d23bfa4a7b08db3f4ff6fdc169190ab491efd1a5fc5e0357"
+    }
+  ],
+  "source_commit": "c373d55",
+  "desktop_version": "1.7.1",
+  "fresh_navigation_matrix": [
+    {
+      "url": "http://example.com/",
+      "expected_blocked": true,
+      "blocked_error": true,
+      "example_content": false,
+      "pass": true
+    },
+    {
+      "url": "https://example.com/",
+      "expected_blocked": true,
+      "blocked_error": true,
+      "example_content": false,
+      "pass": true
+    },
+    {
+      "url": "https://www.example.com/",
+      "expected_blocked": true,
+      "blocked_error": true,
+      "example_content": false,
+      "pass": true
+    },
+    {
+      "url": "https://example.org/",
+      "expected_blocked": false,
+      "blocked_error": false,
+      "example_content": true,
+      "pass": true
+    }
+  ],
+  "chrome_upload_archive": {
+    "sha256": "bf71aff118eefdc887bdeb868402127268ceffb5feee457d7ff747b0c2d9d58b",
+    "exact_allowlist": true,
+    "zip_integrity": true,
+    "packaged_source_parity": true
+  },
+  "completion_notes": [
+    "Current guest evidence only proves macOS arm64 on recorded versions. Windows/Linux unavailable, never passed.",
+    "Recovery restarts the interrupted phase at its full duration; elapsed time is not persisted. No automatic timer start after crash.",
+    "Native interception is rearmed after recovered participant ACKs while the timer remains stopped.",
+    "Normal OS shutdown, power loss, and app-update crash boundaries were not independently exercised.",
+    "No store upload, submission or Public distribution change performed."
+  ],
+  "final_bridge_events": {
+    "events": [
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "hello_accepted",
+        "connection": "cd38a4bd-19cb-4326-8db6-6cb7c8bda63a",
+        "version": "3"
+      },
+      {
+        "event": "policy_sent",
+        "connection": "cd38a4bd-19cb-4326-8db6-6cb7c8bda63a",
+        "revision": "1",
+        "active": "true"
+      },
+      {
+        "event": "ack_received",
+        "connection": "cd38a4bd-19cb-4326-8db6-6cb7c8bda63a",
+        "revision": "1"
+      },
+      {
+        "event": "socket_closed",
+        "connection": "cd38a4bd-19cb-4326-8db6-6cb7c8bda63a"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "hello_accepted",
+        "connection": "abe831ac-2803-4c39-89fb-e4ed85cab10f",
+        "version": "3"
+      },
+      {
+        "event": "policy_sent",
+        "connection": "abe831ac-2803-4c39-89fb-e4ed85cab10f",
+        "revision": "1",
+        "active": "true"
+      },
+      {
+        "event": "ack_received",
+        "connection": "abe831ac-2803-4c39-89fb-e4ed85cab10f",
+        "revision": "1"
+      },
+      {
+        "event": "policy_released",
+        "revision": "2"
+      },
+      {
+        "event": "ack_received",
+        "connection": "abe831ac-2803-4c39-89fb-e4ed85cab10f",
+        "revision": "2"
+      },
+      {
+        "event": "policy_sent",
+        "revision": "3",
+        "participants": "1"
+      },
+      {
+        "event": "ack_received",
+        "connection": "abe831ac-2803-4c39-89fb-e4ed85cab10f",
+        "revision": "3"
+      },
+      {
+        "event": "policy_released",
+        "revision": "4"
+      },
+      {
+        "event": "ack_received",
+        "connection": "abe831ac-2803-4c39-89fb-e4ed85cab10f",
+        "revision": "4"
+      }
+    ],
+    "profile_count": 1,
+    "profiles_sha256": "82dd81f65657bfe9b4d79d97012a25246287e449d3717e2eb7911a69de46be84"
+  },
+  "crash_recovery_epoch": {
+    "events": [
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "lease_failed"
+      },
+      {
+        "event": "hello_accepted",
+        "connection": "9ef21a30-4184-43ff-8739-f407ee8fa8f7",
+        "version": "3"
+      },
+      {
+        "event": "policy_sent",
+        "connection": "9ef21a30-4184-43ff-8739-f407ee8fa8f7",
+        "revision": "1",
+        "active": "true"
+      },
+      {
+        "event": "ack_received",
+        "connection": "9ef21a30-4184-43ff-8739-f407ee8fa8f7",
+        "revision": "1"
+      },
+      {
+        "event": "policy_released",
+        "revision": "2"
+      },
+      {
+        "event": "ack_received",
+        "connection": "9ef21a30-4184-43ff-8739-f407ee8fa8f7",
+        "revision": "2"
+      },
+      {
+        "event": "hello_accepted",
+        "connection": "d45d76cf-8d99-4533-aefd-4c9a129286cc",
+        "version": "3"
+      },
+      {
+        "event": "policy_sent",
+        "connection": "d45d76cf-8d99-4533-aefd-4c9a129286cc",
+        "revision": "0",
+        "active": "false"
+      },
+      {
+        "event": "ack_received",
+        "connection": "d45d76cf-8d99-4533-aefd-4c9a129286cc",
+        "revision": "0"
+      },
+      {
+        "event": "policy_sent",
+        "revision": "1",
+        "participants": "1"
+      },
+      {
+        "event": "ack_received",
+        "connection": "d45d76cf-8d99-4533-aefd-4c9a129286cc",
+        "revision": "1"
+      },
+      {
+        "event": "policy_released",
+        "revision": "2"
+      },
+      {
+        "event": "ack_received",
+        "connection": "d45d76cf-8d99-4533-aefd-4c9a129286cc",
+        "revision": "2"
+      },
+      {
+        "event": "policy_sent",
+        "revision": "3",
+        "participants": "1"
+      },
+      {
+        "event": "ack_received",
+        "connection": "d45d76cf-8d99-4533-aefd-4c9a129286cc",
+        "revision": "3"
+      },
+      {
+        "event": "policy_released",
+        "revision": "1"
+      },
+      {
+        "event": "hello_accepted",
+        "connection": "26b446bf-45b7-42c4-8191-56bccd8b578b",
+        "version": "3"
+      },
+      {
+        "event": "policy_sent",
+        "connection": "26b446bf-45b7-42c4-8191-56bccd8b578b",
+        "revision": "1",
+        "active": "false"
+      },
+      {
+        "event": "ack_received",
+        "connection": "26b446bf-45b7-42c4-8191-56bccd8b578b",
+        "revision": "1"
+      },
+      {
+        "event": "hello_accepted",
+        "connection": "3192f92e-d622-4e2a-806a-2f9a38a6c0e5",
+        "version": "3"
+      },
+      {
+        "event": "policy_sent",
+        "connection": "3192f92e-d622-4e2a-806a-2f9a38a6c0e5",
+        "revision": "0",
+        "active": "false"
+      },
+      {
+        "event": "ack_received",
+        "connection": "3192f92e-d622-4e2a-806a-2f9a38a6c0e5",
+        "revision": "0"
+      },
+      {
+        "event": "policy_sent",
+        "revision": "1",
+        "participants": "1"
+      },
+      {
+        "event": "ack_received",
+        "connection": "3192f92e-d622-4e2a-806a-2f9a38a6c0e5",
+        "revision": "1"
+      },
+      {
+        "event": "hello_accepted",
+        "connection": "40f28d73-0cb6-406a-81db-976998c3e0dd",
+        "version": "3"
+      },
+      {
+        "event": "policy_sent",
+        "connection": "40f28d73-0cb6-406a-81db-976998c3e0dd",
+        "revision": "1",
+        "active": "true"
+      },
+      {
+        "event": "ack_received",
+        "connection": "40f28d73-0cb6-406a-81db-976998c3e0dd",
+        "revision": "1"
+      }
+    ],
+    "profile_count": 1,
+    "profiles_sha256": "82dd81f65657bfe9b4d79d97012a25246287e449d3717e2eb7911a69de46be84"
+  },
+  "macos_packaged_acceptance": "passed",
+  "guest_shutdown": {
+    "owned_clone": "stopped; verified by runner stop inventory",
+    "baseline": "stopped; never booted or modified"
+  },
+  "build_worktree_note": "Runtime .dirty version suffix reflects pending plan/documentation changes; production Rust source was committed as c373d55 before build."
+}

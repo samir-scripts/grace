@@ -284,6 +284,7 @@ pub async fn apply_view_size(
                 #[cfg(target_os = "macos")]
                 if animate_frame_macos(app, &window, w, h, gen, None).await {
                     if RESIZE_GENERATION.load(std::sync::atomic::Ordering::SeqCst) == gen { if parsed == ViewKind::Timer { state.complete_timer_restore(); } state.set_transitioning(false); }
+                    crate::sync_macos_traffic_lights(&window);
                     return Ok(());
                 }
                 animate_resize_fallback(&window, w, h, gen).await;
@@ -295,6 +296,8 @@ pub async fn apply_view_size(
                     .set_size(Size::Logical(tauri::LogicalSize::new(w, h)))
                     .map_err(|e| format!("failed to resize window: {e}"))?;
                 if parsed == ViewKind::Timer { state.complete_timer_restore(); }
+                #[cfg(target_os = "macos")]
+                crate::sync_macos_traffic_lights(&window);
                 Ok(())
             }
         }
@@ -305,6 +308,7 @@ pub async fn apply_view_size(
                 #[cfg(target_os = "macos")]
                 if animate_frame_macos(app, &window, phys.width as f64 / scale, phys.height as f64 / scale, gen, pos).await {
                     if RESIZE_GENERATION.load(std::sync::atomic::Ordering::SeqCst) == gen { state.complete_timer_restore(); state.set_transitioning(false); }
+                    crate::sync_macos_traffic_lights(&window);
                     return Ok(());
                 }
                 if let Some(p) = pos {
@@ -322,6 +326,8 @@ pub async fn apply_view_size(
                     .set_size(Size::Physical(phys))
                     .map_err(|e| format!("failed to restore window size: {e}"))?;
                 state.complete_timer_restore();
+                #[cfg(target_os = "macos")]
+                crate::sync_macos_traffic_lights(&window);
                 Ok(())
             }
         }

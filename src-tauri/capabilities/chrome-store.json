@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "chrome-store",
+  "description": "Open the Chrome companion listing in Google Chrome from the main and settings windows",
+  "windows": ["main", "settings"],
+  "permissions": [
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://chromewebstore.google.com/detail/*", "app": "Google Chrome" },
+        { "url": "https://chromewebstore.google.com/detail/*", "app": "google-chrome" },
+        { "url": "https://chromewebstore.google.com/detail/*", "app": "google-chrome-stable" },
+        { "url": "https://chromewebstore.google.com/detail/*", "app": "chrome" }
+      ]
+    }
+  ]
+}

@@ -86,3 +86,22 @@ Observed verification: final `npm run check` reports 0 errors/warnings; `npm tes
 A debug app was built with `npx tauri build --debug --bundles app --config '{"build":{"beforeBuildCommand":"npx vite build"}}'` for native-only inspection, leaving the normal signed production build command unchanged. This is development evidence, not signed release acceptance. Launched this bundle in the existing disposable Tart guest `grace-acceptance-7c36512e-4971-4d40-8e87-d6cbca8758fa`; opened settings and visually confirmed the actual installed Zen icon and themed Installed badge. Guest has Zen only, and its companion was offline: native Chrome icons and native Active/disconnect transitions remain unverified. Windows/Linux native acceptance remains separate. Guest stopped after inspection.
 
 Evidence: [native Zen](evidence/grace-browser-badges-2026-11-10/native-zen.png), [mocked light](evidence/grace-browser-badges-2026-11-10/fixture-light.png), [mocked dark](evidence/grace-browser-badges-2026-11-10/fixture-dark.png). Fixture icons are intentional test images, not native-logo evidence.
+
+## CI Chromium provisioning follow-up (2026-11-12)
+
+Build / Test runs [43147211238](https://github.com/samir-scripts/grace/actions/runs/43147211238) and [43147205751](https://github.com/samir-scripts/grace/actions/runs/43147205751) failed when the motion suite launched Chromium: Playwright's `chromium_headless_shell-1248` executable was missing. Both workflows installed the npm package but omitted browser provisioning.
+
+- [x] Added `npx playwright install --with-deps chromium` immediately after `npm ci` in Build / Test's `quality-gate` and Release's `release-check`. Packaging-only jobs are unchanged.
+- [x] Parsed both workflows as YAML and checked that browser installation occurs once per quality gate, immediately after npm installation and before `npm test`, with no installation in other jobs. `git diff --check` passes.
+- [x] Local macOS `npm run check` reports 0 errors and 0 warnings. Full `npm test` exits 0, including motion, statistics layout and browser setup. The initial restricted run could not bind the local test server (`EPERM`); rerunning with local browser/server access passed.
+- [ ] Fresh Ubuntu installation and full CI quality-gate completion remain unverified. Local tests used existing browser binaries; they do not prove Linux dependency installation. No remote workflow was triggered and Rust checks were not rerun for this workflow-only change.
+
+
+## Linux compilation guard follow-up (2026-11-12)
+
+Both PR quality gates advanced beyond frontend tests after Chromium provisioning, then failed Linux Clippy with 13 diagnostics. Platform-only helpers and imports remained compiled on Linux; browser policy paths also contained Linux-only unreachable tails and an unused executable argument.
+
+- [x] Guarded application-monitor internals and catalog replacement/normalization for macOS, Windows, or unit tests; guarded catalog traversal for its supported platform callers and the macOS backend import for macOS.
+- [x] Split policy-path resolution into mutually exclusive platform implementations. Linux Firefox/Zen paths and unsupported application discovery/interception behavior are preserved. Added Linux policy-path and unsupported-monitor regression tests.
+- [x] Local macOS `cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings` exits 0. Full `cargo test --locked --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_commands_callable` exits 0 with loopback access. The first restricted run failed three tests on socket permission errors; the permitted rerun passes. Luna review found no defects; `git diff --check` passes.
+- [ ] Linux and Windows execution, including the new Linux-specific tests, remains pending. Only the macOS Rust target is installed and Docker daemon is stopped. No updated PR run has been triggered for these local changes; native enforcement acceptance remains separate.

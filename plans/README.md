@@ -1,4 +1,10 @@
+[Chrome companion release](chrome-companion-release-plan.md) — implementation active; release held for Windows/Linux x64 packaged acceptance.
+
 # Implementation plans
+
+[macOS Chrome acceptance through Tart](chrome-tart-acceptance-plan.md) — passed actual packaged Chrome acceptance on macOS, including forced app recovery; evidence collected and clone stopped.
+
+[Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — macOS and Linux ARM64 packaged Chrome matrices passed on disposable guests; Linux x64 and Windows have not been tested. A custom Chrome data directory cannot discover the default native-host registration. Store stays Private and unsubmitted.
 
 [grace. UI consistency and accessibility](grace-ui-consistency-plan.md) — implementation and verification ledger. [Batch 5 native/signing report](grace-ui-batch5-report.md): native development checks, Clippy and production build pass; signed 1.1.0 is approved and a packaged Zen update/reconnect passed; Firefox 115 support is retained with its consent fallback; pre-consent appearance and remaining browser acceptance are open.
 

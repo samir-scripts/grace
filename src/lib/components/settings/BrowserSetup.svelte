@@ -4,6 +4,7 @@
     listInstalledBrowsers,
     getInstalledApplicationIcon,
     registerNativeHost,
+    installChromeCompanion,
     installBrowserExtension,
     removeBrowserExtension,
     getBrowserSetup,
@@ -31,6 +32,11 @@
 
   function isActive(kind: BrowserKind): boolean {
     return browserSetup?.profiles.some((profile) => profile.browser === kind && profile.is_connected) ?? false;
+  }
+
+  function hasCompanionSetup(browser: InstalledBrowser): boolean {
+    return browser.is_extension_installed ||
+      (browserSetup?.profiles.some((profile) => profile.browser === browser.kind) ?? false);
   }
 
   async function loadIcon(id: string) {
@@ -92,6 +98,13 @@
     statusMessage = '';
     statusType = '';
     try {
+      if (browser.kind === 'chrome') {
+        await installChromeCompanion();
+        statusMessage = m.browser_chrome_prepared();
+        statusType = 'success';
+        await refreshSetup();
+        return;
+      }
       await registerNativeHost();
       await installBrowserExtension(browser.kind);
       statusMessage = m.browser_install_success();
@@ -99,7 +112,10 @@
       await loadBrowsers();
       await refreshSetup();
     } catch (e: any) {
-      statusMessage = typeof e === 'string' ? e : (e?.message || 'Failed to install extension');
+      const detail = typeof e === 'string' ? e : (e?.message || '');
+      statusMessage = browser.kind === 'chrome'
+        ? `${m.browser_chrome_error()}${detail ? ` (${detail})` : ''}`
+        : (detail || 'Failed to install extension');
       statusType = 'error';
     } finally {
       mutating = null;
@@ -107,7 +123,7 @@
   }
 
   async function handleRemove(browser: InstalledBrowser) {
-    if (isLocked) {
+    if (isLocked || mutating !== null) {
       statusMessage = m.browser_locked_hint();
       statusType = 'error';
       return;
@@ -173,7 +189,7 @@
   </div>
 
   {#if statusMessage}
-    <div class="alert" class:success={statusType === 'success'} class:error={statusType === 'error'}>
+    <div role={statusType === 'error' ? 'alert' : 'status'} class="alert" class:success={statusType === 'success'} class:error={statusType === 'error'}>
       {statusMessage}
     </div>
   {/if}
@@ -217,7 +233,7 @@
           </div>
         </div>
 
-        {#if browser.is_extension_installed}
+        {#if hasCompanionSetup(browser)}
           <div class="browser-actions">
           <button
             type="button"
@@ -228,8 +244,10 @@
           >
             {#if mutating?.kind === browser.kind && mutating?.action === 'install'}
               {m.browser_installing()}
-            {:else}
+            {:else if browser.is_extension_installed && browser.kind !== 'chrome'}
               {m.browser_update_button()}
+            {:else}
+              {m.browser_repair_button()}
             {/if}
           </button>
           <button
@@ -257,7 +275,7 @@
             {#if mutating?.kind === browser.kind && mutating?.action === 'install'}
               {m.browser_installing()}
             {:else}
-              {m.browser_install_button()}
+              {browser.kind === 'chrome' ? m.browser_chrome_prepare() : m.browser_install_button()}
             {/if}
           </button>
         {/if}
@@ -265,6 +283,11 @@
     {/each}
   <p class="anti-bypass-note">{m.browser_anti_bypass_note()}</p>
   </div>
+
+  <details class="uninstall-help">
+    <summary>{m.browser_uninstall_title()}</summary>
+    <p>{m.browser_uninstall_hint()}</p>
+  </details>
 
   <!-- Connected Profiles List -->
   {#if browserSetup}
@@ -380,6 +403,19 @@
     font-size: 11px;
     color: var(--color-foreground-darker);
     line-height: 1.4;
+    margin: 4px 0 0;
+  }
+
+  .uninstall-help {
+    font-size: 11px;
+    color: var(--color-foreground-darker);
+    line-height: 1.4;
+  }
+  .uninstall-help summary {
+    color: var(--color-foreground);
+    cursor: pointer;
+  }
+  .uninstall-help p {
     margin: 4px 0 0;
   }
 

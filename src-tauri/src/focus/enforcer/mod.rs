@@ -22,6 +22,7 @@ pub enum EnforcerError {
     ProcessTerminationFailed(String),
     PlatformUnsupported,
     LeaseLost,
+    BrowserLeaseLost,
 }
 
 impl fmt::Display for EnforcerError {
@@ -33,6 +34,7 @@ impl fmt::Display for EnforcerError {
             Self::ProcessTerminationFailed(e) => write!(f, "Failed to terminate blocked application: {e}"),
             Self::PlatformUnsupported => write!(f, "Platform is not supported for native enforcement"),
             Self::LeaseLost => write!(f, "Focus enforcement lease was lost"),
+            Self::BrowserLeaseLost => write!(f, "Browser companion connection or policy acknowledgement was lost"),
         }
     }
 }
@@ -43,6 +45,12 @@ pub trait NativeEnforcer: Send + Sync {
     fn apply_blocking(&self, apps: &[AppTarget], domains: &[String]) -> Result<(), EnforcerError>;
     fn release_blocking(&self) -> Result<(), EnforcerError>;
     fn renew_lease(&self) -> Result<(), EnforcerError>;
+    /// Reconstruct an interrupted policy before accepting browser connections.
+    fn restore_blocking(&self, apps: &[AppTarget], domains: &[String]) -> Result<(), EnforcerError> {
+        self.apply_blocking(apps, domains)
+    }
+    fn finish_startup(&self) {}
+
 }
 
 pub struct SystemEnforcer {

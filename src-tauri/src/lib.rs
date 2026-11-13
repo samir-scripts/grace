@@ -56,6 +56,7 @@ use commands::{
     focus_browser_profile_require,
     focus_browsers_list,
     focus_native_host_register,
+    focus_chrome_extension_install,
     focus_browser_extension_install,
     focus_browser_extension_remove,
     focus_enforcement_retry,
@@ -117,6 +118,7 @@ pub fn run() {
             )?;
             application_menu.remove(quit_item)?;
             application_menu.insert(&guarded_quit, application_items.len() - 1)?;
+            let _ = application_menu.set_text("grace.");
             Ok(menu)
         })
         .on_menu_event(|app_handle, event| {
@@ -164,7 +166,7 @@ pub fn run() {
                 .expect("failed to create app data directory");
 
             let browser_bridge = match tauri::async_runtime::block_on(
-                focus::browser::BrowserBridge::new_persistent(
+                focus::browser::BrowserBridge::new_persistent_deferred(
                     &app_data_dir,
                     focus::browser::BROWSER_PORT_DEFAULT,
                 ),
@@ -364,7 +366,17 @@ pub fn run() {
                 use objc2::msg_send;
                 use objc2::runtime::{AnyClass, AnyObject};
                 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+                use objc2_foundation::NSString;
 
+                unsafe {
+                    if let Some(cls) = AnyClass::get(c"NSProcessInfo") {
+                        let process_info: *mut AnyObject = msg_send![cls, processInfo];
+                        if !process_info.is_null() {
+                            let name = NSString::from_str("grace.");
+                            let _: () = msg_send![process_info, setProcessName: &*name];
+                        }
+                    }
+                }
                 if let Ok(handle) = main_window.window_handle() {
                     if let RawWindowHandle::AppKit(h) = handle.as_raw() {
                         let ns_view = h.ns_view.as_ptr() as *mut AnyObject;
@@ -463,6 +475,9 @@ pub fn run() {
                 }
             }
 
+            #[cfg(target_os = "macos")]
+            sync_macos_traffic_lights(&main_window);
+
             // Persist window position/size on move and resize, and close child windows
             // when the main window is truly closed (not hidden to tray).
             let db_for_close = db.clone();
@@ -472,6 +487,10 @@ pub fn run() {
             let win_for_pos = main_window.clone();
             let view_state_for_pos = Arc::clone(&window_view_state);
             main_window.on_window_event(move |event| {
+                #[cfg(target_os = "macos")]
+                if matches!(event, tauri::WindowEvent::Resized(_)) {
+                    sync_macos_traffic_lights(&win_for_pos);
+                }
                 match event {
                     tauri::WindowEvent::CloseRequested { api, .. } => {
                         let min_to_tray = db_for_close
@@ -574,6 +593,7 @@ pub fn run() {
             focus_browser_profile_require,
             focus_browsers_list,
             focus_native_host_register,
+            focus_chrome_extension_install,
             focus_browser_extension_install,
             focus_browser_extension_remove,
             focus_enforcement_retry,
@@ -596,6 +616,54 @@ pub fn run() {
                 }
             }
         });
+}
+
+/// Keep native caption buttons on the 48px header's center line after AppKit layout.
+#[cfg(target_os = "macos")]
+pub(crate) fn sync_macos_traffic_lights(window: &tauri::WebviewWindow) {
+    let native_window = window.clone();
+    if let Err(error) = window.run_on_main_thread(move || {
+        use objc2::{msg_send, runtime::AnyObject};
+        use objc2_foundation::{NSPoint, NSRect};
+
+        let Ok(pointer) = native_window.ns_window() else { return; };
+        let ns_window = pointer as *mut AnyObject;
+        // SAFETY: Tauri owns this NSWindow and dispatches this closure on the AppKit thread.
+        unsafe {
+            let style: usize = msg_send![ns_window, styleMask];
+            if style & (1 << 14) != 0 { return; } // Fullscreen uses native caption layout.
+            let close: *mut AnyObject = msg_send![ns_window, standardWindowButton: 0usize];
+            if close.is_null() { return; }
+            let parent: *mut AnyObject = msg_send![close, superview];
+            if parent.is_null() { return; }
+            let container: *mut AnyObject = msg_send![parent, superview];
+            if container.is_null() { return; }
+            let bounds: NSRect = msg_send![close, bounds];
+            let base: NSRect = msg_send![close, convertRect: bounds, toView: std::ptr::null::<AnyObject>()];
+            let frame: NSRect = msg_send![ns_window, frame];
+            let delta = frame.size.height - 24.0 - (base.origin.y + base.size.height / 2.0);
+            if delta.abs() > 0.25 {
+                let mut caption: NSRect = msg_send![container, frame];
+                caption.origin.y += delta;
+                caption.size.height -= delta;
+                let _: () = msg_send![container, setFrame: caption];
+            }
+            let close_frame: NSRect = msg_send![close, frame];
+            let minimize: *mut AnyObject = msg_send![ns_window, standardWindowButton: 1usize];
+            if minimize.is_null() { return; }
+            let minimize_frame: NSRect = msg_send![minimize, frame];
+            let spacing = minimize_frame.origin.x - close_frame.origin.x;
+            for index in 0..3usize {
+                let button: *mut AnyObject = msg_send![ns_window, standardWindowButton: index];
+                if button.is_null() { continue; }
+                let rect: NSRect = msg_send![button, frame];
+                let origin = NSPoint { x: 14.0 + index as f64 * spacing, y: rect.origin.y };
+                let _: () = msg_send![button, setFrameOrigin: origin];
+            }
+        }
+    }) {
+        log::warn!("Could not align native caption buttons: {error}");
+    }
 }
 
 pub fn matches_macos_application_menu_title(

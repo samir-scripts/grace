@@ -16,6 +16,13 @@
   let activeProfile = $derived($focusSnapshot.active_profile);
   let profiles = $derived($focusProfiles);
 
+  function formatProfileCadence(profile: { work_secs: number; short_break_secs: number; long_break_secs: number; work_rounds: number }): string {
+    const w = Math.round(profile.work_secs / 60);
+    const s = Math.round(profile.short_break_secs / 60);
+    const l = Math.round(profile.long_break_secs / 60);
+    return `${w}/${s}/${l} × ${profile.work_rounds}`;
+  }
+
   function toggleDropdown(e: MouseEvent) {
     e.stopPropagation();
     if (isLocked) {
@@ -95,51 +102,30 @@
     <span class="session-name">
       {activeProfile ? activeProfile.name : 'Pomodoro'}
     </span>
-    {#if !isLocked}
-      <span class="chevron" class:rotated={isOpen} aria-hidden="true">▾</span>
-    {/if}
   </button>
 
   {#if isOpen && !isLocked}
     <div class="dropdown-menu" role="listbox">
       {#if profiles.length > 0}
-        {#each profiles as profile (profile.id)}
+        {#each profiles as profile, idx (profile.id)}
           {@const isSelected = activeProfile?.id === profile.id}
           <button
             class="dropdown-item"
             class:selected={isSelected}
             role="option"
             aria-selected={isSelected}
+            style="--delay: {idx * 25}ms"
             onclick={() => handleSelect(profile.id)}
           >
-            <div class="profile-info">
-              <span class="item-name">{profile.name}</span>
-              <span class="item-meta">
-                {Math.round(profile.work_secs / 60)}m • {profile.work_rounds} {m.timer_slider_rounds().toLowerCase()}
-              </span>
-            </div>
-            {#if isSelected}
-              <svg
-                class="checkmark"
-                width="13"
-                height="13"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
-              </svg>
-            {/if}
+            <span class="item-dot" class:active={isSelected} aria-hidden="true"></span>
+            <span class="item-name">{profile.name}</span>
+            <span class="item-cadence">{formatProfileCadence(profile)}</span>
           </button>
         {/each}
       {/if}
 
       <div class="menu-divider"></div>
-      <button class="dropdown-item manage-link" onclick={openSettingsSessions}>
+      <button class="dropdown-item manage-link" style="--delay: {profiles.length * 25}ms" onclick={openSettingsSessions}>
         <svg
           class="manage-icon"
           width="13"
@@ -175,22 +161,30 @@
     justify-content: center;
     user-select: none;
     z-index: 50;
+    pointer-events: auto;
   }
 
   .session-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    padding: 3px 8px;
-    background: var(--color-background);
-    border: 1px solid transparent;
+    height: 26px;
+    padding: 0 12px;
+    background: var(--color-background-light);
+    border: 1px solid var(--color-separator);
     border-radius: 6px;
-    color: var(--color-foreground-darker);
+    color: var(--color-foreground);
     font-family: inherit;
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    transition: background var(--transition-snappy), color var(--transition-snappy), border-color var(--transition-snappy), transform 100ms ease-out;
+    transition:
+      background var(--transition-snappy),
+      color var(--transition-snappy),
+      border-color var(--transition-snappy),
+      transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
     min-width: 0;
     max-width: min(140px, 100%);
   }
@@ -200,13 +194,14 @@
   }
   .session-btn:hover {
     background: var(--color-hover);
+    border-color: var(--color-border);
     color: var(--color-foreground);
   }
 
   .session-btn.active {
-    background: var(--color-hover);
+    background: var(--color-selected, var(--color-hover));
+    border-color: var(--color-border);
     color: var(--color-foreground);
-    border-color: var(--color-separator);
   }
 
   .session-btn.locked {
@@ -219,6 +214,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: center;
   }
 
   .lock-indicator {
@@ -226,22 +222,15 @@
     flex-shrink: 0;
   }
 
-  .chevron {
-    font-size: 9px;
-    transition: transform var(--transition-snappy);
-  }
-
-  .chevron.rotated {
-    transform: rotate(180deg);
-  }
 
   .dropdown-menu {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 6px);
     left: 50%;
     transform: translateX(-50%);
-    min-width: 180px;
-    max-width: 240px;
+    transform-origin: top center;
+    min-width: 210px;
+    max-width: 270px;
     max-height: calc(100vh - 56px);
     overflow-y: auto;
     overflow-x: hidden;
@@ -254,13 +243,27 @@
     flex-direction: column;
     gap: 2px;
     z-index: 100;
+    animation: dropdown-pop 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes dropdown-pop {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-6px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
   }
 
   .dropdown-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 8px;
+    gap: 8px;
+    padding: 6px 10px;
+    min-height: 28px;
     background: var(--color-background);
     border: none;
     border-radius: 4px;
@@ -271,6 +274,19 @@
     text-align: left;
     width: 100%;
     transition: background var(--transition-snappy), color var(--transition-snappy);
+    animation: dropdown-item-rise 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--delay, 0ms);
+  }
+
+  @keyframes dropdown-item-rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .dropdown-item:hover {
@@ -283,29 +299,42 @@
     font-weight: 600;
   }
 
-  .profile-info {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    overflow: hidden;
-  }
-
   .item-name {
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .item-meta {
-    font-size: 9px;
+  .item-cadence {
+    flex: 0 0 auto;
+    margin-left: auto;
+    font-family: 'Mona Sans Mono', monospace;
+    font-size: 9.5px;
+    font-variant-numeric: tabular-nums;
     color: var(--color-foreground-darker);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
   }
 
-  .checkmark {
-    display: block;
+  .dropdown-item:hover .item-cadence,
+  .dropdown-item.selected .item-cadence {
+    color: var(--color-foreground);
+  }
+
+  .item-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
     flex-shrink: 0;
-    color: var(--color-accent, var(--color-foreground));
-    margin-left: 6px;
+    background: transparent;
+    transition: background var(--transition-snappy), box-shadow var(--transition-snappy);
+  }
+
+  .item-dot.active {
+    background: var(--color-accent, var(--color-focus-round));
+    box-shadow: 0 0 5px color-mix(in oklch, var(--color-accent, var(--color-focus-round)) 40%, transparent);
   }
 
   .menu-divider {
@@ -329,10 +358,11 @@
 
   @media (prefers-reduced-motion: reduce) {
     .session-btn,
-    .chevron,
+    .dropdown-menu,
     .dropdown-item {
       transition: none !important;
       transform: none !important;
+      animation: none !important;
     }
   }
 </style>

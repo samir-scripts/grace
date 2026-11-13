@@ -1,0 +1,128 @@
+{
+  "run_id": "3abda6cc-ede0-425a-93d7-118e377146b3",
+  "vm": "grace-linux-acceptance-3abda6cc-ede0-425a-93d7-118e377146b3",
+  "image_digest": "sha256:97166c84ea5f102be33d2959f70e83861a36bd749f1715ab669d93e6c9f31476",
+  "os": "Ubuntu 24.04.5 LTS aarch64",
+  "chrome_version": "157.0.8103.78",
+  "chrome_deb_sha256": "6be08fb629687039ac7ce966f27c2c5a2dfd1dc1707b549b352de335b3e86dd2",
+  "chrome_authenticity": "Google-signed repository Release and ARM64 Packages SHA-256 chain verified",
+  "source_commit": "84419c64dabeaf9aac3b27ea58b7ca5c1bb12541",
+  "source_archive_sha256": "6917a7c4d97569c62a639212652900855bf425e2542c14db3ee6a3af0e247c46",
+  "source_snapshot_files": 363,
+  "signed_firefox_guard": "enabled; artifact and provenance included",
+  "package_build": "passed (production deb, signed Firefox guard enabled)",
+  "scenarios": {
+    "runtime-extension-id": "passed: packaged resource loaded using Chrome GUI; runtime ID cgibenlmgmblmalggjalnoaikjkdnoid",
+    "native-registration": "passed: /usr/bin/pomotroid-native-host executable; expected Chrome origin",
+    "automatic-pairing": "passed: consent accepted in normal guest Chrome profile; companion visibly Connected without pasted credentials",
+    "profile-assignment": "passed: one connected profile assigned Chrome and required",
+    "extension-controls-and-guidance": "passed: setup button and uninstall disclosure shown; assigned active and offline states show Repair Connection/Remove Setup with correct Active distinction; management disabled while locked",
+    "existing-tab-blocking": "passed: existing example.com tab visibly replaced by companion block page while timer counted down",
+    "fresh-http": "passed: same-profile controlled loopback HTTP proxy served http://acceptance-http.example.com/baseline2 while idle; during active work fresh /work-unique-22 produced Chrome ERR_BLOCKED_BY_CLIENT and no matching proxy request; baseline host is a subdomain of blocked example.com; after authenticated release, /release-unique-22 reached the same proxy and loaded controlled-http-ok",
+    "fresh-https": "passed: https://example.com/ displayed ERR_BLOCKED_BY_CLIENT",
+    "subdomain-blocking": "passed: https://www.example.com/ displayed ERR_BLOCKED_BY_CLIENT",
+    "allowed-control": "passed: https://example.org/ loaded Example Domain",
+    "browser-restart-retained-policy": "passed: normal Chrome Exit paused locked timer; same profile reconnect received and ACKed active revision 1; fresh target remained blocked",
+    "failed-retry-retention": "passed: Chrome normal Exit paused locked timer; Retry while offline remained paused; log retained active revision 1 without policy release, reconnect sent active revision 1 and received ACK",
+    "consent-withdrawal-retention": "passed: stopped sharing via companion; fresh https://example.com/ blocked",
+    "reconsent-automatic-reconnect": "passed: companion Connected after reconsent; single required Chrome profile remained",
+    "protected-quit-guard": "passed: Linux tray Exit selected while protected; Grace service remained active and locked timer continued",
+    "forced-app-stop-and-relaunch-retained-policy": "passed: forced SIGKILL app service, relaunched locked paused 10:00; Chrome reconnect received active revision 1 and ACKed; no inactive policy recorded",
+    "explicit-retry-retained-revision": "passed: Retry after reconnect and after forced app recovery resumed timer; logs show no replacement publication or inactive release before retry",
+    "emergency-hold-authenticated-release": "passed on repeat with verbose logging: 63-second continuous hold, policy_sent and ACK revision 5 followed by policy_released and ACK revision 6; fresh example.com loaded; journal count zero",
+    "natural-cycle-authenticated-release": "passed: one-minute work and auto-started one-minute long break; fresh example.com blocked during break and loaded after completion; journal count 0; completed work and long-break rows each 60 seconds; bridge logs policy_sent revision 3, ack_received 3, policy_released revision 4, ack_received 4"
+  },
+  "store_actions": "none",
+  "linux_acceptance": "packaged normal-profile Linux matrix passed for observed cases; custom user-data directory native-host lookup remains a separate limitation",
+  "package_sha256": "d4f699966ac70aa510a387ff9c5c6cfcce9431c7f25f4f1a55008f53464f82d2",
+  "package_install": "passed",
+  "custom_user_data_dir_limitation": "Native registration used default Chrome manifest directory while the provisioned custom --user-data-dir expects its own NativeMessagingHosts; consent could not pair, Chrome reported Specified native messaging host not found. Separate normal fresh guest Chrome profile used afterward.",
+  "guest_status": "owned VM stopped after authorized release and empty focus journal; no other VM modified",
+  "natural_cycle_bridge_events": [
+    {
+      "event": "policy_sent",
+      "revision": 3
+    },
+    {
+      "event": "ack_received",
+      "revision": 3
+    },
+    {
+      "event": "policy_released",
+      "revision": 4
+    },
+    {
+      "event": "ack_received",
+      "revision": 4
+    }
+  ],
+  "emergency_bridge_events": [
+    {
+      "event": "policy_sent",
+      "revision": 5
+    },
+    {
+      "event": "ack_received",
+      "revision": 5
+    },
+    {
+      "event": "policy_released",
+      "revision": 6
+    },
+    {
+      "event": "ack_received",
+      "revision": 6
+    }
+  ],
+  "additional_ui_observation": "After an earlier successful emergency hold and new session, reopening emergency dialog showed stale 100% progress before starting a new hold; repeat hold still required 63 seconds.",
+  "recovery_bridge_events": [
+    {
+      "stage": "initial work",
+      "event": "policy_sent",
+      "revision": 1
+    },
+    {
+      "stage": "initial work",
+      "event": "ack_received",
+      "revision": 1
+    },
+    {
+      "stage": "Chrome reconnect",
+      "event": "policy_sent",
+      "revision": 1,
+      "active": true
+    },
+    {
+      "stage": "Chrome reconnect",
+      "event": "ack_received",
+      "revision": 1
+    },
+    {
+      "stage": "app relaunch",
+      "event": "policy_sent",
+      "revision": 1,
+      "active": true
+    },
+    {
+      "stage": "app relaunch",
+      "event": "ack_received",
+      "revision": 1
+    },
+    {
+      "stage": "authorized release after app recovery",
+      "event": "policy_released",
+      "revision": 2
+    },
+    {
+      "stage": "authorized release after app recovery",
+      "event": "ack_received",
+      "revision": 2
+    }
+  ],
+  "controlled_http": {
+    "baseline": "HTTP GET /baseline2 reached loopback proxy and displayed controlled-http-ok",
+    "work": "fresh HTTP /work-unique-22 showed ERR_BLOCKED_BY_CLIENT; proxy received no corresponding request",
+    "released": "HTTP GET /release-unique-22 reached same proxy and displayed controlled-http-ok",
+    "domain": "acceptance-http.example.com (subdomain of blocked example.com)"
+  }
+}

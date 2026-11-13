@@ -148,6 +148,20 @@ impl FocusStateMachine {
         Ok(())
     }
 
+    /// Restore the interrupted phase conservatively; elapsed time is not persisted.
+    pub(crate) fn restore_interrupted(&mut self, profile: FocusProfile, phase: FocusPhase, round: u32) {
+        self.total_work_rounds = profile.work_rounds;
+        self.active_profile = Some(profile);
+        self.current_phase = Some(phase);
+        self.current_work_round = round;
+        self.status = FocusStatus::Active;
+        self.set_enforcement(EnforcementStatus {
+            state: super::enforcer::protocol::EnforcementState::Failed,
+            error_code: Some(super::enforcer::protocol::EnforcementErrorCode::LeaseLost),
+            ..Default::default()
+        });
+    }
+
     pub fn handle_work_started(&mut self) -> Result<(), FocusError> {
         self.status = FocusStatus::Active;
         if self.current_work_round == 0 {

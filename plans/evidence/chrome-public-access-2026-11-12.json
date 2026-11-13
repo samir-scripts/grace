@@ -1,0 +1,22 @@
+{
+  "site_access": "public",
+  "access_revision": 4,
+  "checks": [
+    {
+      "url": "https://grace-chrome-support.springygranola16.chatgpt.site/",
+      "status": 200,
+      "final_url": "https://grace-chrome-support.springygranola16.chatgpt.site/",
+      "expected_content": true,
+      "login_gate": false,
+      "cookies_or_authorization_sent": false
+    },
+    {
+      "url": "https://grace-chrome-support.springygranola16.chatgpt.site/privacy.html",
+      "status": 200,
+      "final_url": "https://grace-chrome-support.springygranola16.chatgpt.site/privacy",
+      "expected_content": true,
+      "login_gate": false,
+      "cookies_or_authorization_sent": false
+    }
+  ]
+}

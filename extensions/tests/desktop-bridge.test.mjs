@@ -42,7 +42,7 @@ test('installed extension applies and releases policies from the Rust desktop br
     context = await chromium.launchPersistentContext(dir, { channel: 'chromium', headless: true, args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`] });
     const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
     const id = new URL(worker.url()).hostname;
-    assert.equal(id, 'ddiojihepmbimcfoefnebpolgaljlcfn');
+    assert.equal(id, 'cgibenlmgmblmalggjalnoaikjkdnoid');
     const options = await context.newPage();
     await options.goto(`chrome-extension://${id}/options.html`);
     await options.evaluate(port => chrome.storage.local.set({ port }), port);
