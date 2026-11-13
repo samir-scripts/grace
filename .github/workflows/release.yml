@@ -392,6 +392,23 @@ jobs:
           run-id: ${{ inputs.candidate_run_id || github.run_id }}
           github-token: ${{ github.token }}
 
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install release signing tools
+        run: |
+          npm ci
+          sudo apt-get update
+          sudo apt-get install -y minisign
+
+      - name: Sign and verify every downloadable package
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: node scripts/sign-release-artifacts.mjs --artifacts dist
+
       - name: Generate latest.json updater manifest
         if: needs.changelog.outputs.prerelease == 'false'
         run: |
@@ -422,11 +439,6 @@ jobs:
                 "windows-x86_64": { signature: $windows_sig, url: $windows_url }
               }
             }' > latest.json
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
 
       - name: Load reviewed stable acceptance
         if: needs.changelog.outputs.prerelease == 'false'
