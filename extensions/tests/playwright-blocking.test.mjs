@@ -295,6 +295,11 @@ test('options use cached appearance before consent and remain usable at narrow w
     await sw.evaluate(colors => chrome.storage.local.set({ focus_appearance: { type: 'appearance', version: 1, colors, animations_enabled: false } }), colors);
     const page = await context.newPage();
     await page.setViewportSize({ width: 320, height: 700 });
+    const publicRequests = [];
+    await context.route('https://grace-focus.github.io/**', route => {
+      publicRequests.push(route.request().url());
+      return route.fulfill({ contentType: 'text/html', body: '<title>Grace privacy</title><h1>Privacy</h1>' });
+    });
     await page.goto(`chrome-extension://${id}/options.html`);
     await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--background').trim() === '#123456');
     assert.equal(await page.locator('#advanced').isVisible(), false);
@@ -303,6 +308,17 @@ test('options use cached appearance before consent and remain usable at narrow w
     assert.equal(await page.locator('#chromeConnectionHelp').textContent(), '', 'native pairing diagnostics stay silent before consent');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.equal(await page.evaluate(() => document.documentElement.dataset.animations), 'disabled');
+    assert.deepEqual(publicRequests, [], 'opening options never fetches public website');
+    assert.equal(await page.getByRole('link', { name: 'Website', exact: true }).getAttribute('href'), 'https://grace-focus.github.io/');
+    const popupPromise = context.waitForEvent('page');
+    await page.getByRole('link', { name: 'Privacy', exact: true }).click();
+    const popup = await popupPromise;
+    await popup.waitForURL('https://grace-focus.github.io/privacy/');
+    assert.deepEqual(publicRequests, ['https://grace-focus.github.io/privacy/']);
+    assert.equal(await page.locator('#consentStatus').textContent(), 'Data sharing is disabled.');
+    assert.equal(await page.locator('#chromeConnectionHelp').textContent(), '');
+    await popup.close();
+
     await page.screenshot({ path: '/tmp/grace-extension-cached-theme-narrow.png', fullPage: true });
     // Invalid cached data is ignored, leaving the default system theme in place.
     await page.evaluate(() => chrome.storage.local.set({ focus_appearance: { type: 'appearance', version: 1, colors: { '--color-background': 'url(evil)' }, animations_enabled: false } }));

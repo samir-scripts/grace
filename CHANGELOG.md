@@ -1,3 +1,10 @@
+[v1.7.2-beta.1]
+
+- Experimental Windows x64 and Ubuntu x64 packages: packaged integration, blocking and recovery are unverified; contributor native acceptance is required before stable promotion.
+- Manual beta downloads only; the stable updater feed is unchanged.
+- Chrome 1.1.2 and Firefox 1.1.1 add Grace website/privacy links without changing consent or browser permissions.
+- Chrome and Firefox privacy disclosures now share the branded Grace website.
+
 ## Unreleased
 
 ### Bug Fixes

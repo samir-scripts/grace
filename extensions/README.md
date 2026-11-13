@@ -139,3 +139,10 @@ Grace uses the same Chrome identity for unpacked acceptance and the Web Store: `
 The listing is still an unpublished Private draft. During staged acceptance, load the packaged `extensions/dist/chrome` directory through Chrome Developer mode after registering the native host. Accept & connect requires no pasted token. Windows and Linux x64 packaged acceptance are required before Public submission. Custom Chrome data directories remain unsupported by this acceptance claim.
 
 Build the inspected Chrome ZIP with `npm run extensions:chrome:release`. Chrome-only diagnostics are injected into the Chrome output; the shared Gecko payload and signed XPI remain unchanged. CI runs `npm run test:chrome-integration` with Chromium installed. Universal macOS packaging uses `npm run build:macos-universal`; release signing uses `-- --updater`.
+
+
+## Experimental desktop beta and public pages
+
+Homepage/support: https://grace-focus.github.io/; privacy for Chrome and Firefox: https://grace-focus.github.io/privacy/. Both companions provide these links before consent; following a public link does not grant consent or start native pairing. Firefox uses its exact signed browser-specific options payload; Safari shared bytes are unchanged.
+
+Windows x64 and Ubuntu x64 1.7.2-beta.1 packages are experimental: packaged integration, blocking and recovery are unverified / deferred to contributors. Updates are manual and do not alter the stable updater feed. [Contributor native acceptance](../plans/contributor-native-acceptance.md) is required before stable promotion. Firefox remains an unlisted, signed companion installed/updated through Grace; no automatic public AMO update channel was added.

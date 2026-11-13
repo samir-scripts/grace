@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { Unzip, unzipSync } from 'fflate';
+import { geckoPayload } from './gecko-payload.mjs';
 import { assertSafeExtensionName, assertSafeExtensionTree } from './extension-source-guard.mjs';
 
 // Checks source correspondence and provenance, not Mozilla's cryptographic signature.
@@ -39,16 +40,7 @@ export function verifySignedGeckoArtifact({ artifactPath, provenancePath, shared
   }
   const archiveManifest = JSON.parse(Buffer.from(entries['manifest.json'] || []).toString('utf8'));
   if (!isDeepStrictEqual(archiveManifest, manifest)) throw new Error('Gecko archive manifest differs from source');
-  const expected = new Map();
-  function collect(dir, prefix = '') {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const name = prefix + entry.name;
-      if (entry.isDirectory()) collect(path.join(dir, entry.name), name + '/');
-      else if (entry.isFile()) expected.set(name, fs.readFileSync(path.join(dir, entry.name)));
-      else throw new Error('Unsupported source entry in Gecko companion');
-    }
-  }
-  collect(sharedDir);
+  const expected = geckoPayload(sharedDir, manifestPath);
   const payload = Object.keys(entries).filter(name => !name.endsWith('/') && !name.startsWith('META-INF/') && name !== 'manifest.json');
   if (payload.length !== expected.size || payload.some(name => !expected.has(name) || !expected.get(name).equals(Buffer.from(entries[name])))) {
     throw new Error('Gecko archive payload differs from source');
