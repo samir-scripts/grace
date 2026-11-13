@@ -19,3 +19,7 @@ Publish explicitly unverified Windows/Ubuntu x64 manual betas before contributor
 - No stable updater feed or latest.json publication for beta. Exact artifacts and checksums precede store submission.
 - Firefox remains unlisted with manual/desktop-managed updates. Signed guard stays strict; no new permissions or protocol changes.
 - Public Chrome submission uses existing ID and normal store rollout, not an isolated beta track.
+
+
+### Staging integration timing repair
+PR #4 exact-head checks passed, then staging run 43388097152 failed the existing first Chromium test: it read `Checking connection…` before the asynchronous initial `Disconnected` status settled. The test now waits for that actual final state rather than asserting immediately after navigation. No production extension payload, signature, permissions or protocol changes. Fresh exact-head CI is required.
