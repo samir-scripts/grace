@@ -128,6 +128,7 @@ pub fn detect_installed_browsers() -> Vec<InstalledBrowser> {
     let mut detected = browsers_from_catalog(&catalog.applications);
 
     // Fallback detection for known default locations if catalog missed them
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     let mut check_fallback = |kind: BrowserKind, name: &str, candidates: &[&str]| {
         if !detected.iter().any(|b| b.kind == kind) {
             for candidate in candidates {

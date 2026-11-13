@@ -41,3 +41,7 @@ Windows and Linux x64 disposable packaged acceptance capacity is unavailable. CI
 - Final local checks after fixes: npm check 0 errors/warnings; npm test 146 passed, 2 optional captures skipped; Chromium 2 passed; signed-guarded frontend build passed. Earlier native source tests remain 214 passed, 19 ignored; no native behavior changes in this fix pass.
 - Final Chrome ZIP: 21 allowlisted package files, SHA-256 133ebfe4a7a472caaf3398cf95973ee15f7b5ec9322e1be7727c35122dd75b93.
 - Review boundaries: Windows registry/opener, actual universal bundling/signing/updater, native browser/recovery/tray/window/audio behavior, all localized layouts and store-installed behavior are not proven by local fixtures. Required native acceptance remains a release hold. Custom data directories remain unsupported. Pre-existing Mozilla registration and Windows unregister behavior are unchanged. No deferred minor findings.
+
+### Windows build continuation
+- Corrected candidate 73f30ac passed both Ubuntu quality gates and CodeQL. Windows reached Rust compilation, proving the signed-source checkout failure was repaired, then exposed an existing windows 0.62 BOOL import error.
+- Narrow repair imports BOOL from windows::core, matching the installed WNDENUMPROC signature, and limits the unused fallback closure to macOS/Linux. Independent Terra review found no issue; focused browser-detector tests (5) and macOS Clippy passed. Fresh Windows CI remains required.
