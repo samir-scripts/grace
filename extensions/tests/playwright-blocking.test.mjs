@@ -140,6 +140,7 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
     const optPage = await context.newPage();
     await optPage.goto(`chrome-extension://${extId}/options.html`);
     assert.equal(await optPage.locator('#advanced').isVisible(), false);
+    await optPage.waitForFunction(() => document.getElementById('connectionStatus').textContent === 'Disconnected');
     assert.equal(await optPage.locator('#connectionStatus').textContent(), 'Disconnected');
     assert.equal(clientSocket, null, 'no socket opens before consent');
     await optPage.keyboard.press('Tab');
