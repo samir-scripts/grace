@@ -42,6 +42,9 @@ export async function prepareRelease({ root = process.cwd(), tag, artifactDir = 
     if (matches.length !== 1) throw new Error(`Expected exactly one ${platform} package`);
     selected.set(matches[0], output);
   }
+  const updaterArchives = files.filter((file) => basename(file).endsWith('.app.tar.gz'));
+  if (updaterArchives.length > 1 || (prerelease === 'false' && updaterArchives.length !== 1)) throw new Error('Expected exactly one macOS updater archive for stable releases, and at most one for beta');
+  if (updaterArchives.length === 1) selected.set(updaterArchives[0], `grace-macos-universal-${version}.app.tar.gz`);
   for (const [source, output] of [...selected]) {
     for (const suffix of ['.sig', '.asc']) {
       if (files.includes(source + suffix)) selected.set(source + suffix, output + suffix);

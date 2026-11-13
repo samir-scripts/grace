@@ -14,7 +14,7 @@ const cases = Object.fromEntries(['installation','automatic_pairing','profile_as
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'release-prep-'));
   mkdirSync(join(root, 'dist', 'nested'), { recursive: true });
-  for (const [file, bytes] of Object.entries({ 'nested/app-setup.exe': 'windows', 'nested/app-setup.exe.sig': 'signature', 'nested/app.deb': 'linux', 'nested/app.deb.sig': 'signature', 'app.dmg': 'mac', 'app.dmg.sig': 'signature', 'app.AppImage': 'appimage', 'app.AppImage.sig': 'signature', 'grace-updater.pub': 'public verification key', 'latest.json': 'unsafe feed' })) writeFileSync(join(root, 'dist', file), bytes);
+  for (const [file, bytes] of Object.entries({ 'nested/app-setup.exe': 'windows', 'nested/app-setup.exe.sig': 'signature', 'nested/app.deb': 'linux', 'nested/app.deb.sig': 'signature', 'app.dmg': 'mac', 'app.dmg.sig': 'signature', 'grace..app.tar.gz': 'mac updater archive', 'grace..app.tar.gz.sig': 'mac updater signature', 'app.AppImage': 'appimage', 'app.AppImage.sig': 'signature', 'grace-updater.pub': 'public verification key', 'latest.json': 'unsafe feed' })) writeFileSync(join(root, 'dist', file), bytes);
   return root;
 }
 function reports(root) {
@@ -149,7 +149,7 @@ test('stable Ubuntu DEB evidence does not publish unaccepted Linux formats', asy
 
 
 test('all public package formats require a detached signature before assembly', async () => {
-  for (const file of ['nested/app-setup.exe', 'nested/app.deb', 'app.dmg', 'app.AppImage', 'extra.rpm', 'extra.app.tar.gz']) {
+  for (const file of ['nested/app-setup.exe', 'nested/app.deb', 'app.dmg', 'app.AppImage', 'extra.rpm', 'grace..app.tar.gz']) {
     const root = fixture();
     try {
       for (const path of ['nested/app-setup.exe', 'nested/app.deb', 'app.dmg', 'app.AppImage']) writeFileSync(join(root, 'dist', path + '.sig'), 'signature');
@@ -157,6 +157,51 @@ test('all public package formats require a detached signature before assembly', 
       rmSync(join(root, 'dist', file + '.sig'), { force: true });
       await assert.rejects(prepareRelease({ root, tag: 'v1.7.2-beta.1', sourceRevision: source }), /signature/i);
       assert.equal(existsSync(join(root, 'release-assets')), false);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+});
+
+
+test('normalizes double-dot macOS updater archive and its signature in checksums and provenance', async () => {
+  const root = fixture();
+  try {
+    const archive = 'grace-macos-universal-1.7.2-beta.1.app.tar.gz';
+    const result = await prepareRelease({ root, tag: 'v1.7.2-beta.1', sourceRevision: source });
+    assert.ok(result.assets.includes(archive));
+    assert.ok(result.assets.includes(archive + '.sig'));
+    assert.equal(result.assets.includes('grace..app.tar.gz'), false);
+    assert.equal(readFileSync(join(root, 'release-assets', archive), 'utf8'), 'mac updater archive');
+    assert.equal(readFileSync(join(root, 'release-assets', archive + '.sig'), 'utf8'), 'mac updater signature');
+    const sums = readFileSync(join(root, 'release-assets/SHA256SUMS'), 'utf8');
+    assert.ok(sums.includes(`${hash('mac updater archive')}  ${archive}\n`));
+    assert.ok(sums.includes(`${hash('mac updater signature')}  ${archive}.sig\n`));
+    const provenance = JSON.parse(readFileSync(join(root, 'release-assets/provenance.json')));
+    assert.ok(provenance.artifacts.some((entry) => entry.file === archive && entry.sha256 === hash('mac updater archive')));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('stable fails closed on absent or duplicate updater archives', async () => {
+  for (const kind of ['missing', 'duplicate']) {
+    const root = fixture();
+    try {
+      reports(root);
+      if (kind === 'missing') { rmSync(join(root, 'dist/grace..app.tar.gz')); rmSync(join(root, 'dist/grace..app.tar.gz.sig')); }
+      else { writeFileSync(join(root, 'dist/second.app.tar.gz'), 'other'); writeFileSync(join(root, 'dist/second.app.tar.gz.sig'), 'signature'); }
+      await assert.rejects(prepareRelease(opts(root)), /archive/i);
+      assert.equal(existsSync(join(root, 'release-assets')), false);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+});
+
+test('beta permits no updater archive but rejects duplicates', async () => {
+  for (const kind of ['missing', 'duplicate']) {
+    const root = fixture();
+    try {
+      if (kind === 'missing') { rmSync(join(root, 'dist/grace..app.tar.gz')); rmSync(join(root, 'dist/grace..app.tar.gz.sig')); }
+      else { writeFileSync(join(root, 'dist/second.app.tar.gz'), 'other'); writeFileSync(join(root, 'dist/second.app.tar.gz.sig'), 'signature'); }
+      const run = prepareRelease({ root, tag: 'v1.7.2-beta.1', sourceRevision: source });
+      if (kind === 'missing') await assert.doesNotReject(run);
+      else { await assert.rejects(run, /archive/i); assert.equal(existsSync(join(root, 'release-assets')), false); }
     } finally { rmSync(root, { recursive: true, force: true }); }
   }
 });

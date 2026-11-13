@@ -425,7 +425,7 @@ jobs:
             --arg version "$VERSION" \
             --arg pub_date "$PUB_DATE" \
             --arg notes "See $REPO/releases/tag/v$VERSION for release notes." \
-            --arg darwin_url "$REPO/releases/download/v$VERSION/$(basename "$APP_TAR_FILE")" \
+            --arg darwin_url "$REPO/releases/download/v$VERSION/grace-macos-universal-$VERSION.app.tar.gz" \
             --arg darwin_sig "$APP_TAR_SIG" \
             --arg windows_url "$REPO/releases/download/v$VERSION/grace-windows-x64-$VERSION-setup.exe" \
             --arg windows_sig "$NSIS_SIG" \
