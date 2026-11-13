@@ -41,6 +41,9 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
   let clientSocket = null;
   let serverKey;
   let sendSequence = 0;
+  let currentPolicy = { type: 'policy', version: 3, active: false, revision: 0, domains: [], lease_secs: 15 };
+  let holdChallenge = false;
+  let pendingChallenge;
 
   function sendBrokerJson(msg) {
     if (!clientSocket || !serverKey) throw new Error('No authenticated client socket connected');
@@ -68,10 +71,12 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
         assert.equal(msg.version, 3);
         clientNonce = msg.client_nonce;
         serverNonce = crypto.randomBytes(32).toString('hex');
-        socket.send(JSON.stringify({
+        const challenge = {
           type: 'auth_challenge', version: 3, server_nonce: serverNonce,
           proof: mac(testToken, `${prefix}server\n${clientNonce}\n${serverNonce}`),
-        }));
+        };
+        if (holdChallenge) pendingChallenge = () => socket.send(JSON.stringify(challenge));
+        else socket.send(JSON.stringify(challenge));
       } else if (msg.type === 'auth_response') {
         assert.equal(msg.version, 3);
         assert.equal(msg.proof, mac(testToken, `${prefix}client\n${clientNonce}\n${serverNonce}\n${msg.metadata}`));
@@ -80,7 +85,7 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
         clientKey = Buffer.from(mac(testToken, `${prefix}key-client\n${clientNonce}\n${serverNonce}\n${msg.metadata}`), 'hex');
         serverKey = Buffer.from(mac(testToken, `${prefix}key-server\n${clientNonce}\n${serverNonce}\n${msg.metadata}`), 'hex');
         events.push({ type: 'authenticated', metadata });
-        sendBrokerJson({ type: 'policy', version: 3, active: false, revision: 0, domains: [], lease_secs: 15 });
+        sendBrokerJson(currentPolicy);
       } else if (msg.type === 'authenticated') {
         assert.equal(msg.sequence, ++receivedSequence);
         assert.equal(msg.mac, mac(clientKey, `${prefix}frame\n${msg.sequence}\n${msg.payload}`));
@@ -156,14 +161,8 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
     assert.ok(wireMessages.every((message) => !message.includes(testToken)));
 
     // 7. Send active blocking policy for example.com
-    sendBrokerJson({
-      type: 'policy',
-      version: 3,
-      lease_secs: 15,
-      active: true,
-      revision: 1,
-      domains: ['example.com'],
-    });
+    currentPolicy = { type: 'policy', version: 3, lease_secs: 15, active: true, revision: 1, domains: ['example.com'] };
+    sendBrokerJson(currentPolicy);
 
     const ack1 = await waitForBrokerEvent((m) => m.type === 'ack' && m.revision === 1);
     assert.equal(ack1.revision, 1);
@@ -192,6 +191,47 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
     assert.ok(blockedError !== null, 'Expected navigation to be blocked');
     assert.match(blockedError.message, /net::ERR_BLOCKED_BY_CLIENT/);
 
+    // Stop the MV3 worker through Chromium, then wake it with an extension message.
+    // DNR rules must survive worker termination and authentication must recover.
+    const authCount = () => events.filter((event) => event.type === 'authenticated').length;
+    const ackCount = () => events.filter((event) => event.type === 'ack' && event.revision === 1).length;
+    let previousAuth = authCount();
+    let previousAck = ackCount();
+    holdChallenge = true;
+    const cdp = await context.newCDPSession(optPage);
+    await cdp.send('ServiceWorker.enable');
+    await cdp.send('ServiceWorker.stopAllWorkers');
+    await optPage.evaluate(() => chrome.runtime.sendMessage({ type: 'connection:status' }));
+    await optPage.waitForFunction(() => chrome.declarativeNetRequest.getDynamicRules().then(rules => rules.some(rule => rule.condition.urlFilter === '||example.com^')));
+    await waitForBrokerEvent(() => Boolean(pendingChallenge));
+    assert.equal(authCount(), previousAuth, 'worker must authenticate again before receiving policy');
+    pendingChallenge(); pendingChallenge = undefined; holdChallenge = false;
+    await waitForBrokerEvent(() => authCount() > previousAuth && ackCount() > previousAck);
+    await cdp.detach();
+
+    // Restart the browser using the same profile. Hold authentication so the
+    // rule is observed before any policy can be sent over the new connection.
+    previousAuth = authCount(); previousAck = ackCount(); holdChallenge = true;
+    await context.close();
+    context = await chromium.launchPersistentContext(userDataDir, {
+      headless: false,
+      args: ['--headless=new', `--disable-extensions-except=${chromeExtPath}`, `--load-extension=${chromeExtPath}`],
+    });
+    const restartedWorker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+    assert.equal(new URL(restartedWorker.url()).hostname, extId);
+    const persistedRules = await restartedWorker.evaluate(() => chrome.declarativeNetRequest.getDynamicRules());
+    assert.equal(persistedRules.length, 1);
+    assert.equal(persistedRules[0].condition.urlFilter, '||example.com^');
+    await waitForBrokerEvent(() => Boolean(pendingChallenge));
+    assert.equal(authCount(), previousAuth, 'restart must authenticate before receiving policy');
+    pendingChallenge(); pendingChallenge = undefined; holdChallenge = false;
+    await waitForBrokerEvent(() => authCount() > previousAuth && ackCount() > previousAck);
+    sw = restartedWorker;
+    const restartedOptions = await context.newPage();
+    await restartedOptions.goto(`chrome-extension://${extId}/options.html`);
+    const restartedPage = await context.newPage();
+    await assert.rejects(restartedPage.goto('http://example.com/', { timeout: 3000 }), /net::ERR_BLOCKED_BY_CLIENT/);
+
     // 9. Send policy release to unblock domains
     sendBrokerJson({
       type: 'policy',
@@ -211,25 +251,25 @@ test('Playwright Chromium MV3 extension connects and blocks webpages dynamically
     assert.equal(clearedRules.length, 0);
 
     // 10. Verify navigation to previously blocked domain succeeds after policy release
-    const releasedRes = await page.goto('http://example.com/', { timeout: 4000 });
+    const releasedRes = await restartedPage.goto('http://example.com/', { timeout: 4000 });
     assert.ok(releasedRes !== null && releasedRes.status() >= 200);
-    const releasedContent = await page.content();
+    const releasedContent = await restartedPage.content();
     assert.ok(releasedContent.toLowerCase().includes('example domain'));
     assert.ok(wireMessages.every((message) => !message.includes(testToken)));
-    await optPage.bringToFront();
-    await optPage.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await optPage.waitForFunction(() => document.querySelector('#connectionStatus').textContent === 'Connected');
-    await optPage.click('#consentStop');
-    await optPage.waitForFunction(() => document.querySelector('#consentStatus').textContent === 'Data sharing is disabled.');
-    assert.equal(await optPage.locator('#advanced').isVisible(), false);
-    assert.equal(await optPage.locator('#connectionStatus').textContent(), 'Disconnected');
+    await restartedOptions.bringToFront();
+    await restartedOptions.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await restartedOptions.waitForFunction(() => document.querySelector('#connectionStatus').textContent === 'Connected');
+    await restartedOptions.click('#consentStop');
+    await restartedOptions.waitForFunction(() => document.querySelector('#consentStatus').textContent === 'Data sharing is disabled.');
+    assert.equal(await restartedOptions.locator('#advanced').isVisible(), false);
+    assert.equal(await restartedOptions.locator('#connectionStatus').textContent(), 'Disconnected');
     await new Promise((resolve, reject) => {
       if (clientSocket.readyState === 3) return resolve();
       const timer = setTimeout(() => reject(new Error('socket did not close on withdrawal')), 3000);
       clientSocket.once('close', () => { clearTimeout(timer); resolve(); });
     });
-    await optPage.close();
-    await page.close();
+    await restartedOptions.close();
+    await restartedPage.close();
   } finally {
     if (clientSocket) clientSocket.terminate();
     wss.close();
@@ -259,6 +299,8 @@ test('options use cached appearance before consent and remain usable at narrow w
     await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--background').trim() === '#123456');
     assert.equal(await page.locator('#advanced').isVisible(), false);
     assert.equal(await page.locator('#consentStatus').textContent(), 'Data sharing is disabled.');
+    await page.locator('#chromeConnectionHelp').waitFor({ state: 'attached' });
+    assert.equal(await page.locator('#chromeConnectionHelp').textContent(), '', 'native pairing diagnostics stay silent before consent');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.equal(await page.evaluate(() => document.documentElement.dataset.animations), 'disabled');
     await page.screenshot({ path: '/tmp/grace-extension-cached-theme-narrow.png', fullPage: true });

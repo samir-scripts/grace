@@ -67,6 +67,9 @@ jobs:
       - name: Frontend and extension tests
         run: npm test
 
+      - name: Chromium extension integration tests
+        run: npm run test:chrome-integration
+
       - name: Rust clippy
         run: cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings
 
@@ -230,7 +233,7 @@ jobs:
         run: npx svelte-kit sync
 
       - name: Build (release, universal binary)
-        run: npm run tauri build -- --config '{"bundle":{"createUpdaterArtifacts":true}}' --bundles app,dmg --target universal-apple-darwin
+        run: npm run build:macos-universal -- --updater
         env:
           CI: true
 

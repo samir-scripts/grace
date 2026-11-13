@@ -49,13 +49,14 @@ async fn test_e2e_browser_onboarding_lifecycle() {
         &NativeOutboundMessage::Config {
             token: test_token.into(),
             port: test_port,
+            protocol_version: 3,
         },
     ).unwrap();
 
     let mut resp_cursor = std::io::Cursor::new(pipe_out);
     let outbound = read_native_message::<NativeOutboundMessage>(&mut resp_cursor).unwrap();
     let (received_token, received_port) = match outbound {
-        NativeOutboundMessage::Config { token, port } => (token, port),
+        NativeOutboundMessage::Config { token, port, .. } => (token, port),
         other => panic!("Unexpected message: {other:?}"),
     };
     assert_eq!(received_token, test_token);

@@ -970,8 +970,7 @@ fn resolve_extension_dist_dir(app: &AppHandle) -> std::path::PathBuf {
     std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).join("extensions/dist")
 }
 
-#[tauri::command]
-pub fn focus_native_host_register(app: AppHandle) -> Result<(), String> {
+fn resolve_native_host_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
     let mut exe_path = std::env::current_exe().map_err(|e| format!("Cannot locate current exe: {e}"))?;
     exe_path.pop();
     #[cfg(windows)]
@@ -993,7 +992,26 @@ pub fn focus_native_host_register(app: AppHandle) -> Result<(), String> {
         host_in_exe_dir
     };
 
-    crate::focus::native_messaging::register_native_messaging_manifests(&host_path)
+    Ok(host_path)
+}
+
+#[tauri::command]
+pub fn focus_native_host_register(app: AppHandle) -> Result<(), String> {
+    crate::focus::native_messaging::register_mozilla_manifest(&resolve_native_host_path(&app)?)
+}
+
+#[tauri::command]
+pub fn focus_chrome_extension_install(
+    app: AppHandle,
+    focus: State<'_, Arc<FocusController>>,
+    bridge: State<'_, Arc<crate::focus::browser::BrowserBridge>>,
+) -> Result<String, String> {
+    if bridge.is_active() {
+        return Err("Cannot modify browser extensions during an active focus session.".into());
+    }
+    focus.execute_guarded_browser_mutation(|| {
+        crate::focus::native_messaging::register_release_chrome_manifest(&resolve_native_host_path(&app)?)
+    })
 }
 
 #[tauri::command]
@@ -1043,6 +1061,19 @@ pub fn focus_browser_extension_install(
     })
 }
 
+fn should_unregister_native_host(
+    browser: crate::focus::browser::BrowserKind,
+    profiles: &[crate::focus::browser::ConnectedProfileInfo],
+) -> bool {
+    use crate::focus::browser::BrowserKind;
+    let other = match browser {
+        BrowserKind::Firefox => Some(BrowserKind::Zen),
+        BrowserKind::Zen => Some(BrowserKind::Firefox),
+        _ => None,
+    };
+    !other.is_some_and(|kind| profiles.iter().any(|profile| profile.browser == Some(kind)))
+}
+
 #[tauri::command]
 pub fn focus_browser_extension_remove(
     browser: crate::focus::browser::BrowserKind,
@@ -1055,7 +1086,9 @@ pub fn focus_browser_extension_remove(
 
     focus.execute_guarded_browser_mutation(|| {
         crate::focus::enterprise_policy::remove_browser_enterprise_policy(browser)?;
-        crate::focus::native_messaging::unregister_native_messaging_manifests(browser)?;
+        if should_unregister_native_host(browser, &bridge.get_setup_info().profiles) {
+            crate::focus::native_messaging::unregister_native_messaging_manifests(browser)?;
+        }
         bridge.remove_profiles_for_browser(browser);
         Ok(())
     })
@@ -1078,6 +1111,21 @@ pub fn focus_enforcement_retry(
 mod tests {
     use rusqlite::Connection;
     use crate::db::migrations;
+
+    #[test]
+    fn gecko_removal_retains_other_assigned_companion() {
+        use crate::focus::browser::{BrowserKind, ConnectedProfileInfo};
+        let profiles = vec![ConnectedProfileInfo {
+            profile_id: "disconnected-zen".into(), browser: Some(BrowserKind::Zen),
+            is_required: false, is_connected: false, last_seen_secs_ago: 0,
+        }];
+        assert!(!super::should_unregister_native_host(BrowserKind::Firefox, &profiles));
+        assert!(super::should_unregister_native_host(BrowserKind::Zen, &profiles));
+        assert!(super::should_unregister_native_host(BrowserKind::Chrome, &profiles));
+        assert!(super::should_unregister_native_host(BrowserKind::Firefox, &[]));
+        let firefox = vec![ConnectedProfileInfo { browser: Some(BrowserKind::Firefox), ..profiles[0].clone() }];
+        assert!(!super::should_unregister_native_host(BrowserKind::Zen, &firefox));
+    }
 
     fn setup() -> Connection {
         let conn = Connection::open_in_memory().unwrap();

@@ -103,3 +103,11 @@ Next required input is disposable Windows and Linux native test capacity. After 
 ### Current submission hold
 
 macOS packaged acceptance is complete, including authorized crash recovery repair and final candidate reruns. Public privacy/support evidence remains recorded above. Windows/Linux native acceptance and exact matching public desktop candidate downloads remain outstanding; distribution stays Private and no upload/submission was performed. Historical identity artifact hashes are explicitly marked superseded by the current Tart evidence.
+
+### Linux ARM64 and setup-controls follow-up
+
+- The signed-guarded production DEB passed the normal-profile packaged Chrome matrix on disposable Tart Ubuntu 24.04.5 ARM64 with verified Chrome 157.0.8103.78; see [per-case evidence](evidence/chrome-linux-tart-2026-11-12.json). This is not Linux x64 or Windows evidence.
+- Timer & Sessions now distinguishes an assigned companion from the browser policy marker and provides browser-specific removal instructions. Removing Grace setup does not revoke a companion's cached credentials: stop sharing or uninstall the companion first.
+- Host checks after these changes: `npm run check` passed with zero errors and warnings; `npm test` passed with two optional captures skipped; Rust tests passed 212 with 19 ignored and the documented accessibility exclusion; Clippy passed. The Chrome store was not modified.
+- An isolated custom Chrome `--user-data-dir` could not discover the native host because Grace registers the default Chrome data directory. The fresh standard guest profile paired automatically; custom-directory support remains unverified beyond that observed failure.
+- Controlled HTTP and fresh HTTPS blocking, reconnect/retry and forced app recovery with retained active revision, protected tray Exit, natural completion and emergency release were observed with authenticated ACKs. The owned VM was stopped after release. The separate custom Chrome data-directory limitation remains open.

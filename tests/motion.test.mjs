@@ -729,8 +729,8 @@ test('updating an installed companion preserves participants and is disabled whi
     });
     await page.waitForFunction(() => document.querySelector('button[title="Extensions cannot be changed while a focus session is active."]')?.disabled);
     assert.equal(await update.isDisabled(), true);
-    assert.equal(await page.getByRole('button', { name: 'Remove Extension' }).isDisabled(), true);
-    assert.equal(await page.getByRole('button', { name: 'Install Extension' }).isDisabled(), true);
+    assert.equal(await page.locator('.browser-card .btn-remove').first().isDisabled(), true);
+    assert.equal(await page.locator('.browser-card').nth(1).locator('.btn-install').first().isDisabled(), true);
     assert.deepEqual(await page.evaluate(() => window.__motionTest.getBrowserSetupCalls()), ['focus_native_host_register', 'focus_browser_extension_install']);
   } finally { await context.close(); }
 });

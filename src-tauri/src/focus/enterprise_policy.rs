@@ -340,6 +340,11 @@ pub fn install_browser_enterprise_policy(browser: BrowserKind, extension_path: &
     let target = browsers.into_iter().find(|b| b.kind == browser)
         .ok_or_else(|| format!("Browser {:?} is not installed", browser))?;
 
+    // Unmanaged Chrome uses native messaging registration, not a force-install policy.
+    if browser == BrowserKind::Chrome && target.policy_path.is_none() {
+        return Ok(());
+    }
+
     let policy_path = target.policy_path
         .ok_or_else(|| format!("Could not determine policy path for {:?}", browser))?;
 
@@ -381,6 +386,11 @@ pub fn remove_browser_enterprise_policy(browser: BrowserKind) -> Result<(), Stri
     let browsers = detect_installed_browsers();
     let target = browsers.into_iter().find(|b| b.kind == browser)
         .ok_or_else(|| format!("Browser {:?} is not installed", browser))?;
+
+    // There is no managed Chrome policy to remove on these platforms.
+    if browser == BrowserKind::Chrome && target.policy_path.is_none() {
+        return Ok(());
+    }
 
     let policy_path = target.policy_path
         .ok_or_else(|| format!("Could not determine policy path for {:?}", browser))?;

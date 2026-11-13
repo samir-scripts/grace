@@ -36,6 +36,7 @@ fn main() {
     println!("cargo:rerun-if-changed=../extensions/signed");
     println!("cargo:rerun-if-changed=../scripts/build-browser-extensions.mjs");
     println!("cargo:rerun-if-changed=../scripts/gecko-signed-artifact.mjs");
+    println!("cargo:rerun-if-changed=../scripts/chrome-release-config.mjs");
 
     let dist_xpi = std::path::Path::new("../extensions/dist/firefox/focus@pomotroid.local.xpi");
     let dist_chrome = std::path::Path::new("../extensions/dist/chrome");
