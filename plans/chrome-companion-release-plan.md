@@ -61,3 +61,8 @@ Windows and Linux x64 disposable packaged acceptance capacity is unavailable. CI
 - Local full universal app/DMG build passed; packaged app and native host both contain x86_64 and arm64. CI DMG inspection at preceding application revision 1cb0a6a independently confirmed both binaries and Chrome 1.1.1 without executing the application.
 - Staging automation runs on the resulting stage commit; its live GitHub checks are the authoritative result for that build. A successful package build does not count as native acceptance.
 - STOP: disposable Windows and Linux x64 packaged runtime capacity remains unavailable. Final-candidate native acceptance, matching public downloads, Public store distribution and automatic publication after review remain pending. Store draft stays Private/unsubmitted; remote release is not created or pushed.
+
+### Post-merge CodeQL push repair
+- Feature PR CodeQL passed, but dev/stage push analyses failed while uploading results: Resource not accessible by integration. The workflow requested no explicit token permissions. GitHub permits PR SARIF uploads specially; normal branch pushes need security-events write.
+- Owner explicitly approved contents read, actions read and security-events write for the analyze job after automatic approval review requested authorization. No repository-wide defaults, credentials, triggers or analysis checks change. Independent Terra review confirmed the scope.
+- The repeated dev/stage failures are the observed regression. A reviewed CI follow-up PR and successful push analyses are required before the staging checkpoint is considered green. Application source and extension payload remain unchanged.
