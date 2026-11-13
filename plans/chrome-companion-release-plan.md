@@ -45,3 +45,8 @@ Windows and Linux x64 disposable packaged acceptance capacity is unavailable. CI
 ### Windows build continuation
 - Corrected candidate 73f30ac passed both Ubuntu quality gates and CodeQL. Windows reached Rust compilation, proving the signed-source checkout failure was repaired, then exposed an existing windows 0.62 BOOL import error.
 - Narrow repair imports BOOL from windows::core, matching the installed WNDENUMPROC signature, and limits the unused fallback closure to macOS/Linux. Independent Terra review found no issue; focused browser-detector tests (5) and macOS Clippy passed. Fresh Windows CI remains required.
+
+### Real macOS tool regression
+- CI at 73f30ac compiled the universal application and created the helper, then rejected the lipo verification argument order. Corrected the input-before-command syntax.
+- A real local macOS regression compiles tiny arm64/x86_64 Mach-O objects, exercises lipo through the helper, accepts universal binaries, and rejects a thin main before bundling. It failed before the fix and now passes; all 6 packaging tests pass. Independent Terra review found no issue.
+- Full npm suite after this fix passed 147 tests with 2 optional captures skipped. Required Rust suite after Windows fix passed 214 with 19 opt-in ignored and documented accessibility exclusion. Final all-platform CI is still pending.

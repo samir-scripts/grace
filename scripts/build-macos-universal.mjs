@@ -23,7 +23,7 @@ export function buildUniversal({ run, cwd, updater = false }) {
   mkdirSync(release, { recursive: true });
   execute('lipo', ['-create', ...hosts, '-output', join(release, 'pomotroid-native-host')]);
   for (const binary of ['pomotroid', 'pomotroid-native-host']) {
-    execute('lipo', ['-verify_arch', 'arm64', 'x86_64', join(release, binary)]);
+    execute('lipo', [join(release, binary), '-verify_arch', 'arm64', 'x86_64']);
   }
   execute('npm', ['run', 'tauri', '--', 'bundle', '--target', 'universal-apple-darwin', '--bundles', 'app,dmg', ...config]);
 }
