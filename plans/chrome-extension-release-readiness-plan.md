@@ -1,5 +1,26 @@
 # Chrome Extension Release Readiness Implementation Plan
 
+## Current release status — 2026-11-15
+
+- **Chrome 1.1.2 is Pending Review**, item `cgibenlmgmblmalggjalnoaikjkdnoid`, with **Public** distribution. A refreshed developer dashboard confirmed the version, review status, visibility and that the item is not published yet on 2026-11-15. The [published release plan](https://github.com/samir-scripts/grace/blob/dev/plans/experimental-beta-release-plan.md) records submission on 2026-11-13 with automatic publication after approval. No resubmission or publication-setting change is needed for this documentation update.
+- Desktop [v1.7.2-beta.1](https://github.com/samir-scripts/grace/releases/tag/v1.7.2-beta.1) is already public as a manual experimental prerelease, not a stable/latest release. Its immutable payload source is `f7f28c2a53351a0fdbcf41264c2c709d5421e4c3`. This older, dirty checkout and its generated artifacts are not the published candidate.
+- The canonical landing/support URL remains **https://grace-focus.github.io/** under the **grace-focus** GitHub organization; privacy is **https://grace-focus.github.io/privacy/**. Keep these GitHub Pages URLs. No custom-domain purchase or DNS migration is planned. The earlier support Site access checks below remain historical evidence.
+- Windows x64 and Ubuntu x64 packaged integration, blocking and recovery remain **unverified / deferred to contributors**. The owner-approved waiver permitted this experimental beta and Chrome submission only; it is not a native acceptance pass or a waiver for stable promotion.
+- The published release plan records focused checks against the exact beta DMG on macOS: pairing/reconnection, fresh policy ACK, blocking, natural completion and restored access. The broader macOS and Linux ARM64 matrices below belong to earlier artifacts and do not certify the full final-beta matrix or Windows/Ubuntu x64 packages.
+
+### Remaining checks
+
+- [ ] Obtain Google approval; submission and Public visibility configuration are not approval or a live listing.
+- [ ] After approval, repeat acceptance with the **store-installed** Chrome companion and the matching desktop candidate.
+- [ ] Before stable promotion, collect separate reviewed Windows x64 and Ubuntu x64 native reports against the exact stable-candidate source and package bytes. Follow the [contributor native acceptance checklist](https://github.com/samir-scripts/grace/blob/dev/plans/contributor-native-acceptance.md); rebuilt packages require new evidence.
+- [ ] Complete any broader final-candidate native/browser scenarios not covered by the focused beta checks. Missing, skipped or inconclusive checks remain unverified.
+
+Sources: the live Chrome developer dashboard rechecked on 2026-11-15, the linked published release plan and [current reviewer guidance](chrome-extension-reviewer-instructions.md). This update changes local documentation only; it does not upload, resubmit or change distribution settings.
+
+## Historical implementation scope — 2026-11-12
+
+The original tasks, constraints and execution evidence below retain their historical results. Their Private/unsubmitted instructions and candidate-publication hold were superseded by the 2026-11-13 experimental beta policy described above; unchecked historical tasks are not a reason to repeat the completed submission.
+
 **Goal:** Align Chrome identity, make privacy access public, and prove packaged integration before submission.
 
 **Architecture:** Keep store draft `cgibenlmgmblmalggjalnoaikjkdnoid`; use its public key for development and its ID for native authorization. Change the existing support Site access only.
@@ -74,9 +95,9 @@
 - Saved 485-character reviewer instructions in Chrome dashboard, confirmed by its saved notice; username/password left empty. Exact matching desktop candidate URL remains pending until release handoff. Full instructions: [reviewer setup](chrome-extension-reviewer-instructions.md). Distribution was not changed and nothing was uploaded/submitted.
 - Chrome ZIP CRC, exact file allowlist and source-byte checks passed. Archive excludes hidden files, credentials, tests and unrelated distribution directories. Artifact hashes: [release artifacts](evidence/chrome-release-artifacts-2026-11-12.json).
 
-### Native acceptance matrix — Windows/Linux blocked
+### Historical native acceptance matrix — before the Linux ARM64 follow-up
 
-Current macOS result: **passed** in the owned Tart clone using packaged source `c373d55`, macOS 15.7.7 (24G720) arm64 and actual Google Chrome 157.0.8103.79. [Runbook and results](chrome-tart-acceptance-plan.md), [artifact/runtime evidence](evidence/chrome-macos-tart-2026-11-12.json), [sanitized UI](evidence/chrome-macos-tart-ui-2026-11-12.txt).
+At this checkpoint the macOS result was **passed** in the owned Tart clone using packaged source `c373d55`, macOS 15.7.7 (24G720) arm64 and actual Google Chrome 157.0.8103.79. [Runbook and results](chrome-tart-acceptance-plan.md), [artifact/runtime evidence](evidence/chrome-macos-tart-2026-11-12.json), [sanitized UI](evidence/chrome-macos-tart-ui-2026-11-12.txt).
 
 | Scenario | macOS | Windows | Linux |
 | --- | --- | --- | --- |
@@ -91,15 +112,15 @@ Browser restart exposed live lease cleanup; repaired in `34a266b`. Expanded actu
 
 Pinned baseline was restored without automatic pruning and never booted. Acceptance clone was collected and stopped; baseline remains unchanged/stopped. No usable Windows/Linux disposable desktop is available. CI/headless Chromium does not replace those gates. Store-installed acceptance remains separate after approval. OS reboot/power loss and app-update crash boundaries were not separately exercised.
 
-### Final review
+### Historical final review
 
 Independent whole-change review found no critical, important or minor code findings. Reviewer independently checked the four artifact sizes/hashes, ZIP integrity, exact archive allowlist, source/dist parity, identity regression and diff whitespace. Code repair is consistent; release remains blocked.
 
 Review boundaries: native packaged scenarios and store-installed behavior were not judged as passed; live service changes and the historical full test runs rely on the recorded session evidence, not a second operation/rerun. Unrelated docs, nested Site source and credentials were excluded. No merge, push, upload, review submission or public store release was performed.
 
-Next required input is disposable Windows and Linux native test capacity. After those scenarios pass, supply exact matching desktop candidate downloads, update the pending reviewer note, upload the verified ZIP, and select Public distribution at the separate release handoff.
+At this checkpoint, the next required input was disposable Windows and Linux native test capacity, followed by matching desktop downloads, updated reviewer instructions, ZIP upload and Public distribution. The later beta-only waiver and completed submission supersede that ordering; stable native acceptance remains required.
 
 
-### Current submission hold
+### Historical submission hold — superseded on 2026-11-13
 
 macOS packaged acceptance is complete, including authorized crash recovery repair and final candidate reruns. Public privacy/support evidence remains recorded above. Windows/Linux native acceptance and exact matching public desktop candidate downloads remain outstanding; distribution stays Private and no upload/submission was performed. Historical identity artifact hashes are explicitly marked superseded by the current Tart evidence.

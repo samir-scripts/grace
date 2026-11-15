@@ -1,8 +1,12 @@
 # Implementation plans
 
+Current Chrome status (2026-11-15): companion **1.1.2 is Pending Review**, submitted for **Public** distribution on 2026-11-13 with automatic publication after approval. Desktop [v1.7.2-beta.1](https://github.com/samir-scripts/grace/releases/tag/v1.7.2-beta.1) is published as a manual experimental prerelease. Google approval, store-installed acceptance and reviewed Windows/Ubuntu x64 native evidence for stable promotion remain outstanding. See the [current release status and remaining checks](chrome-extension-release-readiness-plan.md#current-release-status--2026-11-15).
+
+The landing page remains [https://grace-focus.github.io/](https://grace-focus.github.io/), hosted by the **grace-focus** GitHub organization; privacy remains [https://grace-focus.github.io/privacy/](https://grace-focus.github.io/privacy/). No custom-domain purchase or DNS migration is planned.
+
 [macOS Chrome acceptance through Tart](chrome-tart-acceptance-plan.md) — passed actual packaged Chrome acceptance on macOS, including forced app recovery; evidence collected and clone stopped.
 
-[Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — store identity aligned and public privacy access verified; checks and macOS production packaging pass. Actual macOS packaged Chrome acceptance passed; Windows/Linux remain blocked by missing disposable desktops. Store stays Private and unsubmitted.
+[Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — current submission status and historical acceptance ledger. Earlier macOS and Linux ARM64 packaged Chrome matrices passed; those results do not certify the newer beta packages. Windows/Ubuntu x64 remain unverified under a beta-only waiver. Chrome 1.1.2 is Public / Pending Review; the earlier Private/unsubmitted hold is superseded. One isolated custom Chrome data directory could not discover the default native-host registration; broader custom-directory support remains unverified.
 
 [grace. UI consistency and accessibility](grace-ui-consistency-plan.md) — implementation and verification ledger. [Batch 5 native/signing report](grace-ui-batch5-report.md): native development checks, Clippy and production build pass; signed 1.1.0 is approved and a packaged Zen update/reconnect passed; Firefox 115 support is retained with its consent fallback; pre-consent appearance and remaining browser acceptance are open.
 
