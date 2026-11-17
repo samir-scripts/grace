@@ -1,6 +1,7 @@
 pub mod audio;
 pub mod commands;
 pub mod db;
+pub mod fonts;
 pub mod notifications;
 pub mod focus;
 pub mod platform;
@@ -11,6 +12,7 @@ pub mod timer;
 pub mod tray;
 pub mod websocket;
 pub mod window_view;
+pub mod window_material;
 
 use std::sync::Arc;
 
@@ -31,6 +33,7 @@ use commands::{
     get_log_dir, open_log_dir,
     notification_show,
     settings_get, settings_reset_defaults, settings_set,
+    fonts_list, fonts_import, fonts_read, fonts_remove,
     shortcuts_reload,
     sessions_clear,
     stats_get_detailed, stats_get_heatmap,
@@ -38,6 +41,7 @@ use commands::{
     timer_get_state, timer_reset, timer_restart_round, timer_skip, timer_toggle,
     window_set_visibility,
     window_set_view_size,
+    window_material_set_allowed,
     focus_apps_list,
     focus_app_icon,
     focus_snapshot_get,
@@ -198,7 +202,10 @@ pub fn run() {
                 }
             };
 
-            tauri::WebviewWindowBuilder::from_config(app.handle(), &main_window_config)?.build()?;
+            let window_builder = tauri::WebviewWindowBuilder::from_config(app.handle(), &main_window_config)?;
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            let window_builder = window_builder.transparent(true).background_color(tauri::utils::config::Color(0, 0, 0, 0));
+            window_builder.build()?;
 
             // --- Database ---
             let db = match db::open(&app_data_dir) {
@@ -236,6 +243,10 @@ pub fn run() {
                 let conn = db.lock().unwrap();
                 settings::load(&conn).expect("failed to load settings")
             };
+            app.manage(window_material::WindowMaterialState::new(&initial_settings.ui_style));
+            if let Err(error) = window_material::install_observers(app.handle()) {
+                log::warn!("Window material observers unavailable: {error}");
+            }
 
             // Apply the persisted log level before any further setup.
             if initial_settings.verbose_logging {
@@ -545,6 +556,10 @@ pub fn run() {
             settings_get,
             settings_set,
             settings_reset_defaults,
+            fonts_list,
+            fonts_import,
+            fonts_read,
+            fonts_remove,
             // Themes
             themes_list,
             appearance_publish,
@@ -556,6 +571,7 @@ pub fn run() {
             // Window
             window_set_visibility,
             window_set_view_size,
+            window_material_set_allowed,
             // Shortcuts
             shortcuts_reload,
             // Audio
@@ -601,6 +617,9 @@ pub fn run() {
         .build(context)
         .expect("error while building tauri application")
         .run(|app_handle, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                window_material::shutdown();
+            }
             if let tauri::RunEvent::ExitRequested { api, .. } = event {
                 if let Some(focus) = app_handle.try_state::<std::sync::Arc<crate::focus::controller::FocusController>>() {
                     if focus.should_prevent_app_exit() {

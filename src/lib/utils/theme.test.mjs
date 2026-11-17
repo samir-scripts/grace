@@ -86,6 +86,7 @@ test('resolved bundled themes provide readable solid semantic roles', async () =
       assert.ok(contrastRatio(c['--color-border'], c[bg]) >= 3, `${file}: border`);
     }
     assert.ok(contrastRatio(c['--color-button-text'], c['--color-button']) >= 4.5);
+    assert.ok(contrastRatio(c['--color-danger-button-text'], c['--color-status-error']) >= 4.5, `${file}: destructive hover`);
     assert.ok(contrastRatio(c['--color-button'], c['--color-background']) >= 3);
     assert.ok(contrastRatio(c['--color-browser-installed-text'], c['--color-browser-installed-bg']) >= 4.5, `${file}: installed badge`);
     assert.ok(contrastRatio(c['--color-browser-active-text'], c['--color-browser-active-bg']) >= 4.5, `${file}: active badge`);
@@ -135,4 +136,130 @@ test('structural separators stay quiet while controls retain contrast', async ()
     assert.ok(contrastRatio(c['--color-border'], c['--color-background']) >= 3);
     assert.ok(contrastRatio(c['--color-background-light'], c['--color-background']) < 1.5);
   }
+});
+
+test('Glass control text remains readable over desktop extremes and solid controls', async () => {
+  const { resolveThemeColors, resolveGlassColors, contrastRatio } = await import('./theme.ts');
+  const fs = await import('node:fs');
+  const themes = fs.readdirSync('static/themes').filter(f => f.endsWith('.json'))
+    .map(file => [file, JSON.parse(fs.readFileSync(`static/themes/${file}`, 'utf8'))]);
+  themes.push(['gray custom', { colors: {
+    '--color-background': '#808080', '--color-background-light': '#818181',
+    '--color-foreground': '#808080', '--color-foreground-darker': '#818181',
+    '--color-accent': '#808080', '--color-short-round': '#818181',
+  } }]);
+  for (const [name, theme] of themes) {
+    const base = resolveThemeColors(theme);
+    const original = { ...base };
+    const glass = resolveGlassColors(base);
+    assert.deepEqual(base, original, `${name}: input remains unchanged`);
+    const match = /^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/.exec(glass['--glass-canvas']);
+    assert.ok(match, `${name}: canvas is rgba`);
+    const channels = match.slice(1, 4).map(Number);
+    const alpha = Number(match[4]);
+    assert.ok(alpha > 0 && alpha <= 1, `${name}: canvas alpha`);
+    const composite = back => '#' + channels.map(channel =>
+      Math.round(channel * alpha + back * (1 - alpha)).toString(16).padStart(2, '0')).join('');
+    const layer = (rgba, canvas) => {
+      const values = rgba.match(/[\d.]+/g).map(Number);
+      return '#' + values.slice(0, 3).map((channel, i) => Math.round(channel * values[3] + parseInt(canvas.slice(1 + i * 2, 3 + i * 2), 16) * (1 - values[3])).toString(16).padStart(2, '0')).join('');
+    };
+    const protectedSurfaces = [0, 255].flatMap(back => ['--glass-control-surface', '--glass-selected-surface', '--glass-chrome-surface'].map(role => layer(glass[role], composite(back))));
+    const surfaces = [...protectedSurfaces, ...[
+      '--color-background', '--color-background-light', '--color-hover', '--color-selected',
+    ].map(key => base[key])];
+    for (const surface of surfaces) {
+      for (const role of ['--glass-foreground', '--glass-foreground-darker', '--glass-status-error',
+        '--glass-status-success', '--glass-status-warning']) {
+        assert.ok(contrastRatio(glass[role], surface) >= 4.5, `${name}: ${role} on ${surface}`);
+      }
+      assert.ok(contrastRatio(glass['--glass-border'], surface) >= 3, `${name}: border on ${surface}`);
+    }
+    assert.ok(contrastRatio(glass['--glass-danger-button-text'], glass['--glass-status-error']) >= 4.5);
+  }
+});
+
+test('Glass content protects light and dark text across the complete transparency range', async () => {
+  const { resolveThemeColors, resolveGlassColors, contrastRatio } = await import('./theme.ts');
+  const fs = await import('node:fs');
+  const themes = fs.readdirSync('static/themes').filter(f => f.endsWith('.json'))
+    .map(file => [file, JSON.parse(fs.readFileSync(`static/themes/${file}`, 'utf8'))]);
+  themes.push(['gray custom', { colors: {
+    '--color-background': '#808080', '--color-background-light': '#818181',
+    '--color-foreground': '#808080', '--color-foreground-darker': '#818181',
+  } }]);
+  const layer = (paint, back) => {
+    assert.match(paint ?? '', /^rgba\(/, 'content has a protected material');
+    const values = paint.match(/[\d.]+/g).map(Number);
+    return '#' + values.slice(0, 3).map((v, i) => Math.round(v * values[3]
+      + parseInt(back.slice(1 + i * 2, 3 + i * 2), 16) * (1 - values[3]))
+      .toString(16).padStart(2, '0')).join('');
+  };
+  for (const [name, theme] of themes) {
+    const base = resolveThemeColors(theme);
+    for (let transparency = 0; transparency <= 100; transparency++) {
+      const glass = resolveGlassColors(base, transparency);
+      for (const back of ['#000000', '#ffffff', '#385c81']) {
+        const canvas = layer(glass['--glass-canvas'], back);
+        const content = layer(glass['--glass-content-surface'], canvas);
+        const surfaces = [content, ...['--glass-control-surface', '--glass-selected-surface', '--glass-chrome-surface']
+          .map(key => layer(glass[key], content))];
+        for (const surface of surfaces) {
+          for (const role of ['--glass-foreground', '--glass-foreground-darker', '--glass-status-error', '--glass-status-success', '--glass-status-warning']) {
+            assert.ok(contrastRatio(glass[role], surface) >= 4.5, `${name} ${transparency}%: ${role} on ${surface}`);
+          }
+          assert.ok(contrastRatio(glass['--glass-border'], surface) >= 3, `${name} ${transparency}%: border on ${surface}`);
+        }
+        if (transparency === 0) assert.equal(contrastRatio(content, base['--color-background']), 1, `${name}: solid endpoint`);
+      }
+    }
+  }
+});
+
+test('theme application updates glass colors without publishing them', async () => {
+  const { applyTheme, getAppliedThemeColors, setThemePublisher } = await import('../stores/theme.ts');
+  const values = new Map();
+  let published;
+  globalThis.document = { documentElement: { style: {
+    setProperty: (k, v) => values.set(k, v), removeProperty: k => values.delete(k)
+  } } };
+  setThemePublisher(colors => { published = { ...colors }; });
+  try {
+    const theme = { colors: { '--color-background': '#ffffff' } };
+    const input = structuredClone(theme);
+    applyTheme(theme);
+    const firstCanvas = values.get('--glass-canvas');
+    assert.deepEqual(theme, input);
+    assert.deepEqual(published, getAppliedThemeColors());
+    assert.ok(!Object.keys(published).some(key => key.startsWith('--glass-')));
+    applyTheme({ colors: { '--color-background': '#222222' } });
+    assert.notEqual(values.get('--glass-canvas'), firstCanvas);
+    assert.ok(values.has('--glass-foreground'));
+    assert.deepEqual(published, getAppliedThemeColors());
+    assert.ok(!Object.keys(published).some(key => key.startsWith('--glass-')));
+  } finally {
+    setThemePublisher(null);
+    delete globalThis.document;
+  }
+});
+
+// A fixed tint floor hides native material even when contrast permits more glass.
+test('Glass retains a light tint at maximum transparency for light and dark canvases', async () => {
+  const { resolveThemeColors, resolveGlassColors } = await import('./theme.ts');
+  for (const [background, expectedAlpha] of [['#000000', .25], ['#ffffff', .25]]) {
+    const colors = resolveThemeColors({ colors: { '--color-background': background } });
+    const glass = resolveGlassColors(colors);
+    assert.equal(Number(glass['--glass-canvas'].match(/, ([\d.]+)\)$/)[1]), expectedAlpha);
+  }
+});
+
+test('Glass transparency ranges from solid to a light tint without changing palettes', async () => {
+  const { resolveThemeColors, resolveGlassColors } = await import('./theme.ts');
+  const colors = resolveThemeColors({ colors: { '--color-background': '#000000' } });
+  const alpha = value => Number(resolveGlassColors(colors, value)['--glass-canvas'].match(/, ([\d.]+)\)$/)[1]);
+  assert.equal(alpha(0), 1);
+  assert.equal(alpha(50), .625);
+  assert.equal(alpha(100), .25);
+  assert.equal(alpha(-20), 1);
+  assert.equal(alpha(120), .25);
 });

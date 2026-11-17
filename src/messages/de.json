@@ -213,5 +213,19 @@
   "nav_back_timer": "Timer",
   "browser_chrome_prepare": "Chrome-Erweiterung installieren",
   "browser_chrome_prepared": "Der Chrome Web Store wurde geöffnet. Installieren Sie die Erweiterung und stimmen Sie der Verbindung zu. Die Kopplung erfolgt automatisch; weisen Sie das Profil zu, sobald „Verbunden“ angezeigt wird.",
-  "browser_chrome_error": "Chrome-Einrichtung fehlgeschlagen. Prüfen Sie, ob Grace den Browser-Host registrieren kann, und versuchen Sie es erneut."
+  "browser_chrome_error": "Chrome-Einrichtung fehlgeschlagen. Prüfen Sie, ob Grace den Browser-Host registrieren kann, und versuchen Sie es erneut.",
+  "appearance_ui_style": "Oberflächenstil",
+  "appearance_style_pomotroid": "Pomotroid",
+  "appearance_style_blocky": "Kantig",
+  "appearance_style_glass": "Glas",
+  "appearance_font_pack": "Schriftart",
+  "appearance_import_font": "Schrift importieren",
+  "appearance_remove_font": "{name} entfernen",
+  "appearance_customization_hint": "Stil, Schrift und Farben sind unabhängig. Importierte Schriften bleiben auf diesem Gerät.",
+  "appearance_customization_error": "Darstellung konnte nicht gespeichert werden. Die vorherige Auswahl bleibt erhalten.",
+  "appearance_font_import_error": "Schrift konnte nicht geladen werden. Wählen Sie eine gültige WOFF2-, WOFF-, TTF- oder OTF-Datei bis 20 MiB.",
+  "appearance_font_missing": "Die gewählte Schrift ist nicht verfügbar. Mona Sans wird verwendet. Importieren Sie die Schrift erneut oder wählen Sie eine andere.",
+  "appearance_font_remove_error": "Schrift konnte nicht entfernt werden. Bitte erneut versuchen.",
+  "appearance_glass_transparency": "Transparenz",
+  "appearance_glass_transparency_hint": "Bei 100 % behält das Fenster eine leichte Tönung."
 }

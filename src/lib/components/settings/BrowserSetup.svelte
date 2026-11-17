@@ -11,6 +11,7 @@
     requireBrowserProfile,
   } from '$lib/ipc';
   import type { InstalledBrowser, BrowserSetupInfo, BrowserKind } from '$lib/types';
+  import ThemedSelect from '$lib/components/ThemedSelect.svelte';
   import * as m from '$paraglide/messages.js';
 
   interface Props {
@@ -302,22 +303,22 @@
           {#each browserSetup.profiles as prof}
             <div class="browser-profile-row">
               <div class="prof-meta">
-                <label>
+                <div>
                   <span>{m.browser_assign_browser()}</span>
-                  <select
+                  <ThemedSelect
+                    id={`browser-assignment-${encodeURIComponent(prof.profile_id)}`}
+                    label={m.browser_assign_browser()}
                     value={prof.browser ?? ''}
                     disabled={isLocked}
-                    onchange={(event) => {
-                      const browser = event.currentTarget.value as BrowserKind;
-                      if (browser) assignProfile(prof.profile_id, browser, prof.is_required);
+                    options={[
+                      { value: '', label: m.browser_choose_browser() },
+                      ...installedBrowsers.filter((browser) => browser.is_installed).map((browser) => ({ value: browser.kind, label: browser.name })),
+                    ]}
+                    onchange={(browser) => {
+                      if (browser) assignProfile(prof.profile_id, browser as BrowserKind, prof.is_required);
                     }}
-                  >
-                    <option value="">{m.browser_choose_browser()}</option>
-                    {#each installedBrowsers.filter((browser) => browser.is_installed) as browser}
-                      <option value={browser.kind}>{browser.name}</option>
-                    {/each}
-                  </select>
-                </label>
+                  />
+                </div>
                 <span class="prof-id">{prof.profile_id}</span>
                 {#if prof.is_connected}
                   <span class="badge active"><span class="connection-dot" aria-hidden="true"></span>{m.browser_status_active()}</span>
@@ -632,7 +633,7 @@
   }
 
   .prof-id {
-    font-family: monospace;
+    font-family: var(--font-mono);
     color: var(--color-foreground);
   }
 

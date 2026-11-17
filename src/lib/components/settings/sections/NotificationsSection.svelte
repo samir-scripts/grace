@@ -235,7 +235,7 @@
 
   .value {
     font-size: 0.8rem;
-    font-family: monospace;
+    font-family: var(--font-mono);
     color: var(--color-foreground-darker, var(--color-foreground));
     background: var(--color-hover);
     padding: 2px 8px;
@@ -309,7 +309,7 @@
 
   .file-name {
     font-size: 0.72rem;
-    font-family: monospace;
+    font-family: var(--font-mono);
     color: var(--color-foreground-darker, rgba(255, 255, 255, 0.35));
     white-space: nowrap;
     overflow: hidden;
@@ -358,6 +358,6 @@
     padding: 2px 20px 8px;
     font-size: 0.72rem;
     color: var(--color-danger, #e05252);
-    font-family: monospace;
+    font-family: var(--font-mono);
   }
 </style>

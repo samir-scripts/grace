@@ -181,6 +181,14 @@ const MIGRATION_9: &str = "
     INSERT OR IGNORE INTO settings (key, value) VALUES ('dnd_enabled', 'false');
     INSERT INTO schema_version VALUES (9);
 ";
+const MIGRATION_10: &str = "
+    CREATE TABLE imported_fonts (
+        id TEXT PRIMARY KEY NOT NULL,
+        display_name TEXT NOT NULL,
+        extension TEXT NOT NULL
+    );
+    INSERT INTO schema_version VALUES (10);
+";
 
 
 
@@ -241,6 +249,9 @@ pub fn run(conn: &Connection) -> Result<()> {
         conn.execute_batch(&format!("BEGIN; {MIGRATION_9} COMMIT;"))?;
         log::info!("[db/migrations] MIGRATION_9 complete");
     }
+    if version < 10 {
+        conn.execute_batch(&format!("BEGIN; {MIGRATION_10} COMMIT;"))?;
+    }
 
 
     Ok(())
@@ -275,6 +286,20 @@ mod tests {
             conn.execute_batch(migration).unwrap();
         }
         conn
+    }
+
+    #[test]
+    fn version_nine_upgrade_preserves_settings_and_creates_font_catalog() {
+        let conn = legacy_database();
+        conn.execute_batch(MIGRATION_8).unwrap();
+        conn.execute_batch(MIGRATION_9).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('theme_mode', 'dark')", []).unwrap();
+        run(&conn).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 10);
+        assert_eq!(conn.query_row("SELECT value FROM settings WHERE key = 'theme_mode'", [], |r| r.get::<_, String>(0)).unwrap(), "dark");
+        conn.execute("INSERT INTO imported_fonts VALUES ('id', 'name', 'ttf')", []).unwrap();
+        run(&conn).unwrap();
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM imported_fonts", [], |r| r.get::<_, i64>(0)).unwrap(), 1);
     }
 
     #[test]
@@ -327,14 +352,14 @@ mod tests {
         let v: i64 = conn
             .query_row("SELECT MAX(version) FROM schema_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 9);
+        assert_eq!(v, 10);
     }
 
     #[test]
     fn all_tables_created() {
         let conn = Connection::open_in_memory().unwrap();
         run(&conn).unwrap();
-        for table in &["settings", "sessions", "custom_themes", "schema_version", "focus_profiles", "focus_preferences", "focus_run_journal"] {
+        for table in &["settings", "sessions", "custom_themes", "schema_version", "focus_profiles", "focus_preferences", "focus_run_journal", "imported_fonts"] {
             let count: i64 = conn
                 .query_row(
                     "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",

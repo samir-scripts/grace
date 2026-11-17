@@ -2,6 +2,38 @@
 
 Grace ships with 38 built-in themes and supports an unlimited number of user-created custom themes. Custom themes are hot-reloaded — no restart required.
 
+## Fonts and interface styles
+
+In **Settings → Appearance**, choose a font and interface style independently of
+the light/dark color palettes:
+
+- **Pomotroid** keeps the original rounded interface and circular timer.
+- **Blocky** uses square controls and a stepped, logo-inspired progress ring.
+- **Glass** uses theme-tinted native frosted material on macOS and Desktop Acrylic
+  on Windows 11 build 22621 or newer. Unsupported platforms and reduced-transparency
+  or high-contrast preferences use opaque themed surfaces. This is not Apple Liquid Glass.
+
+Glass uses an inset settings selection and native frosted surfaces. Its **Transparency**
+slider appears only while Glass is selected, previews immediately and is saved on
+release. At 0% the window is solid; at 100% a light 25% tint remains over the native
+frost. The timer dial, labels, round count and shared idle buttons have no separate
+background fill. The titlebar shares the window frost, the dial uses the theme’s round colors
+without outlines, and action buttons gain a translucent fill on hover. Settings/statistics
+content, form controls and open menus keep readability backing; accessibility preferences
+still force opaque surfaces. Bare timer contrast depends on the desktop behind the material.
+Form controls share restrained 6px corners.
+
+Mona Sans, Inter, Roboto and JetBrains Mono are bundled for offline use. Inter and
+Roboto retain Mona Sans Mono for timer digits and shortcuts; JetBrains Mono uses
+one family throughout. **Import Font** accepts individual WOFF2, WOFF, TTF and OTF
+files up to 20 MiB and copies them into the app's local `fonts/` directory.
+Imported fonts apply to text and timer digits, with fallback for missing glyphs.
+Remove an imported face from Appearance; removing the selected face restores Mona Sans.
+Font collections and installed-system-font enumeration are not supported.
+
+Selections persist across restarts. Browser companions continue to receive colors
+and animation preferences only, not desktop styles or imported fonts.
+
 ## Built-in themes
 
 Andromeda, Ayu (Mirage), Catppuccin Frappé, Catppuccin Latte, Catppuccin Macchiato, Catppuccin Mocha, City Lights, Cobalt2, Crimson White, Darcula, Dracula, D.Va, Everforest, GitHub, GitHub Dark, Graphite, Gruvbox, Gruvbox Light, Horizon, Kanagawa, Material Palenight, Monokai, Monokai Pro, Night Owl, Nord, One Dark Pro, Panda, Pomotroid (default dark), Pomotroid Light (default light), Popping and Locking, Rosé Pine, Rosé Pine Dawn, Rosé Pine Moon, Solarized Dark, Solarized Light, Spandex, Synthwave, Tokyo Night

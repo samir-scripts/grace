@@ -210,5 +210,19 @@
   "nav_back_timer": "Temporizador",
   "browser_chrome_prepare": "Instalar complemento de Chrome",
   "browser_chrome_prepared": "Se abrió Chrome Web Store. Instala el complemento y acepta la solicitud de conexión. La vinculación es automática; asigna el perfil cuando aparezca «Conectado».",
-  "browser_chrome_error": "No se pudo abrir la configuración de Chrome. Comprueba que Grace pueda registrar el host del navegador y vuelve a intentarlo."
+  "browser_chrome_error": "No se pudo abrir la configuración de Chrome. Comprueba que Grace pueda registrar el host del navegador y vuelve a intentarlo.",
+  "appearance_ui_style": "Estilo de interfaz",
+  "appearance_style_pomotroid": "Pomotroid",
+  "appearance_style_blocky": "Angular",
+  "appearance_style_glass": "Cristal",
+  "appearance_font_pack": "Fuente",
+  "appearance_import_font": "Importar fuente",
+  "appearance_remove_font": "Eliminar {name}",
+  "appearance_customization_hint": "El estilo, las fuentes y los colores son independientes. Las fuentes importadas permanecen en este dispositivo.",
+  "appearance_customization_error": "No se pudo guardar la apariencia. Se conserva la selección anterior.",
+  "appearance_font_import_error": "No se pudo cargar la fuente. Elige un archivo WOFF2, WOFF, TTF u OTF válido de hasta 20 MiB.",
+  "appearance_font_missing": "La fuente elegida no está disponible. Se usa Mona Sans; importa la fuente otra vez o elige otra.",
+  "appearance_font_remove_error": "No se pudo eliminar la fuente. Inténtalo de nuevo.",
+  "appearance_glass_transparency": "Transparencia",
+  "appearance_glass_transparency_hint": "Al 100 %, la ventana conserva un ligero tinte."
 }

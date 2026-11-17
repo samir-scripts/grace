@@ -164,4 +164,33 @@
       border-bottom-color: transparent;
     }
   }
+
+  /* Glass navigation is one inset selection, rather than edge-to-edge pills.
+     Keep this geometry in the opaque accessibility/unsupported fallback too. */
+  :global(:root[data-ui-style="glass"]) .sidebar {
+    padding: 8px;
+  }
+
+  :global(:root[data-ui-style="glass"]) .nav-list {
+    gap: 4px;
+  }
+
+  :global(:root[data-ui-style="glass"]) .nav-item {
+    border: 0;
+    border-radius: 8px;
+    padding: 9px 8px;
+    background: transparent;
+  }
+
+  :global(:root[data-ui-style="glass"]) .nav-item.active {
+    background: var(--color-selected);
+  }
+
+  @media (min-width: 560px) {
+    :global(:root[data-ui-style="glass"]) .nav-item {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-align: left;
+    }
+  }
 </style>

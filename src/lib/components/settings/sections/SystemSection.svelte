@@ -308,7 +308,7 @@
     border-radius: 4px;
     color: var(--color-foreground);
     font-size: 0.85rem;
-    font-family: monospace;
+    font-family: var(--font-mono);
     padding: 4px 10px;
     width: 90px;
     text-align: right;
@@ -328,7 +328,7 @@
   }
 
   code {
-    font-family: monospace;
+    font-family: var(--font-mono);
     font-size: 0.75em;
     background: var(--color-background-light);
     padding: 1px 5px;
