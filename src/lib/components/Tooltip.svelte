@@ -116,8 +116,8 @@
     position: fixed;
     background: var(--tooltip-bg);
     color: var(--color-foreground);
-    font-size: 0.72rem;
-    line-height: 1.4;
+    font: var(--type-support);
+    letter-spacing: 0;
     padding: 5px 9px;
     border-radius: 4px;
     width: max-content;

@@ -208,7 +208,7 @@
     width: 100%; min-width: 0; padding: 6px 10px;
     background: var(--color-background); color: var(--color-foreground);
     border: 1px solid var(--color-border); border-radius: var(--radius-control, 6px);
-    font: inherit; font-size: 12px; text-align: left; cursor: pointer;
+    font: var(--type-control); letter-spacing: 0; text-align: left; cursor: pointer;
     transition: background-color var(--transition-control), border-color var(--transition-control);
   }
   .themed-select:hover:not(:disabled) { background: var(--color-hover); }
@@ -219,7 +219,7 @@
     position: fixed; z-index: 10000; box-sizing: border-box; overflow-y: auto;
     background: var(--color-background-light); color: var(--color-foreground);
     border: 1px solid var(--color-border); border-radius: var(--radius-control, 6px);
-    font-size: 12px;
+    font: var(--type-control); letter-spacing: 0;
   }
   .themed-options [role='option'] {
     padding: 7px 10px; cursor: pointer; overflow-wrap: anywhere;

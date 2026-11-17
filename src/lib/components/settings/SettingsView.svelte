@@ -91,13 +91,11 @@
     background: var(--color-background);
     border: none;
     border-bottom: 2px solid transparent;
-    font-size: 0.78rem;
-    font-weight: 500;
-    letter-spacing: 0.03em;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground-darker, var(--color-foreground));
     cursor: pointer;
     white-space: nowrap;
-    font-family: inherit;
     transition:
       color 0.12s,
       background 0.12s,
@@ -113,7 +111,7 @@
     color: var(--color-foreground);
     border-bottom-color: var(--color-accent);
     background: var(--color-hover);
-    font-weight: 600;
+    font-weight: 500;
   }
 
   /* Content pane */
@@ -156,7 +154,6 @@
       border-bottom: none;
       border-left: 3px solid transparent;
       padding: 9px 16px;
-      font-size: 0.85rem;
     }
 
     .nav-item.active {

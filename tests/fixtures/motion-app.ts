@@ -35,7 +35,7 @@ const defaultSettings: Settings = {
   theme_dark: 'Pomotroid',
   ui_style: 'pomotroid',
   glass_transparency: 100,
-  font_pack: 'mona-sans',
+  font_pack: 'inter',
   dial_countdown: true,
   language: 'en',
   verbose_logging: false,
@@ -65,7 +65,7 @@ let currentSettings: Settings = {
   animations_enabled: currentAnimationsEnabled,
   glass_transparency: Number(sessionStorage.getItem('glass-transparency') ?? 100),
   ui_style: (sessionStorage.getItem('appearance-style') ?? 'pomotroid') as Settings['ui_style'],
-  font_pack: (sessionStorage.getItem('appearance-font') ?? 'mona-sans') as Settings['font_pack'],
+  font_pack: (sessionStorage.getItem('appearance-font') ?? 'inter') as Settings['font_pack'],
 };
 
 const importedFonts: Array<{ id: string; display_name: string }> = JSON.parse(sessionStorage.getItem('appearance-fonts') ?? '[]');
@@ -269,7 +269,7 @@ mockIPC((cmd, args: unknown) => {
     const id = readField(args, 'id');
     const index = importedFonts.findIndex((font) => font.id === id);
     if (index >= 0) importedFonts.splice(index, 1);
-    if (currentSettings.font_pack === `custom:${id}`) currentSettings.font_pack = 'mona-sans';
+    if (currentSettings.font_pack === `custom:${id}`) currentSettings.font_pack = defaultSettings.font_pack;
     emit('settings:changed', currentSettings).catch(() => {});
     sessionStorage.setItem('appearance-fonts', JSON.stringify(importedFonts));
     sessionStorage.setItem('appearance-font', currentSettings.font_pack);

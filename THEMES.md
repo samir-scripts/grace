@@ -23,12 +23,13 @@ content, form controls and open menus keep readability backing; accessibility pr
 still force opaque surfaces. Bare timer contrast depends on the desktop behind the material.
 Form controls share restrained 6px corners.
 
-Mona Sans, Inter, Roboto and JetBrains Mono are bundled for offline use. Inter and
-Roboto retain Mona Sans Mono for timer digits and shortcuts; JetBrains Mono uses
-one family throughout. **Import Font** accepts individual WOFF2, WOFF, TTF and OTF
-files up to 20 MiB and copies them into the app's local `fonts/` directory.
-Imported fonts apply to text and timer digits, with fallback for missing glyphs.
-Remove an imported face from Appearance; removing the selected face restores Mona Sans.
+Mona Sans, Inter, Roboto and JetBrains Mono are bundled for offline use. The default
+uses Inter for interface text and JetBrains Mono for timer digits and shortcuts;
+Roboto retains Mona Sans Mono, while JetBrains Mono uses one family throughout.
+Existing saved font choices are preserved. **Import Font** accepts individual WOFF2,
+WOFF, TTF and OTF files up to 20 MiB and copies them into the app's local `fonts/`
+directory. Imported fonts apply to text and timer digits, with fallback for missing
+glyphs. Removing the selected imported face restores the Inter default.
 Font collections and installed-system-font enumeration are not supported.
 
 Selections persist across restarts. Browser companions continue to receive colors

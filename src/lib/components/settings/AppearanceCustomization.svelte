@@ -25,8 +25,8 @@
     }
   });
   const builtins = [
-    { value: 'mona-sans', label: 'Mona Sans' },
     { value: 'inter', label: 'Inter' },
+    { value: 'mona-sans', label: 'Mona Sans' },
     { value: 'roboto', label: 'Roboto' },
     { value: 'jetbrains-mono', label: 'JetBrains Mono' },
   ];
@@ -167,18 +167,18 @@
 
 <style>
   .customization { display: flex; flex-direction: column; gap: 14px; padding: 20px; border-bottom: 1px solid var(--color-separator); }
-  label { font-size: 0.75rem; font-weight: 600; color: var(--color-foreground); margin-bottom: -8px; }
-  .hint, .error { font-size: 0.75rem; line-height: 1.5; color: var(--color-foreground-darker); }
+  label { font: var(--type-control); font-weight: 500; letter-spacing: 0; color: var(--color-foreground); margin-bottom: -8px; }
+  .hint, .error { font: var(--type-support); letter-spacing: 0; color: var(--color-foreground-darker); }
   .error { color: var(--color-status-error); }
-  button { font: inherit; cursor: pointer; border: 1px solid var(--color-border); border-radius: 6px; padding: 7px 10px; font-size: 0.75rem; }
+  button { font: var(--type-control); font-weight: 500; letter-spacing: 0; cursor: pointer; border: 1px solid var(--color-border); border-radius: 6px; padding: 7px 10px; }
   .import-font { align-self: flex-start; background: var(--color-button); color: var(--color-button-text); }
-  .imported-font { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.75rem; overflow-wrap: anywhere; }
+  .imported-font { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font: var(--type-control); letter-spacing: 0; overflow-wrap: anywhere; }
   .remove-font { background: var(--color-background-light); color: var(--color-foreground); }
   button:disabled { opacity: 0.5; }
   .transparency-control { display: flex; flex-direction: column; gap: 8px; }
-  .transparency-label { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.75rem; }
+  .transparency-label { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: baseline; font: var(--type-control); letter-spacing: 0; }
   .transparency-label label { margin: 0; }
-  .transparency-label span { color: var(--color-foreground-darker); font-family: var(--font-mono); }
+  .transparency-label span { color: var(--color-foreground-darker); font: var(--type-code); letter-spacing: 0; }
   .transparency-track { position: relative; display: flex; align-items: center; height: 24px; }
   .transparency-track::before { content: ''; position: absolute; width: 100%; height: 4px; background: var(--color-background-light); border-radius: 2px; }
   .transparency-track input { appearance: none; -webkit-appearance: none; width: 100%; height: 4px; position: relative; z-index: 2; background: transparent; cursor: pointer; }

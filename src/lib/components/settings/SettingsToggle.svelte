@@ -75,15 +75,15 @@
   }
 
   .label {
-    font-size: 0.85rem;
+    font: var(--type-control);
     color: var(--color-foreground);
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
   }
 
   .desc {
-    font-size: 0.72rem;
+    font: var(--type-support);
     color: var(--color-foreground-darker, var(--color-foreground));
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
   }
 
   /* Pill toggle */

@@ -571,6 +571,7 @@
   .session-toolbar {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     justify-content: space-between;
     padding: 10px 18px;
     background: var(--color-background-light);
@@ -588,8 +589,7 @@
   }
 
   .toolbar-label {
-    font-size: 11px;
-    font-weight: 600;
+    font: var(--type-eyebrow);
     color: var(--color-foreground-darker);
     white-space: nowrap;
     text-transform: uppercase;
@@ -658,14 +658,15 @@
   }
 
   .modal-title {
-    font-size: 13px;
-    font-weight: 600;
+    font: var(--type-heading);
+    letter-spacing: 0;
     color: var(--color-foreground);
     margin: 0;
   }
 
   .modal-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 8px;
   }
@@ -676,10 +677,10 @@
     color: var(--color-foreground);
     border-radius: 6px;
     padding: 6px 12px;
-    font-size: 11px;
-    font-weight: 600;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
-    font-family: inherit;
     transition: background 140ms ease-out, transform 100ms ease-out;
   }
 
@@ -723,7 +724,8 @@
   }
 
   .name-field label {
-    font-size: 12px;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
     font-weight: 500;
   }
@@ -741,8 +743,8 @@
     border-radius: 6px;
     padding: 6px 10px;
     color: var(--color-foreground);
-    font-size: 12px;
-    font-family: inherit;
+    font: var(--type-control);
+    letter-spacing: 0;
     outline: none;
     transition: border-color 140ms ease-out;
   }
@@ -758,10 +760,10 @@
     border: none;
     border-radius: 6px;
     padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 600;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
-    font-family: inherit;
     transition: background 140ms ease-out, transform 100ms ease-out, opacity 140ms ease-out;
   }
 
@@ -781,10 +783,10 @@
     color: var(--color-foreground);
     border-radius: 6px;
     padding: 6px 12px;
-    font-size: 11px;
+    font: var(--type-control);
     font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
-    font-family: inherit;
     transition: background 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out, transform 100ms ease-out;
   }
 
@@ -814,10 +816,10 @@
     color: var(--color-foreground-darker);
     border-radius: 6px;
     padding: 6px 12px;
-    font-size: 11px;
+    font: var(--type-control);
     font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
-    font-family: inherit;
     transition: background 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out, transform 100ms ease-out;
   }
 
@@ -858,8 +860,8 @@
   }
 
   .group-title {
-    font-size: 13px;
-    font-weight: 600;
+    font: var(--type-heading);
+    letter-spacing: 0;
     color: var(--color-foreground);
     margin: 0;
   }
@@ -873,13 +875,17 @@
   .slider-label-row {
     display: flex;
     justify-content: space-between;
-    font-size: 11px;
+    font: var(--type-control);
+    letter-spacing: 0;
+    gap: 8px;
+    flex-wrap: wrap;
     color: var(--color-foreground-darker);
   }
 
   .duration-badge {
     color: var(--color-foreground);
-    font-weight: 600;
+    font: var(--type-code);
+    letter-spacing: 0;
   }
 
   .slider-container {
@@ -976,7 +982,8 @@
     padding: 3px 8px;
     background: var(--color-background-light);
     border-radius: 4px;
-    font-size: 11px;
+    font: var(--type-code);
+    letter-spacing: 0;
     color: var(--color-foreground);
     max-width: 100%;
     min-width: 0;
@@ -1007,12 +1014,14 @@
   }
 
   .empty-hint {
-    font-size: 11px;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 
   .unblock-note {
-    font-size: 10px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 
@@ -1030,12 +1039,14 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    font-size: 11px;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground);
   }
 
   .passphrase-sub {
-    font-size: 10px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 
@@ -1057,7 +1068,8 @@
   }
 
   .passphrase-status {
-    font-size: 10px;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground);
   }
 
@@ -1068,7 +1080,8 @@
   .alert {
     padding: 8px 12px;
     border-radius: 6px;
-    font-size: 12px;
+    font: var(--type-support);
+    letter-spacing: 0;
   }
 
   .alert.error {

@@ -132,7 +132,7 @@
 
 <style>
   .rounds {
-    font-size: 0.8rem;
+    font: var(--type-code);
     color: var(--color-foreground-darker, var(--color-foreground));
     min-width: 48px;
     text-align: center;
@@ -144,7 +144,7 @@
     border: none;
     cursor: pointer;
     color: var(--color-foreground-darker, var(--color-foreground));
-    font-size: 0.8rem;
+    font: var(--type-control);
     padding: 4px 8px;
     border-radius: 4px;
     transition:

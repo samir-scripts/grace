@@ -140,9 +140,8 @@
   .card-label {
     text-align: center;
     overflow-wrap: anywhere;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-foreground-darker);
   }
@@ -151,11 +150,11 @@
     overflow-wrap: anywhere;
     text-align: center;
     font-size: clamp(1.4rem, 6vw, 2.4rem);
-    font-weight: 700;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
+    letter-spacing: normal;
     color: var(--color-foreground);
-    line-height: 1;
+    line-height: 1.15;
   }
 
   .card-divider {
@@ -184,15 +183,15 @@
   }
 
   .section-title {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-foreground-darker);
   }
 
   .empty-hint {
-    font-size: 0.72rem;
+    font: var(--type-support);
+    letter-spacing: normal;
     color: var(--color-foreground-darker);
     font-style: italic;
   }
@@ -239,7 +238,9 @@
 
   .hour-label {
     fill: var(--color-foreground-darker);
-    font-size: 9px;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: normal;
     font-variant-numeric: tabular-nums;
     cursor: default;
   }

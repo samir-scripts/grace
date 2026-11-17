@@ -58,6 +58,7 @@
 <style>
   .notice-banner {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
@@ -66,7 +67,8 @@
     border-radius: 8px;
     padding: 8px 14px;
     margin: 8px 0;
-    font-size: 13px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground, #cdd6f4);
   }
   .notice-banner.danger {
@@ -77,6 +79,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
     text-align: left;
   }
   .icon {
@@ -84,15 +87,16 @@
     flex-shrink: 0;
   }
   .text {
-    line-height: 1.4;
+    overflow-wrap: anywhere;
   }
   .retry-btn {
     background: var(--color-button);
     color: var(--color-button-text);
     border: none;
     border-radius: 4px;
-    font-weight: 600;
-    font-size: 12px;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     padding: 4px 10px;
     cursor: pointer;
     white-space: nowrap;
