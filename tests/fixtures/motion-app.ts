@@ -2,6 +2,7 @@ import { mockWindows, mockIPC } from '@tauri-apps/api/mocks';
 import { mount, unmount } from 'svelte';
 import type { Settings, Theme, TimerState, FocusSnapshot, DetailedStats, HeatmapStats, WindowMaterialStatus } from '$lib/types';
 import { emit } from '@tauri-apps/api/event';
+import type { invoke } from '@tauri-apps/api/core';
 
 declare global {
   interface Window {
@@ -468,8 +469,23 @@ mockIPC((cmd, args: unknown) => {
   throw new Error(`Unhandled mock IPC command: ${cmd}`);
 }, { shouldMockEvents: true });
 
+// The route can render before it subscribes to backend events.
+const registeredEvents = new Set<string>();
+const { __TAURI_INTERNALS__: internals } = window as Window & { __TAURI_INTERNALS__?: { invoke: typeof invoke } };
+if (!internals) throw new Error('Tauri IPC mock was not installed');
+const mockInvoke = internals.invoke;
+internals.invoke = async <T>(...args: Parameters<typeof invoke>): Promise<T> => {
+  const result = await mockInvoke<T>(...args);
+  if (args[0] === 'plugin:event|listen') {
+    const event = readField(args[1], 'event');
+    if (typeof event === 'string') registeredEvents.add(event);
+  }
+  return result;
+};
+
 export interface MotionTestController {
   emit: (event: string, payload: unknown) => Promise<void>;
+  hasRegisteredEvent: (event: string) => boolean;
   releaseSettings: (reject?: boolean) => void;
   holdNextSave: () => void;
   releaseSave: (reject?: boolean) => void;
@@ -498,6 +514,7 @@ export interface MotionTestController {
 }
 
 const controller: MotionTestController = {
+  hasRegisteredEvent: event => registeredEvents.has(event),
   getMaterialCalls: () => [...materialCalls],
   getNativeStartupEvents: () => [...nativeStartupEvents],
   holdNextMaterial: () => { holdMaterial = true; },

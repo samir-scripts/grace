@@ -29,6 +29,13 @@ async function choose(page, name, value) {
   await page.getByRole('option', { name: value, exact: true }).click();
   await page.waitForFunction(() => !document.querySelector('[role="combobox"][disabled]'));
 }
+async function startTimerFixture(page) {
+  await page.goto(`${url}/?animations=false&material_deferred`);
+  await page.waitForFunction(() => window.__motionTest?.materialPending());
+  await page.evaluate(() => window.__motionTest.releaseMaterial());
+  await page.waitForFunction(() => ['timer:tick', 'timer:paused', 'settings:changed']
+    .every(event => window.__motionTest?.hasRegisteredEvent(event)));
+}
 test('font and style are independent and failed saves retain prior selection', async () => {
   const page = await browser.newPage({ viewport: { width: 840, height: 600 } });
   try {
@@ -65,8 +72,7 @@ test('solid themed hover remains readable and reduced motion suppresses transiti
 test('blocky ring uses live timer progress at compact and normal sizes', async () => {
   const page = await browser.newPage({ viewport: { width: 360, height: 478 }, reducedMotion: 'reduce' });
   try {
-    await page.goto(`${url}/?animations=false`);
-    await page.locator('.dial').waitFor();
+    await startTimerFixture(page);
     await page.evaluate(() => window.__motionTest.emit('settings:changed', { ui_style: 'blocky', dial_countdown: false }));
     await page.locator('.dial .block-progress').waitFor();
     await page.evaluate(() => window.__motionTest.emit('timer:tick', { elapsed_secs: 750, total_secs: 1500 }));
@@ -242,8 +248,7 @@ for (const mode of ['normal', 'disabled', 'reduced']) {
 test('Blocky ring gives full-size digits breathing room without crowding compact controls', async () => {
   const page = await browser.newPage({ viewport: { width: 360, height: 478 }, reducedMotion: 'reduce' });
   try {
-    await page.goto(`${url}/?animations=false`);
-    await page.locator('.dial').waitFor();
+    await startTimerFixture(page);
     await page.evaluate(() => window.__motionTest.emit('timer:tick', { elapsed_secs: 0, total_secs: 1500 }));
     for (const [pack, family] of [['mona-sans', 'Mona Sans'], ['inter', 'Inter'], ['roboto', 'Roboto'], ['jetbrains-mono', 'JetBrains Mono']]) {
       await page.evaluate(font_pack => window.__motionTest.emit('settings:changed', { ui_style: 'blocky', font_pack }), pack);
