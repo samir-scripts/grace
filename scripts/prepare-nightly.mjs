@@ -5,6 +5,8 @@ import { resolve as resolvePath } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { classifyTag, readVersions, validateVersions } from './release-policy.mjs';
 
+import { requiredPackages } from './prepare-release.mjs';
+
 const repo = 'samir-scripts/grace';
 const dev = 'refs/remotes/origin/dev';
 const nightly = /-nightly\.(\d{8})$/;
@@ -111,17 +113,22 @@ function verify(tag, checkout = resolve('HEAD'), ref = `refs/tags/${tag}`) {
   return source;
 }
 
-function latestRun(gh, workflow, source, event, branch) {
+function matchingRuns(gh, workflow, source, event, branch) {
   const query = new URLSearchParams({ event, head_sha: source, per_page: '30', ...(branch ? { branch } : {}) });
   return api(gh, `actions/workflows/${workflow}/runs?${query}`)
     .flatMap(page => page.workflow_runs)
     .filter(run => run.head_sha === source && run.event === event && (!branch || run.head_branch === branch))
-    .sort((a, b) => b.id - a.id)[0];
+    .sort((a, b) => b.id - a.id);
 }
 
 function requireGreenDev(gh, source) {
+  const pulls = api(gh, `commits/${source}/pulls`).flat();
+  if (!pulls.some(pr => pr.merged_at && pr.merge_commit_sha === source &&
+      pr.base?.ref === 'dev' && pr.base.repo?.full_name === repo)) {
+    throw new Error('Nightly source must be the result of a merged pull request into dev');
+  }
   for (const workflow of ['build.yml', 'codeql-analysis.yml']) {
-    const run = latestRun(gh, workflow, source, 'push', 'dev');
+    const [run] = matchingRuns(gh, workflow, source, 'push', 'dev');
     const details = run ? `https://github.com/${repo}/actions/runs/${run.id}` : `no push run for ${source}`;
     if (run?.status !== 'completed' || run.conclusion !== 'success') throw new Error(`${workflow} must pass: ${details}`);
     if (workflow === 'build.yml') {
@@ -136,11 +143,12 @@ function requireGreenDev(gh, source) {
 function existingDraft(gh, tag, revision) {
   const releaseJson = gh('api', '--paginate', `repos/${repo}/releases?per_page=100`, '--jq', `.[] | select(.tag_name == ${JSON.stringify(tag)})`).trim();
   const release = releaseJson ? JSON.parse(releaseJson) : null;
-  const run = latestRun(gh, 'release.yml', revision, 'workflow_dispatch');
+  const runs = matchingRuns(gh, 'release.yml', revision, 'workflow_dispatch');
+  const [run] = runs;
   if (run && run.status !== 'completed') return 'active';
   if (!release) return run?.conclusion ?? 'missing';
   const incomplete = () => { throw new Error(`Existing nightly needs asset/run verification before proceeding: ${release.html_url}`); };
-  if (run?.conclusion !== 'success' || !release.prerelease) incomplete();
+  if (!runs.some(attempt => attempt.conclusion === 'success') || !release.prerelease) incomplete();
   const assets = new Map();
   for (const asset of release.assets) {
     if (asset.state !== 'uploaded' || asset.size <= 0 || !/^sha256:[a-f0-9]{64}$/.test(asset.digest) ||
@@ -162,6 +170,16 @@ function existingDraft(gh, tag, revision) {
     checksumNames.add(match[2]);
   }
   const provenance = JSON.parse(metadata('provenance.json'));
+  if (!assets.has('grace-updater.pub')) incomplete();
+  for (const [platform, , file] of requiredPackages(tag.slice(1))) {
+    if (!assets.has(file)) incomplete();
+    if (platform === 'macos-universal') continue;
+    const entry = provenance.platforms?.[platform];
+    if (entry?.file !== file || assets.get(file).digest !== 'sha256:' + entry.sha256) incomplete();
+  }
+  for (const file of assets.keys()) {
+    if (/(-setup\.exe|\.deb|\.dmg|\.AppImage|\.rpm|\.app\.tar\.gz)$/.test(file) && !assets.has(file + '.sig')) incomplete();
+  }
   const reportedNames = new Set(['SHA256SUMS', 'provenance.json']);
   for (const { file, sha256 } of provenance.artifacts) {
     if (reportedNames.has(file) || assets.get(file)?.digest !== `sha256:${sha256}`) incomplete();

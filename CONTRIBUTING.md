@@ -114,7 +114,7 @@ To protect signature validity, any modification to `extensions/focus/` or `exten
 
 ### Nightly (opt-in manual downloads)
 
-Reviewed `dev` changes with green Build / Test and CodeQL push runs are eligible for a signed nightly draft. The Nightly workflow checks daily at 03:17 UTC and skips already-built sources. A maintainer can request the same checks on demand with `gh workflow run nightly.yml --ref dev`.
+The merge commit of a pull request into `dev` with green Build / Test and CodeQL push runs is eligible for a signed nightly draft. The Nightly workflow checks daily at 03:17 UTC and skips already-built sources. A maintainer can request the same checks on demand with `gh workflow run nightly.yml --ref dev`.
 
 The workflow creates an annotated `vX.Y.Z-nightly.YYYYMMDD` tag on a metadata-only child of the tested `dev` commit. Review the exact draft: match the tag and packaged revision to `provenance.json`, verify `SHA256SUMS` and detached signatures against the trusted Grace key, and test the macOS package before publishing as a GitHub prerelease, not latest. Use a disposable environment; nightly uses the same app identity as stable and is not safe to install side by side over a production profile. Windows x64 and Ubuntu x64 runtime acceptance is unverified unless explicitly recorded. Nightly does not publish `latest.json` or advance the stable updater.
 
