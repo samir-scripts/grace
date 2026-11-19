@@ -1,5 +1,13 @@
 # Chrome companion reviewer instructions
 
+## Submitted for Chrome 1.1.4 on November 17, 2026
+
+No account needed. Open Grace desktop from https://github.com/samir-scripts/grace/releases/tag/v1.7.2-beta.1. In Settings > Sessions, set up Chrome. Open the extension, check the Grace logo, then click Accept & connect. Confirm Connected and assign the active profile to Chrome in Grace. Block example.com for a one-minute round. Verify access returns when the session rules allow it. Restart Chrome and check reconnection. Windows/Ubuntu x64 beta blocking and recovery are unverified.
+
+[Submission and verification evidence](evidence/chrome-store-1.1.4/README.md)
+
+## Historical instructions for Chrome 1.1.2
+
 Candidate: Chrome 1.1.2, ID cgibenlmgmblmalggjalnoaikjkdnoid, desktop 1.7.2-beta.1. No account needed. Windows x64 and Ubuntu x64 desktop integration, blocking and recovery are experimental and unverified; this is an owner-approved publication waiver, not a passing result. Other Linux distributions are not covered by Ubuntu evidence.
 
 Homepage/support: https://grace-focus.github.io/

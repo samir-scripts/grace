@@ -1,101 +1,53 @@
-# Grace
+# grace.
 
-A simple, configurable, and visually pleasing Pomodoro timer and focus blocker.
+A desktop Pomodoro timer that blocks the websites and apps you choose while you work.
 
-> **Fork notice:** Grace is an independent fork of [Pomotroid](https://github.com/Splode/pomotroid) by Christopher Murphy, licensed under the MIT License. It adds authenticated browser focus blocking, native application interception, emergency exit protections, and a 3-branch CI/CD development pipeline.
+[![Build and test](https://github.com/samir-scripts/grace/actions/workflows/build.yml/badge.svg?branch=dev)](https://github.com/samir-scripts/grace/actions/workflows/build.yml)
+[![Public beta v1.7.2-beta.1](https://img.shields.io/badge/public%20beta-v1.7.2--beta.1-596963)](https://github.com/samir-scripts/grace/releases/tag/v1.7.2-beta.1)
+[![MIT license](https://img.shields.io/badge/license-MIT-596963)](LICENSE)
 
----
+[Download Grace](#install) · [Start your first session](docs/user-guide.md) · [Contributor guide](CONTRIBUTING.md)
 
-- [Overview](#overview)
-- [Features](#features)
-- [Focus Sessions & Blocking](#focus-sessions--blocking)
-- [Statistics](#statistics)
-- [Themes](#themes)
-- [Install](#install)
-- [Branching & Development](#branching--development)
-- [WebSocket API](#websocket-api)
-- [License](#license)
+## Watch a protected Writing session
 
----
+Block Discord and Instagram for a two-minute Writing round. Watch them become available again on break, then see the first day of a focus streak in Statistics. The full walkthrough shows how to set up and test five blocking rules.
 
-## Overview
+[![24-second preview. A quick check of Instagram gives way to a Writing round. Discord closes and Instagram is blocked. Both reopen on break, and This Week shows a one-day streak. Open the full demo.](docs/media/focus-preview.gif)](https://grace-focus.github.io/#watch-demo)
 
-Grace is an offline-first desktop Pomodoro timer built with **Tauri 2**, **Rust**, and **Svelte 5** (SvelteKit static SPA). It helps you maintain momentum with configurable intervals, seamless theme switching, detailed statistics, and strict distraction-blocking focus sessions.
+[Watch the full demo · 1:14](https://grace-focus.github.io/#watch-demo) · [View the timer still](docs/media/writing-timer.webp)
 
-## Features
-
-- **Configurable timer** — customize work duration, break durations, and rounds per long break
-- **Focus sessions & blocking** — block distracting websites and desktop apps with authenticated browser companions
-- **Emergency unlock options** — continuous 60-second emergency hold or a secure emergency passphrase
-- **Statistics** — daily breakdowns, weekly bar charts with streak tracking, and an all-time 52-week heatmap
-- **38 bundled themes** — Dracula, Nord, Tokyo Night, Catppuccin, Gruvbox, Rosé Pine, and more; auto-switches with OS light/dark mode
-- **Custom themes** — hot-reload user themes directly from the themes folder without restarting
-- **Localization** — 8 languages: English, Spanish, French, German, Japanese, Chinese (Simplified), Portuguese, and Turkish
-- **Global & local shortcuts** — control the timer from anywhere, even when hidden or unfocused
-- **Dynamic tray icon** — real-time progress arc, round status, and minimize-to-tray support
-- **Desktop notifications** — native notifications on round transitions
-- **Compact mode** — minimal dial and controls when the window is resized smaller than 300x300
-- **WebSocket server** — opt-in local server on `127.0.0.1` for stream overlays and external automation
-
-## Focus Sessions & Blocking
-
-Grace includes an integrated focus blocker that coordinates desktop enforcement with browser companions:
-
-- **Browser companion extensions:** Chrome, Firefox (AMO-signed companion `focus@pomotroid.local`), and Safari.
-- **Mutual HMAC authentication:** Companions connect via WebSockets on loopback with nonce verification and signed session leases.
-- **Native OS protection:** macOS guarded-Quit prevents accidental Command-Q escapes during locked work sessions.
-- **Emergency Exit:** Unlock an urgent session with an intentional 60-second physical key hold or a pre-configured 30+ character emergency passphrase.
-
-## Themes
-
-Grace ships with 38 bundled themes and supports user-defined JSON themes. See [THEMES.md](./THEMES.md) for details on colors and custom theme setup.
+Recorded in Tart using a local macOS beta build reporting version 1.7.1. The public beta below has its own release notes and installers.
 
 ## Install
 
-Download the latest pre-built binaries for **Windows** (`.exe` installer), **macOS** (universal `.dmg`), and **Linux** (`.deb`, `.AppImage`, `.rpm`) from the [Releases](https://github.com/samir-scripts/grace/releases) page.
+Open the [public beta release](https://github.com/samir-scripts/grace/releases/tag/v1.7.2-beta.1) and choose the asset for your machine.
 
-## Branching & Development
+| Platform | Installer |
+| --- | --- |
+| macOS (Apple silicon and Intel) | Universal `.dmg`. Open it and move Grace to Applications. |
+| Windows x64 | `-setup.exe`. Run the installer. |
+| Linux x64 | `.deb` for Debian/Ubuntu, `.rpm` for RPM-based systems, or `.AppImage` for a portable launch. |
 
-Grace uses a 3-branch pipeline:
+The release provides checksums and signature files. See [package verification](SECURITY.md). The Windows and Linux artifacts are experimental. macOS and Windows may show publisher warnings because this beta lacks Apple notarization and Windows Authenticode signing. See the release notes for the platform signing details. The [user guide](docs/user-guide.md) identifies appearance features shown in the current checkout. For other builds, see [Releases](https://github.com/samir-scripts/grace/releases) and read the artifact list for the version you plan to install.
 
-- `dev` — Primary integration branch. Feature (`feat/*`) and bugfix (`fix/*`) pull requests target `dev`.
-- `stage` — Pre-release staging branch. Promoted from `dev` for cross-platform packaging and end-to-end testing.
-- `release` — Production branch. Merged from `stage` and tagged (`vX.Y.Z`) to trigger draft GitHub Releases.
+Nightlies are planned as separate, manually downloaded prereleases; they are not the beta installer or the recorded demo. Use a disposable account or VM without a production profile when testing one, and a disposable machine or VM on Windows.
 
-### Setup and verification
+## Use Grace
 
-```bash
-# Install dependencies
-npm ci
+- **Focus sessions.** Save a named timer routine and choose which websites or applications to block. Website blocking requires a connected [browser companion](docs/user-guide.md#set-up-website-blocking). Native app blocking depends on the operating system.
+- **Statistics.** Open the chart icon to view today’s rounds, the week’s activity and streak, or the annual heatmap. [Read your focus history](docs/user-guide.md#read-your-focus-history)
+- **Appearance.** Choose an interface style, font, and light/dark palettes. Resize the window for the compact timer. [Appearance and custom themes](THEMES.md)
+- **Shortcuts and integrations.** Set local or global shortcuts and optionally expose the timer to a loopback WebSocket client. [Controls and integrations](docs/user-guide.md#shortcuts-and-integrations)
 
-# Run development server
-npm run tauri dev
+## Build or contribute
 
-# Run frontend typecheck and localization compilation
-npm run check
+Grace uses SvelteKit and Svelte 5 in a Tauri 2 window. Rust owns the timer and enforcement. Session history and settings live in local SQLite.
 
-# Run frontend and extension tests
-npm test
-
-# Run Rust unit and integration tests
-cargo test --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_commands_callable
-
-# Run Rust linter
-cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
-
-# Build desktop release bundles
-npm run tauri build
-```
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines and release procedures.
-
-## WebSocket API
-
-Grace exposes an optional WebSocket server for integrations. Enable it in **Settings → Advanced → WebSocket Server** (default port: `1314`).
-
-- Client can send `{"type": "getState"}`.
-- Server broadcasts `state` and `roundChange` events with elapsed time, round type, and work round progress.
+- [Development setup and checks](CONTRIBUTING.md#development-setup)
+- [Architecture and component responsibilities](docs/architecture.md)
+- [Browser companion development](extensions/README.md)
+- [Implementation and native verification records](plans/README.md)
 
 ## License
 
-MIT License. Copyright &copy; 2017–2026 Christopher Murphy (Pomotroid upstream) and Grace contributors.
+Grace is an independent fork of [Pomotroid](https://github.com/Splode/pomotroid) by Christopher Murphy. Grace and Pomotroid are distributed under the [MIT license](LICENSE).

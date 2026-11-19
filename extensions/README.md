@@ -1,6 +1,6 @@
-# Pomotroid Focus Browser Companions
+# Grace browser companions
 
-The Pomotroid browser companions enforce website blocking directly in your browser without requiring root privileges, a local VPN tunnel, or paid Apple developer signing.
+The browser companions apply Grace’s website blocking rules directly in the browser. For setup, profile assignment, and removal, start with the [user guide](../docs/user-guide.md#set-up-website-blocking).
 
 Before connecting, open the companion's options and select **Accept & Connect**
 on the data-sharing disclosure. The companion shares its persistent profile ID,
@@ -136,7 +136,7 @@ the add-on's AMO version management page, not a specific version record.
 
 Grace uses the same Chrome identity for unpacked acceptance and the Web Store: `cgibenlmgmblmalggjalnoaikjkdnoid`. In Settings > Timer & Sessions, Install Chrome Companion registers the bundled native host and opens the listing in Google Chrome. Repair Connection repeats registration and opens the listing; Remove Setup removes Grace registration/profile assignment, not the extension itself. Stop sharing or uninstall the companion separately after an authenticated release.
 
-The listing is still an unpublished Private draft. During staged acceptance, load the packaged `extensions/dist/chrome` directory through Chrome Developer mode after registering the native host. Accept & connect requires no pasted token. Windows and Linux x64 packaged acceptance are required before Public submission. Custom Chrome data directories remain unsupported by this acceptance claim.
+Chrome 1.1.2 is publicly available. Chrome 1.1.4 was submitted for review on November 17, 2026; see the [dated submission record](../plans/evidence/chrome-store-1.1.4/README.md). Store-installed acceptance of a newer version is separate from unpacked testing. Windows and Linux x64 packaged acceptance remain unverified; see the [native checklist](../plans/contributor-native-acceptance.md).
 
 Build the inspected Chrome ZIP with `npm run extensions:chrome:release`. Chrome-only diagnostics are injected into the Chrome output; the shared Gecko payload and signed XPI remain unchanged. CI runs `npm run test:chrome-integration` with Chromium installed. Universal macOS packaging uses `npm run build:macos-universal`; release signing uses `-- --updater`.
 
