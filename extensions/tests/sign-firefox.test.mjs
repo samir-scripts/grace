@@ -12,6 +12,7 @@ function fixture(t) {
   fs.mkdirSync(path.join(root, 'extensions/firefox'), { recursive: true });
   fs.mkdirSync(path.join(root, 'extensions/signed/firefox'), { recursive: true });
   fs.writeFileSync(path.join(root, 'extensions/focus/a.js'), 'source');
+  fs.cpSync(path.resolve('extensions/companion'), path.join(root, 'extensions/companion'), { recursive: true });
   fs.writeFileSync(path.join(root, 'extensions/firefox/manifest.json'), JSON.stringify({version:'1.1.0', browser_specific_settings:{gecko:{id:'focus@pomotroid.local'}}}));
   fs.writeFileSync(path.join(root, 'extensions/signed/firefox/focus@pomotroid.local.xpi'), 'old artifact');
   fs.writeFileSync(path.join(root, 'extensions/signed/firefox/provenance.json'), 'old provenance');
@@ -39,7 +40,7 @@ test('installs a source-matched signed candidate and matching provenance', async
  const { zipSync, strToU8 } = await import('fflate');
  const result = await signFirefox({root,env:{WEB_EXT_API_KEY:'key',WEB_EXT_API_SECRET:'secret'},run:async(a)=>{
    const source=a[a.indexOf('--source-dir')+1], artifacts=a[a.indexOf('--artifacts-dir')+1];
-   const archive=zipSync({'manifest.json':new Uint8Array(fs.readFileSync(path.join(source,'manifest.json'))),'a.js':strToU8('source'),'META-INF/mozilla.rsa':strToU8('marker')});
+   const archive=zipSync({...Object.fromEntries(fs.readdirSync(source).map(name => [name, new Uint8Array(fs.readFileSync(path.join(source, name)))])), 'META-INF/mozilla.rsa':strToU8('marker')});
    fs.writeFileSync(path.join(artifacts,'signed.xpi'),archive);
  }});
  const provenance=JSON.parse(fs.readFileSync(path.join(root,'extensions/signed/firefox/provenance.json')));

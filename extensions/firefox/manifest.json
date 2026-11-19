@@ -1,7 +1,15 @@
 {
   "manifest_version": 3,
   "name": "grace. Focus Companion",
-  "version": "1.1.1",
+  "version": "1.1.5",
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "64": "icon-64.png",
+    "96": "icon-96.png",
+    "128": "icon-128.png"
+  },
   "description": "Enforces distraction blocking during grace. focus sessions.",
   "permissions": [
     "storage",

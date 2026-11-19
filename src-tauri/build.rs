@@ -30,6 +30,8 @@ fn main() {
     println!("cargo:rustc-env=APP_BUILD_VERSION={build_version}");
     println!("cargo:rustc-env=APP_BUILD_SHA={full_sha}");
     println!("cargo:rerun-if-changed=../extensions/focus");
+    println!("cargo:rerun-if-changed=../extensions/companion");
+    println!("cargo:rerun-if-changed=../scripts/companion-payload.mjs");
     println!("cargo:rerun-if-changed=../extensions/chrome");
     println!("cargo:rerun-if-changed=../extensions/firefox");
     println!("cargo:rerun-if-changed=../extensions/safari");

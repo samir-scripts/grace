@@ -14,7 +14,7 @@ const id = 'focus@pomotroid.local';
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pomotroid signed gecko '));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  for (const dir of ['focus', 'firefox', 'chrome', 'safari']) {
+  for (const dir of ['focus', 'companion', 'firefox', 'chrome', 'safari']) {
     fs.cpSync(path.join(source, dir), path.join(root, 'extensions', dir), { recursive: true });
   }
   const signed = path.join(root, 'extensions/signed/firefox');
@@ -26,6 +26,9 @@ function fixture(t) {
     const files = {};
     for (const name of fs.readdirSync(path.join(root, 'extensions/focus'))) {
       files[name] = new Uint8Array(fs.readFileSync(path.join(root, 'extensions/focus', name)));
+    }
+    for (const name of fs.readdirSync(path.join(root, 'extensions/companion'))) {
+      files[name] = new Uint8Array(fs.readFileSync(path.join(root, 'extensions/companion', name)));
     }
     const override = path.join(root, 'extensions/firefox/payload/options.html');
     if (fs.existsSync(override)) files['options.html'] = new Uint8Array(fs.readFileSync(override));

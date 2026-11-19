@@ -3,3 +3,11 @@ extensions/focus/** -text
 
 # Firefox overlay bytes are included in the signed archive.
 extensions/firefox/payload/** -text
+extensions/firefox/manifest.json -text
+
+# Companion overlay and Chrome package must match the submitted payload on every OS.
+extensions/companion/** -text
+extensions/chrome/** -text
+
+# Preserve the reviewed Safari inventory and bytes across checkouts.
+extensions/safari/manifest.json -text
