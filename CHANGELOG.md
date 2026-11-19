@@ -1,3 +1,10 @@
+[v1.7.2-nightly.20261119.1]
+
+- Reviewed dev source: https://github.com/samir-scripts/grace/commit/a2087d5a90a0353520af1fca7332b9b6a4883950
+- Changes: https://github.com/samir-scripts/grace/compare/912ba89510e81501aa7f602f46950a310c6d535a...a2087d5a90a0353520af1fca7332b9b6a4883950
+- Signed manual downloads only. No stable updater changes. Install in a disposable environment, not over a production profile.
+- Windows x64 and Ubuntu x64 packaged runtime acceptance is unverified / deferred to contributors. Detached signatures are not OS publisher signatures.
+
 [v1.7.2-beta.1]
 
 - Experimental Windows x64 and Ubuntu x64 packages: packaged integration, blocking and recovery are unverified; contributor native acceptance is required before stable promotion.

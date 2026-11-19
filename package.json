@@ -1,7 +1,7 @@
 {
   "name": "grace",
-  "version": "1.7.2-beta.1",
-  "description": "grace. \u2014 an offline-first Pomodoro timer and focus blocker (fork of Pomotroid)",
+  "version": "1.7.2-nightly.20261119.1",
+  "description": "grace. — an offline-first Pomodoro timer and focus blocker (fork of Pomotroid)",
   "author": {
     "email": "flyweight@pm.me",
     "name": "Christopher Murphy",
