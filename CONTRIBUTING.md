@@ -1,6 +1,6 @@
 # Contributing to Grace
 
-Thank you for contributing to Grace. This guide covers setup, testing, branching workflows, and releasing.
+Start with the [architecture guide](docs/architecture.md) to find the component or native service you want to change. Use this guide to build, test, and prepare changes for release.
 
 ---
 
