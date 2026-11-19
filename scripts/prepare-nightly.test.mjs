@@ -32,9 +32,9 @@ function fixture(t) {
   const source = git('rev-parse', 'HEAD');
   git('checkout', '--quiet', '--detach', source);
   const run = (...args) => execFileSync(process.execPath, [decodeURIComponent(script.pathname), ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-  const install = () => {
-    run('prepare', tag);
-    git('add', '.'); git('commit', '-qm', 'nightly'); git('tag', '-am', tag, tag);
+  const install = (releaseTag = tag) => {
+    run('prepare', releaseTag);
+    git('add', '.'); git('commit', '-qm', 'nightly'); git('tag', '-am', releaseTag, releaseTag);
   };
   return { cwd, git, read, write, run, install, source };
 }
@@ -66,12 +66,39 @@ test('rejects an annotated nightly that changes app source or has an unreviewed 
 
 test('chooses the next unused stable core and retains an existing nightly tag across midnight', t => {
   const f = fixture(t);
+  assert.throws(() => f.run('tag', '20261118.1'), /YYYYMMDD/);
   f.git('tag', 'v1.7.2');
   assert.equal(f.run('tag', '20261118'), 'v1.7.3-nightly.20261118');
   f.git('tag', '-d', 'v1.7.2');
   f.install();
   f.git('checkout', '--detach', f.source);
   assert.equal(f.run('tag', '20261119'), tag);
+});
+
+test('allocates same-day revisions in numeric order and verifies earlier tags after later ones exist', t => {
+  const f = fixture(t);
+  f.install();
+  let previousSource = f.source;
+  for (let revision = 1; revision <= 11; revision++) {
+    f.git('checkout', '--quiet', '--detach', previousSource);
+    f.git('commit', '--allow-empty', '-qm', 'reviewed change');
+    const source = f.git('rev-parse', 'HEAD');
+    f.git('update-ref', 'refs/remotes/origin/dev', source);
+    const next = f.run('tag', '20261118');
+    assert.equal(next, tag + '.' + revision);
+    f.install(next);
+    assert.ok(f.read('CHANGELOG.md').includes(previousSource + '...' + source));
+    assert.equal(f.run('verify', next), source);
+    previousSource = source;
+  }
+  f.git('checkout', '--quiet', '--detach', previousSource);
+  assert.equal(f.run('tag', '20261119'), tag + '.11');
+  f.git('commit', '--allow-empty', '-qm', 'next day');
+  assert.equal(f.run('tag', '20261119'), 'v1.7.2-nightly.20261119');
+  f.git('checkout', '--quiet', '--detach', tag);
+  assert.equal(f.run('verify', tag), f.source);
+  f.git('checkout', '--quiet', '--detach', tag + '.1');
+  assert.equal(f.run('verify', tag + '.1'), f.git('rev-parse', 'HEAD^'));
 });
 
 test('nightly release requires the exact pushed tag and the parent’s green dev checks', t => {

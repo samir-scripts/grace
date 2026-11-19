@@ -5,6 +5,7 @@ on:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+-nightly.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-nightly.[0-9]+.[0-9]+'
   workflow_dispatch:
     inputs:
       tag:
@@ -40,7 +41,7 @@ jobs:
     outputs:
       version: ${{ steps.policy.outputs.version }}
       prerelease: ${{ steps.policy.outputs.prerelease }}
-      nightly_date: ${{ steps.policy.outputs.nightly_date }}
+      nightly_label: ${{ steps.policy.outputs.nightly_label }}
       revision: ${{ steps.policy.outputs.revision }}
 
     steps:
@@ -75,12 +76,16 @@ jobs:
           const { version, prerelease } = validateReleaseTrigger({ tag, ref, event, candidateRunId, acceptanceRef });
           validateVersions(version, readVersions());
           appendFileSync(output, 'version=' + version + '\nprerelease=' + prerelease + '\n');
-          const date = /-nightly\.(\d{4})(\d{2})(\d{2})$/.exec(version);
-          if (date) appendFileSync(output, 'nightly_date=' + date.slice(1).join('-') + '\n');
+          const date = /-nightly\.(\d{4})(\d{2})(\d{2})(?:\.(\d+))?$/.exec(version);
+          if (date) {
+            const [, year, month, day, revision] = date;
+            const label = `${year}-${month}-${day}` + (revision ? ` (revision ${revision})` : '');
+            appendFileSync(output, 'nightly_label=' + label + '\n');
+          }
           JS
 
       - name: Verify immutable nightly source and dev checks
-        if: steps.policy.outputs.nightly_date != ''
+        if: steps.policy.outputs.nightly_label != ''
         env:
           RELEASE_TAG: ${{ github.ref_name }}
           GH_TOKEN: ${{ github.token }}
@@ -538,8 +543,8 @@ jobs:
           draft: true
           prerelease: ${{ needs.changelog.outputs.prerelease == 'true' }}
           make_latest: false
-          name: ${{ needs.release-check.outputs.nightly_date && format('Grace Beta — {0}', needs.release-check.outputs.nightly_date) || inputs.tag || github.ref_name }}
+          name: ${{ needs.release-check.outputs.nightly_label && format('Grace Beta — {0}', needs.release-check.outputs.nightly_label) || inputs.tag || github.ref_name }}
           body: ${{ needs.changelog.outputs.notes }}
-          overwrite_files: ${{ needs.release-check.outputs.nightly_date == '' }}
+          overwrite_files: ${{ needs.release-check.outputs.nightly_label == '' }}
           fail_on_unmatched_files: true
           files: release-assets/*
