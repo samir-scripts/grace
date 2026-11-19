@@ -268,8 +268,7 @@ for (const mode of ['normal', 'disabled', 'reduced']) {
 test('timer digits remain centered and stable with a readable regular weight', async () => {
   const page = await browser.newPage({ viewport: { width: 360, height: 478 }, reducedMotion: 'reduce' });
   try {
-    await page.goto(`${url}/?animations=false`);
-    await page.locator('.time').waitFor();
+    await startTimerFixture(page);
     const measurements = [];
     for (const [total, expected] of [[671, '11:11'], [0, '00:00'], [1500, '25:00'], [5288, '88:08']]) {
       await page.evaluate(total_secs => window.__motionTest.emit('timer:tick', { elapsed_secs: 0, total_secs }), total);
