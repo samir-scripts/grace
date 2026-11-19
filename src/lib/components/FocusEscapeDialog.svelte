@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { modalFocus } from '$lib/utils/modalFocus';
   import {
     startEmergencyHold,
     pulseEmergencyHold,
@@ -19,11 +20,13 @@
   let mode = $state<Mode>('hold');
 
   // Hold state
+  let pressActive = false;
+  let holdGeneration = 0;
   let attemptId = $state<string | null>(null);
   let isHolding = $state(false);
   let holdProgress = $state(0); // 0.0 to 100.0
   let holdSecondsLeft = $state(60);
-  let pulseTimer = $state<any>(null);
+  let pulseTimer: ReturnType<typeof setInterval> | null = null;
   let holdStartTime = $state<number | null>(null);
 
   // Passphrase state
@@ -31,8 +34,11 @@
   let passphraseSecond = $state('');
   let passphraseError = $state<string | null>(null);
   let isSubmitting = $state(false);
+  let formGeneration = 0;
 
   function resetHold() {
+    pressActive = false;
+    holdGeneration++;
     if (attemptId) {
       cancelEmergencyHold(attemptId).catch(() => {});
     }
@@ -48,9 +54,16 @@
   }
 
   async function beginHold() {
-    if (isHolding) return;
+    if (pressActive || isHolding) return;
+    pressActive = true;
+    const generation = ++holdGeneration;
     try {
-      attemptId = await startEmergencyHold();
+      const id = await startEmergencyHold();
+      if (!pressActive || generation !== holdGeneration || !open) {
+        cancelEmergencyHold(id).catch(() => {});
+        return;
+      }
+      attemptId = id;
       isHolding = true;
       holdStartTime = Date.now();
       holdSecondsLeft = 60;
@@ -64,27 +77,26 @@
 
         try {
           const finished = await pulseEmergencyHold(attemptId);
+          if (generation !== holdGeneration || !pressActive) return;
           if (finished) {
-            clearInterval(pulseTimer);
+            if (pulseTimer) clearInterval(pulseTimer);
             pulseTimer = null;
             isHolding = false;
             onClose();
           }
         } catch (err) {
           console.error('[escape] pulse error:', err);
-          resetHold();
+          if (generation === holdGeneration) resetHold();
         }
       }, 250);
     } catch (err) {
       console.error('[escape] failed to start hold:', err);
-      resetHold();
+      if (generation === holdGeneration) resetHold();
     }
   }
 
   function endHold() {
-    if (isHolding) {
-      resetHold();
-    }
+    resetHold();
   }
 
   async function handlePassphraseSubmit(e: SubmitEvent) {
@@ -92,64 +104,72 @@
     passphraseError = null;
 
     if (passphraseFirst.length < 30) {
-      passphraseError = 'Passphrase must be at least 30 characters long.';
+      passphraseError = m.escape_passphrase_short();
       return;
     }
     if (passphraseFirst !== passphraseSecond) {
-      passphraseError = 'Passphrases do not match. You must type it twice identically.';
+      passphraseError = m.escape_passphrase_mismatch();
       return;
     }
 
     isSubmitting = true;
+    const generation = formGeneration;
     try {
       const ok = await submitEmergencyPassphrase(passphraseFirst);
+      if (generation !== formGeneration) return;
       if (ok) {
         onClose();
       } else {
-        passphraseError = 'Passphrase verification failed.';
+        passphraseError = m.escape_passphrase_failed();
       }
-    } catch (err: any) {
-      passphraseError = String(err);
+    } catch {
+      if (generation === formGeneration) passphraseError = m.escape_passphrase_failed();
     } finally {
-      isSubmitting = false;
+      if (generation === formGeneration) isSubmitting = false;
     }
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (!open) return;
-    if (e.key === 'Escape' && !isHolding) {
-      onClose();
-    } else if (e.key === ' ' && mode === 'hold' && !isHolding) {
+  function closeDialog() {
+    resetHold();
+    onClose();
+  }
+
+  function holdKeydown(e: KeyboardEvent) {
+    if (e.key === ' ' && !e.repeat) {
       e.preventDefault();
       beginHold();
     }
   }
 
-  function handleKeyup(e: KeyboardEvent) {
-    if (!open) return;
-    if (e.key === ' ' && mode === 'hold' && isHolding) {
+  function holdKeyup(e: KeyboardEvent) {
+    if (e.key === ' ') {
       e.preventDefault();
       endHold();
     }
   }
 
-  onMount(() => {
-    window.addEventListener('keydown', handleKeydown);
-    window.addEventListener('keyup', handleKeyup);
-    window.addEventListener('blur', endHold);
+  $effect(() => {
+    if (!open) {
+      resetHold();
+      mode = 'hold';
+      passphraseFirst = '';
+      passphraseSecond = '';
+      passphraseError = null;
+      isSubmitting = false;
+      formGeneration++;
+    }
   });
 
+  onMount(() => window.addEventListener('blur', endHold));
   onDestroy(() => {
-    window.removeEventListener('keydown', handleKeydown);
-    window.removeEventListener('keyup', handleKeyup);
     window.removeEventListener('blur', endHold);
     resetHold();
   });
 </script>
 
 {#if open}
-  <div class="escape-modal-backdrop" onclick={(e) => e.target === e.currentTarget && !isHolding && onClose()} role="presentation">
-    <div class="escape-modal" role="dialog" aria-modal="true" aria-labelledby="escape-title">
+  <div class="escape-modal-backdrop" onclick={(e) => e.target === e.currentTarget && closeDialog()} role="presentation">
+    <div class="escape-modal" role="dialog" aria-modal="true" aria-labelledby="escape-title" tabindex="-1" use:modalFocus={{ onEscape: closeDialog }}>
       <div class="modal-header">
         <h2 id="escape-title" class="modal-title">
           <svg
@@ -170,13 +190,11 @@
           </svg>
           <span>{m.session_emergency_exit()}</span>
         </h2>
-        {#if !isHolding}
-          <button class="btn-close" onclick={onClose} aria-label="Close dialog">×</button>
-        {/if}
+        <button class="btn-close" onclick={closeDialog} aria-label={m.escape_close()}>×</button>
       </div>
 
       <p class="modal-desc">
-        Focus session is currently locked. To exit early, you must perform a deliberate action.
+        {m.escape_description()}
       </p>
 
       <div class="mode-tabs">
@@ -186,7 +204,7 @@
           disabled={isHolding}
           onclick={() => { mode = 'hold'; resetHold(); }}
         >
-          60-Second Hold
+          {m.escape_hold_tab()}
         </button>
         <button
           class="mode-tab"
@@ -194,35 +212,37 @@
           disabled={isHolding}
           onclick={() => { mode = 'passphrase'; resetHold(); }}
         >
-          Enter Passphrase
+          {m.escape_passphrase_tab()}
         </button>
       </div>
 
       {#if mode === 'hold'}
         <div class="hold-section">
           <p class="instruction">
-            Press and hold the button below (or hold the <kbd>Spacebar</kbd>) continuously for <strong>60 seconds</strong>. Releasing early resets the timer.
+            {m.escape_hold_instruction()}
           </p>
 
           <div class="hold-action-area">
             <button
               class="hold-btn"
               class:holding={isHolding}
-              onmousedown={beginHold}
-              onmouseup={endHold}
-              onmouseleave={endHold}
-              ontouchstart={beginHold}
-              ontouchend={endHold}
-              aria-label="Hold for 60 seconds to unlock"
+              onpointerdown={(e) => { if (e.isPrimary && e.button === 0) beginHold(); }}
+              onpointerup={endHold}
+              onpointerleave={endHold}
+              onpointercancel={endHold}
+              onblur={endHold}
+              onkeydown={holdKeydown}
+              onkeyup={holdKeyup}
+              aria-label={m.escape_hold_label()}
             >
               <div class="hold-progress-fill" style="width: {holdProgress}%;"></div>
               <div class="hold-btn-text">
                 {#if isHolding}
-                  <span class="holding-countdown">{holdSecondsLeft}s remaining...</span>
-                  <span class="subtext">Do not release!</span>
+                  <span class="holding-countdown">{m.escape_remaining({ seconds: String(holdSecondsLeft) })}</span>
+                  <span class="subtext">{m.escape_do_not_release()}</span>
                 {:else}
-                  <span class="hold-prompt">Hold to Unlock</span>
-                  <span class="subtext">Press and hold for 60s</span>
+                  <span class="hold-prompt">{m.escape_hold_prompt()}</span>
+                  <span class="subtext">{m.escape_hold_subtext()}</span>
                 {/if}
               </div>
             </button>
@@ -238,7 +258,7 @@
       {:else}
         <form class="passphrase-section" onsubmit={handlePassphraseSubmit}>
           <p class="instruction">
-            Enter your 30+ character emergency passphrase twice to confirm early exit.
+            {m.escape_passphrase_instruction()}
           </p>
 
           {#if passphraseError}
@@ -246,33 +266,33 @@
           {/if}
 
           <div class="input-group">
-            <label for="pass-first">Passphrase</label>
+            <label for="pass-first">{m.escape_passphrase()}</label>
             <input
               id="pass-first"
               type="password"
               class="text-input"
               bind:value={passphraseFirst}
-              placeholder="Minimum 30 characters"
+              placeholder={m.escape_passphrase_placeholder()}
               required
             />
           </div>
 
           <div class="input-group">
-            <label for="pass-second">Confirm Passphrase</label>
+            <label for="pass-second">{m.escape_confirm_passphrase()}</label>
             <input
               id="pass-second"
               type="password"
               class="text-input"
               bind:value={passphraseSecond}
-              placeholder="Re-enter passphrase"
+              placeholder={m.escape_confirm_placeholder()}
               required
             />
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn-secondary" onclick={onClose}>Cancel</button>
+            <button type="button" class="btn-secondary" onclick={closeDialog}>{m.escape_cancel()}</button>
             <button type="submit" class="btn-danger" disabled={isSubmitting}>
-              {isSubmitting ? 'Verifying...' : 'Unlock Session'}
+              {isSubmitting ? m.escape_verifying() : m.escape_unlock()}
             </button>
           </div>
         </form>
@@ -385,14 +405,6 @@
     margin: 0 0 12px 0;
   }
 
-  kbd {
-    background: var(--color-background-light);
-    border: 1px solid var(--color-separator);
-    border-radius: 3px;
-    padding: 1px 4px;
-    font: var(--type-code);
-    letter-spacing: 0;
-  }
 
   .hold-action-area {
     display: flex;

@@ -105,3 +105,10 @@ Both PR quality gates advanced beyond frontend tests after Chromium provisioning
 - [x] Split policy-path resolution into mutually exclusive platform implementations. Linux Firefox/Zen paths and unsupported application discovery/interception behavior are preserved. Added Linux policy-path and unsupported-monitor regression tests.
 - [x] Local macOS `cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings` exits 0. Full `cargo test --locked --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_commands_callable` exits 0 with loopback access. The first restricted run failed three tests on socket permission errors; the permitted rerun passes. Luna review found no defects; `git diff --check` passes.
 - [ ] Linux and Windows execution, including the new Linux-specific tests, remains pending. Only the macOS Rust target is installed and Docker daemon is stopped. No updated PR run has been triggered for these local changes; native enforcement acceptance remains separate.
+
+## Desktop repairs on the typography baseline
+
+- Preserved the reviewed Inter and JetBrains Mono roles while integrating Glass duration readouts and volume controls, keyboard recording and dialog focus, in-memory session drafts, and Statistics error recovery and keyboard date navigation.
+- The rendered checks cover slider fill and focus, draft retention without saving, keyboard cancellation, and annual chart label spacing across all eight locales and four bundled font packs. These browser fixtures do not certify native focus blocking.
+- The typecheck passed with zero errors and warnings. `npm test` passed 241 tests with two optional capture skips; `npm run test:native-glass` passed in macOS WebKit.
+- The isolated macOS Tauri preview launched and exposed the four named duration sliders through Accessibility. The complete native Glass save/relaunch and Linux fallback matrix has not been verified on this integrated revision.

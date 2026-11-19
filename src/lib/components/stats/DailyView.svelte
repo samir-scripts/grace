@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DailyStats } from '$lib/types';
   import * as m from '$paraglide/messages.js';
+  import { getLocale } from '$paraglide/runtime.js';
 
   let { today }: { today: DailyStats | null } = $props();
 
@@ -10,10 +11,17 @@
   const BAR_GAP = 9; // px between bars
 
   function fmtTime(mins: number): string {
-    if (mins < 60) return `${mins}m`;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m === 0 ? `${h}h` : `${h}h ${m}m`;
+    const unit = (value: number, name: 'hour' | 'minute') =>
+      new Intl.NumberFormat(getLocale(), { style: 'unit', unit: name, unitDisplay: 'short' }).format(value);
+    const hours = Math.floor(mins / 60);
+    const minutes = mins % 60;
+    return hours
+      ? [unit(hours, 'hour'), ...(minutes ? [unit(minutes, 'minute')] : [])].join(' ')
+      : unit(minutes, 'minute');
+  }
+
+  function fmtHour(hour: number): string {
+    return new Intl.DateTimeFormat(getLocale(), { hour: 'numeric' }).format(new Date(2000, 0, 1, hour));
   }
 
   function fmtRate(rate: number | null): string {
@@ -83,8 +91,8 @@
 
           <!-- Hour label (every 6 hours) -->
           {#if hourLabels.includes(h)}
-            <text x={x + BAR_W / 2} y={CHART_H + 18} text-anchor="middle" class="hour-label"
-              >{h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? `${h}a` : `${h - 12}p`}</text
+            <text x={x + BAR_W / 2} y={CHART_H + 18} text-anchor={h === 0 ? 'start' : 'middle'} class="hour-label"
+              >{fmtHour(h)}</text
             >
           {/if}
         {/each}
@@ -206,8 +214,9 @@
 
   .chart {
     display: block;
-    width: 100%;
-    min-width: 500px;
+    flex: none;
+    width: 744px;
+    max-width: none;
     height: auto;
   }
 
@@ -238,7 +247,7 @@
 
   .hour-label {
     fill: var(--color-foreground-darker);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 400;
     letter-spacing: normal;
     font-variant-numeric: tabular-nums;

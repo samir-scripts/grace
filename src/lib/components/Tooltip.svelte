@@ -11,6 +11,8 @@
   let { text, delay = 600, placement = 'above', children }: Props = $props();
 
   let visible = $state(false);
+  let hovered = false;
+  let focused = false;
   let positioned = $state(false);
   // Computed during updatePosition(); falls back to the placement prop when hidden.
   let flipped = $state(false);
@@ -44,6 +46,18 @@
     positioned = false;
     flipped = false;
     tooltipStyle = '';
+  }
+
+  function describeTrigger(node: HTMLSpanElement) {
+    const trigger = node.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]');
+    const previous = trigger?.getAttribute('aria-describedby');
+    if (trigger) trigger.setAttribute('aria-describedby', [previous, tooltipId].filter(Boolean).join(' '));
+    return { destroy() {
+      if (trigger) {
+        if (previous) trigger.setAttribute('aria-describedby', previous);
+        else trigger.removeAttribute('aria-describedby');
+      }
+    } };
   }
 
   function updatePosition() {
@@ -81,23 +95,24 @@
 <span
   class="tooltip-wrapper"
   bind:this={wrapper}
-  onpointerenter={show}
-  onpointermove={show}
-  onpointerleave={hide}
-  aria-describedby={visible ? tooltipId : undefined}
+  use:describeTrigger
+  onfocusin={() => { focused = true; void show(); }}
+  onfocusout={() => { focused = false; if (!hovered) hide(); }}
+  onkeydown={(event) => { if (event.key === 'Escape' && visible) { event.preventDefault(); hide(); } }}
+  onpointerenter={() => { hovered = true; void show(); }}
+  onpointerleave={() => { hovered = false; if (!focused) hide(); }}
 >
   {@render children()}
-  {#if visible}
     <span
       bind:this={tooltipEl}
       class="tooltip"
       class:below={actualPlacement === 'below'}
       class:positioned
+      class:visible
       style={tooltipStyle}
       id={tooltipId}
       role="tooltip">{text}</span
     >
-  {/if}
 </span>
 
 <style>
@@ -132,7 +147,7 @@
     visibility: hidden;
   }
 
-  .tooltip.positioned {
+  .tooltip.visible.positioned {
     visibility: visible;
   }
 

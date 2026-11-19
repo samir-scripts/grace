@@ -1,3 +1,27 @@
+<script module lang="ts">
+  import type { FocusProfile } from '$lib/types';
+
+  // The route remounts settings when switching views. Keep the draft in memory
+  // for this window until the user saves or explicitly replaces it.
+  const draft = $state({
+    profile: {
+      id: '',
+      name: '',
+      work_secs: 1500,
+      short_break_secs: 300,
+      long_break_secs: 900,
+      work_rounds: 4,
+      blocked_apps: [],
+      blocked_domains: [],
+      revision: 1,
+    } as FocusProfile,
+    selectedId: '',
+    originalProfileJson: '',
+    domainInput: '',
+    saving: false,
+  });
+</script>
+
 <script lang="ts">
   import { onMount } from 'svelte';
   import { focusSnapshot, focusProfiles } from '$lib/stores/focus';
@@ -10,7 +34,6 @@
     clearFocusPassphrase,
     getFocusProfiles,
   } from '$lib/ipc';
-  import type { FocusProfile } from '$lib/types';
   import { settings } from '$lib/stores/settings';
   import { setSetting } from '$lib/ipc';
   import SettingsToggle from '$lib/components/settings/SettingsToggle.svelte';
@@ -18,6 +41,11 @@
   import BrowserSetup from '$lib/components/settings/BrowserSetup.svelte';
   import ThemedSelect from '$lib/components/ThemedSelect.svelte';
   import * as m from '$paraglide/messages.js';
+  import { getLocale } from '$paraglide/runtime.js';
+  import { modalFocus } from '$lib/utils/modalFocus';
+
+  const minutesFormat = $derived(new Intl.NumberFormat(getLocale(), { style: 'unit', unit: 'minute' }));
+  const roundsFormat = $derived(new Intl.NumberFormat(getLocale()));
 
   let profiles = $derived($focusProfiles);
   let activeProfile = $derived($focusSnapshot.active_profile);
@@ -25,22 +53,6 @@
   let unblockBreaks = $derived($focusSnapshot.unblock_during_breaks);
 
 
-  // Selected profile in the settings editor
-  let editingProfile = $state<FocusProfile>({
-    id: '',
-    name: '',
-    work_secs: 1500,
-    short_break_secs: 300,
-    long_break_secs: 900,
-    work_rounds: 4,
-    blocked_apps: [],
-    blocked_domains: [],
-    revision: 1,
-  });
-
-  let selectedId = $state<string>('');
-  let originalProfileJson = $state<string>('');
-  let domainInput = $state('');
   let statusMessage = $state<string | null>(null);
   let errorMessage = $state<string | null>(null);
 
@@ -52,30 +64,33 @@
   let passphraseInput = $state('');
   let passphraseConfirm = $state('');
   let passphraseStatus = $state<string | null>(null);
+  let passphraseFailed = $state(false);
 
   let isDirty = $derived.by(() => {
-    if (!originalProfileJson) return false;
-    return JSON.stringify(editingProfile) !== originalProfileJson;
+    if (!draft.originalProfileJson) return false;
+    return JSON.stringify(draft.profile) !== draft.originalProfileJson || Boolean(draft.domainInput.trim());
   });
 
   $effect(() => {
-    if (profiles.length > 0 && !selectedId) {
+    if (profiles.length > 0 && !draft.selectedId) {
       const initial = activeProfile ? profiles.find((p) => p.id === activeProfile.id) || profiles[0] : profiles[0];
       loadProfileForEdit(initial);
     }
   });
 
   function loadProfileForEdit(p: FocusProfile) {
-    selectedId = p.id;
-    editingProfile = JSON.parse(JSON.stringify(p));
-    originalProfileJson = JSON.stringify(editingProfile);
+    draft.selectedId = p.id;
+    draft.profile = JSON.parse(JSON.stringify(p));
+    draft.domainInput = '';
+    draft.originalProfileJson = JSON.stringify(draft.profile);
     errorMessage = null;
     statusMessage = null;
   }
 
   function createNewProfile() {
-    selectedId = 'new';
-    editingProfile = {
+    draft.selectedId = 'new';
+    draft.domainInput = '';
+    draft.profile = {
       id: '',
       name: m.session_new_name(),
       work_secs: 1500,
@@ -86,13 +101,13 @@
       blocked_domains: [],
       revision: 1,
     };
-    originalProfileJson = JSON.stringify(editingProfile);
+    draft.originalProfileJson = JSON.stringify(draft.profile);
     errorMessage = null;
     statusMessage = null;
   }
 
   function handleSelectChange(targetVal: string) {
-    if (targetVal === selectedId) return;
+    if (targetVal === draft.selectedId) return;
 
     if (isDirty) {
       pendingSwitchId = targetVal;
@@ -135,23 +150,34 @@
   }
 
   async function handleSave() {
+    if (draft.saving) return;
     errorMessage = null;
     statusMessage = null;
-    if (!editingProfile.name.trim()) {
+    if (!draft.profile.name.trim()) {
       errorMessage = m.session_name_required();
       return;
     }
 
+    const submitted = $state.snapshot(draft.profile);
+    const selected = draft.selectedId;
+    draft.saving = true;
     try {
-      const saved = await saveFocusProfile(editingProfile);
-      selectedId = saved.id;
-      editingProfile = JSON.parse(JSON.stringify(saved));
-      originalProfileJson = JSON.stringify(editingProfile);
+      const saved = await saveFocusProfile(submitted);
+      if (draft.selectedId === selected) {
+        const editedWhileSaving = JSON.stringify(draft.profile) !== JSON.stringify(submitted);
+        draft.selectedId = saved.id;
+        draft.profile = editedWhileSaving
+          ? { ...draft.profile, id: saved.id, revision: saved.revision }
+          : saved;
+        draft.originalProfileJson = JSON.stringify(saved);
+      }
       const all = await getFocusProfiles();
       focusProfiles.set(all);
       statusMessage = m.session_saved();
-    } catch (err: any) {
+    } catch (err) {
       errorMessage = String(err);
+    } finally {
+      draft.saving = false;
     }
   }
 
@@ -169,7 +195,7 @@
       await deleteFocusProfile(id);
       const all = await getFocusProfiles();
       focusProfiles.set(all);
-      if (selectedId === id) {
+      if (draft.selectedId === id) {
         if (all.length > 0) loadProfileForEdit(all[0]);
         else createNewProfile();
       }
@@ -204,45 +230,51 @@
   }
 
   function addDomain() {
-    const raw = domainInput.trim().toLowerCase();
+    const raw = draft.domainInput.trim().toLowerCase();
     if (!raw) return;
-    if (!editingProfile.blocked_domains.includes(raw)) {
-      editingProfile.blocked_domains = [...editingProfile.blocked_domains, raw];
+    if (!draft.profile.blocked_domains.includes(raw)) {
+      draft.profile.blocked_domains = [...draft.profile.blocked_domains, raw];
     }
-    domainInput = '';
+    draft.domainInput = '';
   }
 
   function removeDomain(domain: string) {
-    editingProfile.blocked_domains = editingProfile.blocked_domains.filter((d) => d !== domain);
+    draft.profile.blocked_domains = draft.profile.blocked_domains.filter((d) => d !== domain);
   }
 
   async function savePassphrase() {
     passphraseStatus = null;
+    passphraseFailed = false;
     if (passphraseInput.length < 30) {
-      passphraseStatus = 'Error: Passphrase must be at least 30 characters long';
+      passphraseFailed = true;
+      passphraseStatus = m.escape_passphrase_short();
       return;
     }
     if (passphraseInput !== passphraseConfirm) {
-      passphraseStatus = 'Error: Passphrases do not match';
+      passphraseFailed = true;
+      passphraseStatus = m.escape_passphrase_mismatch();
       return;
     }
 
     try {
       await setFocusPassphrase(passphraseInput);
-      passphraseStatus = 'Passphrase updated successfully';
+      passphraseStatus = m.session_passphrase_saved();
       passphraseInput = '';
       passphraseConfirm = '';
-    } catch (err: any) {
-      passphraseStatus = `Error: ${err}`;
+    } catch {
+      passphraseFailed = true;
+      passphraseStatus = m.session_passphrase_change_error();
     }
   }
 
   async function clearPassphrase() {
+    passphraseFailed = false;
     try {
       await clearFocusPassphrase();
-      passphraseStatus = 'Passphrase cleared';
-    } catch (err: any) {
-      passphraseStatus = `Error: ${err}`;
+      passphraseStatus = m.session_passphrase_cleared();
+    } catch {
+      passphraseFailed = true;
+      passphraseStatus = m.session_passphrase_change_error();
     }
   }
 
@@ -261,14 +293,15 @@
         <ThemedSelect
           id="session-dropdown"
           label={m.session_select_edit()}
-          value={selectedId}
+          value={draft.selectedId}
           options={[
-            ...(selectedId === 'new' ? [{ value: 'new', label: `+ ${editingProfile.name || m.session_new_name()}` }] : []),
+            ...(draft.selectedId === 'new' ? [{ value: 'new', label: `+ ${draft.profile.name || m.session_new_name()}` }] : []),
             ...profiles.map((p) => ({
               value: p.id,
               label: `${p.name}${activeProfile?.id === p.id ? ` • ${m.session_active_label()}` : ''}`,
             })),
           ]}
+          disabled={draft.saving}
           onchange={handleSelectChange}
         />
       </div>
@@ -277,6 +310,7 @@
     <button
       type="button"
       class="btn-add-session"
+      disabled={draft.saving}
       onclick={handleAddClick}
       title={m.session_add()}
       aria-label={m.session_add()}
@@ -290,8 +324,8 @@
 
   <!-- Discard changes dialog -->
   {#if showDiscardDialog}
-    <div class="modal-backdrop" onclick={cancelDiscard} onkeydown={(e) => e.key === 'Escape' && cancelDiscard()} role="presentation">
-      <div class="modal-card" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="discard-title" tabindex="-1">
+    <div class="modal-backdrop" onclick={(event) => event.target === event.currentTarget && cancelDiscard()} role="presentation">
+      <div class="modal-card" use:modalFocus={{ onEscape: cancelDiscard }} role="dialog" aria-modal="true" aria-labelledby="discard-title" tabindex="-1">
         <h4 id="discard-title" class="modal-title">{m.session_unsaved_title()}</h4>
         <div class="modal-actions">
           <button type="button" class="btn-secondary" onclick={cancelDiscard}>
@@ -321,29 +355,29 @@
           id="prof-name"
           type="text"
           class="text-input"
-          bind:value={editingProfile.name}
+          bind:value={draft.profile.name}
           placeholder="e.g. Deep Work"
         />
       </div>
 
       <div class="header-actions">
-        {#if editingProfile.id && activeProfile?.id !== editingProfile.id}
+        {#if draft.profile.id && activeProfile?.id !== draft.profile.id}
           <button
             type="button"
             class="btn-secondary"
             disabled={isLocked}
-            onclick={() => handleMakeActive(editingProfile.id)}
+            onclick={() => handleMakeActive(draft.profile.id)}
           >
             {m.session_make_active()}
           </button>
         {/if}
-        {#if editingProfile.id}
+        {#if draft.profile.id}
           <button
             type="button"
             class="btn-delete"
-            disabled={profiles.length <= 1 || (isLocked && activeProfile?.id === editingProfile.id)}
+            disabled={draft.saving || profiles.length <= 1 || (isLocked && activeProfile?.id === draft.profile.id)}
             title={profiles.length <= 1 ? m.session_last_required() : m.session_delete()}
-            onclick={() => handleDelete(editingProfile.id)}
+            onclick={() => handleDelete(draft.profile.id)}
           >
             <svg class="trash-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M2 4h12"></path>
@@ -353,7 +387,7 @@
             <span>{m.session_delete()}</span>
           </button>
         {/if}
-        <button type="button" class="btn-primary" onclick={handleSave}>
+        <button type="button" class="btn-primary" disabled={draft.saving} onclick={handleSave}>
           {m.session_save()}
         </button>
       </div>
@@ -366,68 +400,76 @@
 
       <div class="slider-row">
         <div class="slider-label-row">
-          <span>{m.session_work_duration()}</span>
-          <span class="duration-badge">{Math.round(editingProfile.work_secs / 60)}m</span>
+          <label for="session-work">{m.session_work_duration()}</label>
+          <output class="duration-value" for="session-work" aria-hidden="true">{minutesFormat.format(Math.round(draft.profile.work_secs / 60))}</output>
         </div>
         <div class="slider-container">
           <input
+            id="session-work"
+            aria-valuetext={minutesFormat.format(Math.round(draft.profile.work_secs / 60))}
             type="range"
             min="1"
             max="90"
-            value={Math.round(editingProfile.work_secs / 60)}
-            oninput={(e) => (editingProfile.work_secs = Number((e.target as HTMLInputElement).value) * 60)}
+            value={Math.round(draft.profile.work_secs / 60)}
+            oninput={(e) => (draft.profile.work_secs = Number((e.target as HTMLInputElement).value) * 60)}
           />
-          <div class="slider-bar" style="width: {barWidth(Math.round(editingProfile.work_secs / 60), 1, 90)}; background: var(--color-focus-round);"></div>
+          <div class="slider-bar" style="width: {barWidth(Math.round(draft.profile.work_secs / 60), 1, 90)}; background: var(--color-focus-round);"></div>
         </div>
       </div>
 
       <div class="slider-row">
         <div class="slider-label-row">
-          <span>{m.session_short_break_duration()}</span>
-          <span class="duration-badge">{Math.round(editingProfile.short_break_secs / 60)}m</span>
+          <label for="session-short-break">{m.session_short_break_duration()}</label>
+          <output class="duration-value" for="session-short-break" aria-hidden="true">{minutesFormat.format(Math.round(draft.profile.short_break_secs / 60))}</output>
         </div>
         <div class="slider-container">
           <input
+            id="session-short-break"
+            aria-valuetext={minutesFormat.format(Math.round(draft.profile.short_break_secs / 60))}
             type="range"
             min="1"
             max="30"
-            value={Math.round(editingProfile.short_break_secs / 60)}
-            oninput={(e) => (editingProfile.short_break_secs = Number((e.target as HTMLInputElement).value) * 60)}
+            value={Math.round(draft.profile.short_break_secs / 60)}
+            oninput={(e) => (draft.profile.short_break_secs = Number((e.target as HTMLInputElement).value) * 60)}
           />
-          <div class="slider-bar" style="width: {barWidth(Math.round(editingProfile.short_break_secs / 60), 1, 30)}; background: var(--color-short-round);"></div>
+          <div class="slider-bar" style="width: {barWidth(Math.round(draft.profile.short_break_secs / 60), 1, 30)}; background: var(--color-short-round);"></div>
         </div>
       </div>
 
       <div class="slider-row">
         <div class="slider-label-row">
-          <span>{m.session_long_break_duration()}</span>
-          <span class="duration-badge">{Math.round(editingProfile.long_break_secs / 60)}m</span>
+          <label for="session-long-break">{m.session_long_break_duration()}</label>
+          <output class="duration-value" for="session-long-break" aria-hidden="true">{minutesFormat.format(Math.round(draft.profile.long_break_secs / 60))}</output>
         </div>
         <div class="slider-container">
           <input
+            id="session-long-break"
+            aria-valuetext={minutesFormat.format(Math.round(draft.profile.long_break_secs / 60))}
             type="range"
             min="1"
             max="60"
-            value={Math.round(editingProfile.long_break_secs / 60)}
-            oninput={(e) => (editingProfile.long_break_secs = Number((e.target as HTMLInputElement).value) * 60)}
+            value={Math.round(draft.profile.long_break_secs / 60)}
+            oninput={(e) => (draft.profile.long_break_secs = Number((e.target as HTMLInputElement).value) * 60)}
           />
-          <div class="slider-bar" style="width: {barWidth(Math.round(editingProfile.long_break_secs / 60), 1, 60)}; background: var(--color-long-round);"></div>
+          <div class="slider-bar" style="width: {barWidth(Math.round(draft.profile.long_break_secs / 60), 1, 60)}; background: var(--color-long-round);"></div>
         </div>
       </div>
 
       <div class="slider-row">
         <div class="slider-label-row">
-          <span>{m.session_rounds()}</span>
-          <span class="duration-badge">{editingProfile.work_rounds}</span>
+          <label for="session-rounds">{m.session_rounds()}</label>
+          <output class="duration-value" for="session-rounds" aria-hidden="true">{roundsFormat.format(draft.profile.work_rounds)}</output>
         </div>
         <div class="slider-container">
           <input
+            id="session-rounds"
+            aria-valuetext={roundsFormat.format(draft.profile.work_rounds)}
             type="range"
             min="1"
             max="12"
-            bind:value={editingProfile.work_rounds}
+            bind:value={draft.profile.work_rounds}
           />
-          <div class="slider-bar" style="width: {barWidth(editingProfile.work_rounds, 1, 12)}; background: var(--color-accent);"></div>
+          <div class="slider-bar" style="width: {barWidth(draft.profile.work_rounds, 1, 12)}; background: var(--color-accent);"></div>
         </div>
       </div>
     </div>
@@ -436,9 +478,9 @@
     <div class="section-group">
       <h3 class="group-title">{m.session_blocked_apps()}</h3>
       <InstalledAppPicker
-        targets={editingProfile.blocked_apps}
-        onChange={(newTargets) => (editingProfile.blocked_apps = newTargets)}
-        disabled={isLocked && activeProfile?.id === editingProfile.id}
+        targets={draft.profile.blocked_apps}
+        onChange={(newTargets) => (draft.profile.blocked_apps = newTargets)}
+        disabled={isLocked && activeProfile?.id === draft.profile.id}
       />
     </div>
 
@@ -449,7 +491,7 @@
         <input
           type="text"
           class="text-input"
-          bind:value={domainInput}
+          bind:value={draft.domainInput}
           placeholder={m.session_site_placeholder()}
           onkeydown={(e) => e.key === 'Enter' && addDomain()}
         />
@@ -457,13 +499,13 @@
       </div>
 
       <div class="chip-container">
-        {#each editingProfile.blocked_domains as domain}
+        {#each draft.profile.blocked_domains as domain}
           <div class="domain-chip">
             <span>{domain}</span>
-            <button type="button" class="chip-remove" onclick={() => removeDomain(domain)} aria-label="Remove domain">×</button>
+            <button type="button" class="chip-remove" onclick={() => removeDomain(domain)} aria-label={m.session_domain_remove({ domain })}>×</button>
           </div>
         {/each}
-        {#if editingProfile.blocked_domains.length === 0}
+        {#if draft.profile.blocked_domains.length === 0}
           <span class="empty-hint">No websites blocked yet. Add domains like "reddit.com".</span>
         {/if}
       </div>
@@ -474,7 +516,7 @@
       <BrowserSetup
         {isLocked}
         activeSessionId={activeProfile?.id}
-        editingSessionId={editingProfile.id}
+        editingSessionId={draft.profile.id}
       />
     </div>
 
@@ -515,7 +557,7 @@
 
     <!-- Global Preferences -->
     <div class="section-group">
-      <h3 class="group-title">Session Preferences</h3>
+      <h3 class="group-title">{m.session_preferences()}</h3>
       <SettingsToggle
         label={m.session_unblock_breaks()}
         description={m.session_unblock_breaks_desc()}
@@ -526,29 +568,31 @@
       <!-- Optional Emergency Passphrase -->
       <div class="passphrase-box">
         <div class="passphrase-header">
-          <strong>Emergency Exit Passphrase (Optional)</strong>
-          <span class="passphrase-sub">Minimum 30 characters. Required twice to unlock early if hold option is not used.</span>
+          <strong>{m.session_passphrase_optional()}</strong>
+          <span class="passphrase-sub">{m.session_passphrase_help()}</span>
         </div>
         <div class="passphrase-inputs">
           <input
             type="password"
             class="text-input"
             bind:value={passphraseInput}
-            placeholder="Passphrase (30+ characters)"
+            aria-label={m.escape_passphrase()}
+            placeholder={m.escape_passphrase_placeholder()}
           />
           <input
             type="password"
             class="text-input"
             bind:value={passphraseConfirm}
-            placeholder="Confirm passphrase"
+            aria-label={m.escape_confirm_passphrase()}
+            placeholder={m.escape_confirm_placeholder()}
           />
           <div class="passphrase-btns">
-            <button type="button" class="btn-secondary" onclick={savePassphrase}>Save Passphrase</button>
-            <button type="button" class="btn-secondary" onclick={clearPassphrase}>Clear</button>
+            <button type="button" class="btn-secondary" onclick={savePassphrase}>{m.session_passphrase_save()}</button>
+            <button type="button" class="btn-secondary" onclick={clearPassphrase}>{m.session_passphrase_clear()}</button>
           </div>
         </div>
         {#if passphraseStatus}
-          <div class="passphrase-status" class:error={passphraseStatus.startsWith('Error')}>
+          <div class="passphrase-status" class:error={passphraseFailed} role="status">
             {passphraseStatus}
           </div>
         {/if}
@@ -882,10 +926,12 @@
     color: var(--color-foreground-darker);
   }
 
-  .duration-badge {
+  .duration-value {
     color: var(--color-foreground);
     font: var(--type-code);
     letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .slider-container {
@@ -902,7 +948,7 @@
     right: 0;
     height: 4px;
     border-radius: 2px;
-    background: var(--color-separator);
+    background: var(--color-slider-rail, var(--color-border));
   }
 
   .slider-container input[type='range'] {

@@ -682,7 +682,7 @@ for (const [file, desktop, transparency] of [['graphite.json', '#000000'], ['pom
         for (const sample of await textComposites(button)) assert.ok(contrastRatio(sample.foreground, sample.background) >= 4.5, `${name}: readable hover`);
       }
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
-      await check('.profile-editor label, .group-title, .slider-label-row span');
+      await check('.profile-editor label, .group-title, .slider-label-row output');
       await page.getByRole('tab', { name: 'Appearance', exact: true }).click();
       await check('.group-label, .customization label, .customization .hint, .transparency-label span');
       await page.getByRole('button', { name: 'Statistics', exact: true }).click();
@@ -798,5 +798,97 @@ test('Glass form controls match the restrained theme row corners', async () => {
       assert.equal(await control.evaluate(el => getComputedStyle(el).borderRadius), '6px');
     }
     assert.equal(await page.locator('.nav-item.active').evaluate(el => getComputedStyle(el).borderRadius), '8px');
+  } finally { await page.close(); }
+});
+
+test('notification volume has a visible rail, aligned fill, and keyboard focus', async () => {
+  const page = await browser.newPage({ viewport: { width: 840, height: 600 }, reducedMotion: 'reduce' });
+  try {
+    await startGlass(page);
+    await page.evaluate(() => window.__motionTest.emit('settings:changed', { volume: .9 }));
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Notifications' }).click();
+    const volume = page.getByRole('slider', { name: 'Volume' });
+    assert.equal(await volume.inputValue(), '0.9');
+    await page.getByRole('switch').last().press('Tab');
+    assert.ok(await volume.evaluate(el => el === document.activeElement));
+    for (const val of [0, .5, .9, 1]) {
+      const sample = await volume.evaluate(async (input, value) => {
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const rect = input.getBoundingClientRect();
+        const fill = input.parentElement.querySelector('.bar').getBoundingClientRect();
+        return { outline: getComputedStyle(input).outlineStyle, rail: getComputedStyle(input.parentElement, '::before').backgroundColor,
+          expected: 7 + value * (rect.width - 14), actual: fill.right - rect.left };
+      }, val);
+      assert.equal(sample.outline, 'solid');
+      assert.notEqual(sample.rail, 'rgba(0, 0, 0, 0)');
+      assert.ok(Math.abs(sample.expected - sample.actual) < 1, JSON.stringify(sample));
+    }
+  } finally { await page.close(); }
+});
+
+test('timer volume remains reachable by pointer and keyboard and Escape returns focus', async () => {
+  const page = await browser.newPage({ viewport: { width: 360, height: 478 } });
+  page.setDefaultTimeout(6000);
+  try {
+    await page.goto(`${url}/?animations=false`);
+    const mute = page.getByRole('button', { name: 'Mute', exact: true });
+    const slider = page.getByRole('slider', { name: 'Volume' });
+    await mute.hover();
+    await slider.hover();
+    assert.ok(await slider.isVisible());
+    await page.mouse.move(0, 0);
+    await mute.focus();
+    await page.keyboard.press('Tab');
+    assert.ok(await slider.evaluate(el => el === document.activeElement));
+    await page.keyboard.press('Escape');
+    assert.equal(await slider.count(), 0);
+    assert.ok(await mute.evaluate(el => el === document.activeElement));
+  } finally { await page.close(); }
+});
+
+test('session draft survives navigation and dirty replacement offers a keyboard dismissal', async () => {
+  const page = await browser.newPage({ viewport: { width: 840, height: 600 } });
+  try {
+    await page.goto(`${url}/?animations=false`);
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.locator('#prof-name').fill('Pending draft');
+    await page.getByRole('tab', { name: 'Appearance' }).click();
+    await page.getByRole('button', { name: 'Timer', exact: true }).click();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('tab', { name: 'Timer & Sessions' }).click();
+    assert.equal(await page.locator('#prof-name').inputValue(), 'Pending draft');
+    const add = page.locator('.btn-add-session');
+    await add.focus();
+    await add.press('Enter');
+    const dialog = page.getByRole('dialog');
+    await dialog.waitFor();
+    assert.ok(await dialog.evaluate(el => el.contains(document.activeElement)));
+    await page.keyboard.press('Escape');
+    assert.equal(await dialog.count(), 0);
+    assert.ok(await add.evaluate(el => el === document.activeElement));
+    assert.equal(await page.locator('#prof-name').inputValue(), 'Pending draft');
+  } finally { await page.close(); }
+});
+
+test('shortcut recorders preserve Tab navigation and put focus back after cancellation', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await page.goto(`${url}/?animations=false`);
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('tab', { name: 'Shortcuts' }).click();
+    const first = page.getByRole('button', { name: 'Pause / Resume', exact: true });
+    await first.press('Tab');
+    assert.equal(await first.getAttribute('aria-pressed'), 'false');
+    await first.press('Enter');
+    assert.equal(await first.getAttribute('aria-pressed'), 'true');
+    await page.keyboard.press('Tab');
+    const cancel = page.getByRole('button', { name: 'Cancel recording' });
+    assert.ok(await cancel.evaluate(el => el === document.activeElement));
+    await page.keyboard.press('Enter');
+    assert.ok(await first.evaluate(el => el === document.activeElement));
+    assert.equal(await first.getAttribute('aria-pressed'), 'false');
   } finally { await page.close(); }
 });

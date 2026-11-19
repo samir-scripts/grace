@@ -12,7 +12,18 @@
 
   let { snap }: Props = $props();
 
-  let showVolume = $state(false);
+  let volumeButton: HTMLButtonElement;
+  let volumeHovered = $state(false);
+  let volumeFocused = $state(false);
+  let volumeDismissed = $state(false);
+  const showVolume = $derived((volumeHovered || volumeFocused) && !volumeDismissed);
+
+  function handleVolumeEscape(event: KeyboardEvent) {
+    if (event.key !== 'Escape' || !showVolume) return;
+    event.preventDefault();
+    volumeButton.focus();
+    volumeDismissed = true;
+  }
 
   // Local volume for immediate slider feedback — avoids waiting for the
   // async IPC round-trip before the thumb visually moves.
@@ -68,14 +79,22 @@
 
 <!-- Volume -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="volume-wrapper">
+<div
+  class="volume-wrapper"
+  onpointerenter={() => { volumeHovered = true; volumeDismissed = false; }}
+  onpointerleave={() => { volumeHovered = false; }}
+  onfocusin={() => { volumeFocused = true; volumeDismissed = false; }}
+  onfocusout={(event) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) volumeFocused = false;
+  }}
+  onkeydown={handleVolumeEscape}
+>
   <Tooltip text={localVolume === 0 ? m.tooltip_unmute() : m.tooltip_mute()}>
     <button
       class="btn-icon"
       onclick={toggleMute}
-      aria-label={localVolume === 0 ? 'Unmute' : 'Mute'}
-      onmouseenter={() => (showVolume = true)}
-      onmouseleave={() => (showVolume = false)}
+      bind:this={volumeButton}
+      aria-label={localVolume === 0 ? m.control_unmute() : m.control_mute()}
     >
       {#if localVolume === 0}
         <svg width="16" height="16" viewBox="0 0 16 16">
@@ -124,7 +143,7 @@
         value={localVolume}
         oninput={handleVolumeChange}
         class="volume-slider"
-        aria-label="Volume"
+        aria-label={m.notif_label_volume()}
       />
     </div>
   {/if}

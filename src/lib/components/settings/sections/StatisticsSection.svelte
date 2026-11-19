@@ -21,64 +21,69 @@
   let hasSwitchedTab = $state(false);
   let detailed = $state<DetailedStats | null>(null);
   let heatmap = $state<HeatmapStats | null>(null);
-  let heatmapLoaded = $state(false);
+  let detailedStatus = $state<'loading' | 'ready' | 'error'>('loading');
+  let heatmapStatus = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  let mounted = false;
+  let detailedRequest = 0;
+  let heatmapRequest = 0;
 
-  async function switchTab(tab: Tab) {
+  async function loadDetailed() {
+    const request = ++detailedRequest;
+    detailedStatus = 'loading';
+    try {
+      const result = await statsGetDetailed();
+      if (mounted && request === detailedRequest) {
+        detailed = result;
+        detailedStatus = 'ready';
+      }
+    } catch (e) {
+      if (mounted && request === detailedRequest) detailedStatus = 'error';
+      void logError(`[stats section] failed to load statistics: ${e}`);
+    }
+  }
+
+  async function loadHeatmap() {
+    const request = ++heatmapRequest;
+    heatmapStatus = 'loading';
+    try {
+      const result = await statsGetHeatmap();
+      if (mounted && request === heatmapRequest) {
+        heatmap = result;
+        heatmapStatus = 'ready';
+      }
+    } catch (e) {
+      if (mounted && request === heatmapRequest) heatmapStatus = 'error';
+      void logError(`[stats section] failed to load heatmap: ${e}`);
+    }
+  }
+
+  function switchTab(tab: Tab) {
     if (tab !== activeTab) {
       hasSwitchedTab = true;
       activeTab = tab;
     }
-    if (tab === 'alltime' && !heatmapLoaded) {
-      try {
-        heatmap = await statsGetHeatmap();
-        heatmapLoaded = true;
-      } catch (e) {
-        await logError(`[stats section] failed to load heatmap: ${e}`);
-      }
-    }
+    if (tab === 'alltime' && heatmapStatus === 'idle') void loadHeatmap();
   }
 
   onMount(() => {
     const cleanups: UnlistenFn[] = [];
-    let mounted = true;
-
-    (async () => {
-      try {
-        const res = await statsGetDetailed();
-        if (mounted) detailed = res;
-      } catch (e) {
-        await logError(`[stats section] initialization failed: ${e}`);
-      }
-
-      const unlisteners = await Promise.all([
-        onRoundChange(async () => {
-          try {
-            detailed = await statsGetDetailed();
-            if (heatmapLoaded) heatmap = await statsGetHeatmap();
-          } catch (e) {
-            await logError(`[stats section] failed to refresh stats after round change: ${e}`);
-          }
-        }),
-        onSessionsCleared(async () => {
-          try {
-            detailed = await statsGetDetailed();
-            if (heatmapLoaded) heatmap = await statsGetHeatmap();
-          } catch (e) {
-            await logError(`[stats section] failed to refresh stats after session clear: ${e}`);
-          }
-        })
-      ]);
-
-      if (!mounted) {
-        for (const fn of unlisteners) fn();
-      } else {
-        cleanups.push(...unlisteners);
-      }
-    })();
-
+    mounted = true;
+    void loadDetailed();
+    const refresh = () => {
+      void loadDetailed();
+      if (heatmapStatus !== 'idle') void loadHeatmap();
+    };
+    void Promise.all([onRoundChange(refresh), onSessionsCleared(refresh)])
+      .then((unlisteners) => {
+        if (mounted) cleanups.push(...unlisteners);
+        else unlisteners.forEach((fn) => fn());
+      })
+      .catch((e) => void logError(`[stats section] failed to subscribe: ${e}`));
     return () => {
       mounted = false;
-      for (const fn of cleanups) fn();
+      detailedRequest++;
+      heatmapRequest++;
+      cleanups.forEach((fn) => fn());
     };
   });
 </script>
@@ -90,6 +95,7 @@
       type="button"
       class="tab"
       class:active={activeTab === 'today'}
+      aria-pressed={activeTab === 'today'}
       onclick={() => switchTab('today')}
     >
       {m.stats_tab_today()}
@@ -98,6 +104,7 @@
       type="button"
       class="tab"
       class:active={activeTab === 'week'}
+      aria-pressed={activeTab === 'week'}
       onclick={() => switchTab('week')}
     >
       {m.stats_tab_week()}
@@ -106,6 +113,7 @@
       type="button"
       class="tab"
       class:active={activeTab === 'alltime'}
+      aria-pressed={activeTab === 'alltime'}
       onclick={() => switchTab('alltime')}
     >
       {m.stats_tab_alltime()}
@@ -115,7 +123,16 @@
   <!-- Content -->
   {#key activeTab}
     <div class="content" class:view-enter={hasSwitchedTab}>
-      {#if activeTab === 'today'}
+      {#if (activeTab === 'alltime' ? heatmapStatus : detailedStatus) === 'loading' || (activeTab === 'alltime' && heatmapStatus === 'idle')}
+        <div class="state" role="status">{m.stats_loading()}</div>
+      {:else if (activeTab === 'alltime' ? heatmapStatus : detailedStatus) === 'error'}
+        <div class="state" role="alert">
+          <span>{m.stats_load_error()}</span>
+          <button type="button" onclick={() => (activeTab === 'alltime' ? loadHeatmap() : loadDetailed())}
+            >{m.stats_retry()}</button
+          >
+        </div>
+      {:else if activeTab === 'today'}
         <DailyView today={detailed?.today ?? null} />
       {:else if activeTab === 'week'}
         <WeeklyView week={detailed?.week ?? null} streak={detailed?.streak ?? null} />
@@ -175,6 +192,26 @@
     color: var(--color-foreground);
     font-weight: 500;
     border-bottom-color: var(--color-focus-round);
+  }
+
+  .state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--color-foreground-darker);
+    font: var(--type-support);
+  }
+  .state button {
+    font: inherit;
+    color: var(--color-foreground);
+    background: var(--color-background-light);
+    border: 1px solid var(--color-separator);
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
   }
 
   /* ── Content ───────────────────────────────────────────── */
