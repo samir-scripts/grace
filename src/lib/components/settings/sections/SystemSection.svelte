@@ -3,6 +3,7 @@
   import { settings } from '$lib/stores/settings';
   import { setSetting, resetSettings, clearSessionHistory, traySupported } from '$lib/ipc';
   import SettingsToggle from '$lib/components/settings/SettingsToggle.svelte';
+  import ThemedSelect from '$lib/components/ThemedSelect.svelte';
   import * as m from '$paraglide/messages.js';
   import { setLocale } from '$lib/locale.svelte.js';
   import { isMac, isLinux } from '$lib/utils/platform';
@@ -33,28 +34,12 @@
     localPort = String($settings.websocket_port);
   });
 
-  let langOpen = $state(false);
-  let langEl: HTMLElement | undefined;
-
-  const selectedLabel = $derived(
-    LANGUAGES.find((l) => l.value === $settings.language)?.label ?? 'Auto'
-  );
-
   async function selectLanguage(value: string) {
-    langOpen = false;
     const updated = await setSetting('language', value);
     settings.set(updated);
     setLocale(value);
   }
 
-  $effect(() => {
-    if (!langOpen) return;
-    function onOutside(e: MouseEvent) {
-      if (langEl && !langEl.contains(e.target as Node)) langOpen = false;
-    }
-    window.addEventListener('mousedown', onOutside);
-    return () => window.removeEventListener('mousedown', onOutside);
-  });
 
   let confirmingReset = $state(false);
   let confirmingClear = $state(false);
@@ -119,52 +104,7 @@
   <div class="group-heading">{m.system_group_language()}</div>
 
   <div class="lang-row">
-    <div class="lang-dropdown" bind:this={langEl}>
-      <button
-        class="lang-trigger"
-        class:open={langOpen}
-        onclick={() => (langOpen = !langOpen)}
-        onkeydown={(e) => {
-          if (e.key === 'Escape') langOpen = false;
-        }}
-      >
-        <span>{selectedLabel}</span>
-        <svg
-          class="chevron"
-          class:open={langOpen}
-          width="10"
-          height="6"
-          viewBox="0 0 10 6"
-          aria-hidden="true"
-        >
-          <polyline
-            points="0,0.5 5,5.5 10,0.5"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </button>
-
-      {#if langOpen}
-        <ul class="lang-menu" role="listbox">
-          {#each LANGUAGES as lang (lang.value)}
-            <!-- svelte-ignore a11y_interactive_supports_focus -->
-            <li
-              class="lang-option"
-              class:selected={$settings.language === lang.value}
-              role="option"
-              aria-selected={$settings.language === lang.value}
-              onmousedown={() => selectLanguage(lang.value)}
-            >
-              {lang.label}
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </div>
+    <ThemedSelect id="language-select" label={m.system_group_language()} value={$settings.language} options={LANGUAGES} onchange={selectLanguage} />
   </div>
 
   <div class="group-heading">{m.system_group_updates()}</div>
@@ -339,78 +279,6 @@
   .lang-row {
     padding: 10px 20px;
     border-bottom: 1px solid var(--color-separator);
-  }
-
-  .lang-dropdown {
-    position: relative;
-  }
-
-  .lang-trigger {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    background: var(--color-hover);
-    border: 1px solid color-mix(in oklch, var(--color-foreground) 18%, transparent);
-    border-radius: 4px;
-    color: var(--color-foreground);
-    font: var(--type-control);
-    letter-spacing: 0;
-    padding: 6px 10px;
-    cursor: pointer;
-    outline: none;
-    transition: border-color 0.15s;
-    text-align: left;
-  }
-
-  .lang-trigger:hover,
-  .lang-trigger:focus,
-  .lang-trigger.open {
-    border-color: var(--color-accent);
-  }
-
-  .chevron {
-    flex-shrink: 0;
-    margin-left: 6px;
-    color: var(--color-foreground-darker, var(--color-foreground));
-    transition: transform 0.15s;
-  }
-
-  .chevron.open {
-    transform: rotate(180deg);
-  }
-
-  .lang-menu {
-    position: absolute;
-    top: calc(100% + 3px);
-    left: 0;
-    right: 0;
-    background: var(--color-background-light);
-    border: 1px solid color-mix(in oklch, var(--color-foreground) 15%, transparent);
-    border-radius: 4px;
-    box-shadow: 0 4px 16px color-mix(in oklch, black 20%, transparent);
-    z-index: 200;
-    list-style: none;
-    margin: 0;
-    padding: 3px 0;
-  }
-
-  .lang-option {
-    padding: 7px 12px;
-    font: var(--type-control);
-    letter-spacing: 0;
-    color: var(--color-foreground);
-    cursor: pointer;
-    transition: background 0.1s;
-  }
-
-  .lang-option:hover {
-    background: var(--color-hover);
-  }
-
-  .lang-option.selected {
-    color: var(--color-foreground);
-    font-weight: 500;
   }
 
   .data-group {

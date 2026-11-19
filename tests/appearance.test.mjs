@@ -892,3 +892,37 @@ test('shortcut recorders preserve Tab navigation and put focus back after cancel
     assert.equal(await first.getAttribute('aria-pressed'), 'false');
   } finally { await page.close(); }
 });
+
+test('language selection consumes Escape and applies the selected document language', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await page.goto(`${url}/?animations=false`);
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('tab', { name: 'System' }).click();
+    const language = page.locator('#language-select');
+    await language.press('ArrowDown');
+    await language.press('Escape');
+    assert.equal(await language.getAttribute('aria-expanded'), 'false');
+    await language.press('d');
+    await language.press('Enter');
+    await page.waitForFunction(() => document.documentElement.lang === 'de');
+  } finally { await page.close(); }
+});
+
+test('a failed palette save restores the active palette and leaves a retryable control', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await appearance(page);
+    const mode = page.getByRole('button', { name: 'Light', exact: true });
+    const palette = () => page.evaluate(() => document.documentElement.style.getPropertyValue('--color-background'));
+    const before = await palette();
+    await page.evaluate(() => window.__motionTest.setNextSaveError('Injected palette save failure'));
+    await mode.click();
+    await page.getByRole('alert').waitFor();
+    assert.equal(await palette(), before);
+    assert.equal(await mode.getAttribute('aria-pressed'), 'false');
+    await mode.click();
+    await page.waitForFunction(() => document.querySelector('.mode-btn[aria-label="Light"]').getAttribute('aria-pressed') === 'true');
+    assert.notEqual(await palette(), before);
+  } finally { await page.close(); }
+});
