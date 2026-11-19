@@ -119,7 +119,7 @@ pub fn remove(conn: &Connection, app_data: &Path, id: &str) -> Result<Settings, 
     let result = (|| {
         let tx = conn.unchecked_transaction().map_err(|_| "Could not remove font")?;
         tx.execute("DELETE FROM imported_fonts WHERE id = ?1", [id]).map_err(|_| "Could not remove font")?;
-        tx.execute("UPDATE settings SET value = 'mona-sans' WHERE key = 'font_pack' AND value = ?1", [format!("custom:{id}")]).map_err(|_| "Could not update font selection")?;
+        tx.execute("UPDATE settings SET value = ?1 WHERE key = 'font_pack' AND value = ?2", params![Settings::default().font_pack, format!("custom:{id}")]).map_err(|_| "Could not update font selection")?;
         let snapshot = settings::load(&tx).map_err(|_| "Could not load settings")?;
         fs::remove_file(&tombstone).map_err(|_| "Could not remove font file")?;
         if tx.commit().is_err() {
@@ -169,8 +169,9 @@ mod tests {
         settings::validate_appearance(&f.conn, "font_pack", &selected).unwrap();
         settings::save_setting(&f.conn, "font_pack", &selected).unwrap();
         assert_eq!(settings::load(&f.conn).unwrap().font_pack, selected);
-        assert_eq!(remove(&f.conn, &f.dir, &a.id).unwrap().font_pack, "mona-sans");
-        assert_eq!(list(&f.conn).unwrap(), vec![b]);
+        assert_eq!(remove(&f.conn, &f.dir, &b.id).unwrap().font_pack, selected);
+        assert_eq!(remove(&f.conn, &f.dir, &a.id).unwrap().font_pack, "inter");
+        assert!(list(&f.conn).unwrap().is_empty());
     }
 
     #[test]
@@ -220,7 +221,7 @@ mod tests {
         fs::write(f.dir.join("fonts"), b"not a directory").unwrap();
         assert!(import(&f.conn, &f.dir, &source).is_err());
         assert!(list(&f.conn).unwrap().is_empty());
-        assert_eq!(settings::load(&f.conn).unwrap().font_pack, "mona-sans");
+        assert_eq!(settings::load(&f.conn).unwrap().font_pack, "inter");
     }
 
     #[test]

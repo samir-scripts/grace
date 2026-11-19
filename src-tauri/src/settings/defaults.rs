@@ -19,7 +19,7 @@ pub const DEFAULTS: &[(&str, &str)] = &[
     ("theme_dark", "Pomotroid"),
     ("ui_style", "pomotroid"),
     ("glass_transparency", "100"),
-    ("font_pack", "mona-sans"),
+    ("font_pack", "inter"),
     ("animations_enabled", "true"),
     ("tick_sounds_work", "false"),
     ("volume", "100"),

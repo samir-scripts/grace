@@ -3,7 +3,7 @@
 
 /* ---------------------------------------------------------------------------
    Embedded variable fonts
-   font-display: block — app is offline-first, no FOUT risk
+   Local fonts load before the native window appears; swap provides fallback elsewhere.
    --------------------------------------------------------------------------- */
 
 @font-face {
@@ -12,39 +12,49 @@
   font-weight: 200 900;
   font-stretch: 75% 125%;
   font-style: normal;
-  font-display: block;
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'Mona Sans Mono';
   src: url('/fonts/MonaSansMonoVF.woff2') format('woff2');
   font-weight: 200 900;
-  font-stretch: 75% 125%;
-  font-display: block;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'Inter';
   src: url('/fonts/InterVF.woff2') format('woff2');
   font-weight: 100 900;
-  font-display: block;
+  font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: 'Roboto';
   src: url('/fonts/RobotoVF.woff2') format('woff2');
   font-weight: 100 900;
-  font-display: block;
+  font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: 'JetBrains Mono';
   src: url('/fonts/JetBrainsMonoVF.woff2') format('woff2');
   font-weight: 100 800;
-  font-display: block;
+  font-style: normal;
+  font-display: swap;
 }
 
 :root {
-  --font-ui: 'Mona Sans', system-ui, sans-serif;
-  --font-mono: 'Mona Sans Mono', monospace;
+  --font-ui: 'Inter', 'Mona Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Mona Sans Mono', monospace;
+  --type-control: 400 .8125rem / 1.125rem var(--font-ui);
+  --type-body: 400 .8125rem / 1.25rem var(--font-ui);
+  --type-support: 400 .75rem / 1.125rem var(--font-ui);
+  --type-heading: 600 .875rem / 1.25rem var(--font-ui);
+  --type-eyebrow: 500 .6875rem / 1rem var(--font-ui);
+  --type-code: 400 .75rem / 1.125rem var(--font-mono);
+  --type-timer: 400 2.8rem / 1 var(--font-mono);
   --timer-dial-width: 220px;
   --timer-dial-height: 220px;
   /* Theme colors (defaults; overridden by the active theme at runtime) */
@@ -93,10 +103,13 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  font-family: var(--font-ui);
   background-color: var(--color-background);
   color: var(--color-foreground);
   user-select: none;
+}
+
+body {
+  font: var(--type-control);
 }
 /* ---------------------------------------------------------------------------
    Theme-aware Scrollbars

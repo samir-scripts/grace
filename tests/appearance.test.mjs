@@ -101,7 +101,7 @@ test('imported fonts decode, survive reload and removal restores the default fac
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await page.getByRole('tab', { name: 'Appearance', exact: true }).click();
     await page.getByRole('button', { name: 'Remove Imported', exact: true }).click();
-    await page.waitForFunction(() => getComputedStyle(document.body).fontFamily.startsWith('\"Mona Sans\"'));
+    await page.waitForFunction(() => getComputedStyle(document.body).fontFamily.startsWith('Inter'));
     assert.equal(await page.getByRole('button', { name: 'Remove Imported', exact: true }).count(), 0);
     assert.equal(await page.evaluate(family => [...document.fonts].some(face => face.family === family), importedFamily), false);
   } finally { await page.close(); }
@@ -116,7 +116,7 @@ test('undecodable imports are rolled back without changing the selected font', a
     await page.getByRole('button', { name: 'Import Font', exact: true }).click();
     await page.getByRole('alert').waitFor();
     assert.equal(await page.getByRole('button', { name: 'Remove Imported', exact: true }).count(), 0);
-    assert.match(await page.getByRole('combobox', { name: 'Font', exact: true }).innerText(), /Mona Sans/);
+    assert.match(await page.getByRole('combobox', { name: 'Font', exact: true }).innerText(), /Inter/);
   } finally { await page.close(); }
 });
 
@@ -134,6 +134,26 @@ test('all bundled font packs decode locally without remote font requests', async
       assert.equal(await page.evaluate(family => document.fonts.check(`16px \"${family}\"`), name), true);
     }
     assert.deepEqual(remoteFonts, []);
+  } finally { await page.close(); }
+});
+
+test('Inter selection loads Inter and JetBrains Mono for the timer', async () => {
+  const page = await browser.newPage({ viewport: { width: 840, height: 600 } });
+  try {
+    await appearance(page);
+    await choose(page, 'Font', 'Inter');
+    await page.getByRole('button', { name: 'Timer', exact: true }).click();
+    await page.locator('.time').waitFor();
+    const fonts = await page.evaluate(() => ({
+      ui: getComputedStyle(document.body).fontFamily,
+      timer: getComputedStyle(document.querySelector('.time')).fontFamily,
+      inter: [...document.fonts].some(face => face.family === 'Inter' && face.status === 'loaded'),
+      mono: [...document.fonts].some(face => face.family === 'JetBrains Mono' && face.status === 'loaded'),
+    }));
+    assert.match(fonts.ui, /^"?Inter"?/);
+    assert.match(fonts.timer, /^"?JetBrains Mono"?/);
+    assert.equal(fonts.inter, true);
+    assert.equal(fonts.mono, true);
   } finally { await page.close(); }
 });
 
@@ -244,6 +264,59 @@ for (const mode of ['normal', 'disabled', 'reduced']) {
     } finally { await page.close(); }
   });
 }
+
+test('timer digits remain centered and stable with a readable regular weight', async () => {
+  const page = await browser.newPage({ viewport: { width: 360, height: 478 }, reducedMotion: 'reduce' });
+  try {
+    await startTimerFixture(page);
+    const measurements = [];
+    for (const [total, expected] of [[671, '11:11'], [0, '00:00'], [1500, '25:00'], [5288, '88:08']]) {
+      await page.evaluate(total_secs => window.__motionTest.emit('timer:tick', { elapsed_secs: 0, total_secs }), total);
+      await page.waitForFunction(text => document.querySelector('.time')?.textContent === text, expected);
+      measurements.push(await page.locator('.time').evaluate(el => {
+        const time = el.getBoundingClientRect(), container = el.parentElement.getBoundingClientRect();
+        return { width: time.width, center: (time.left + time.right - container.left - container.right) / 2,
+          weight: Number(getComputedStyle(el).fontWeight), size: parseFloat(getComputedStyle(el).fontSize) };
+      }));
+    }
+    for (const value of measurements) {
+      assert.ok(Math.abs(value.width - measurements[0].width) <= 1);
+      assert.ok(Math.abs(value.center) <= 1);
+      assert.ok(value.weight >= 400, `timer weight ${value.weight} is too light`);
+      assert.ok(Math.abs(value.size - 44.8) < 0.1, `timer size ${value.size} changed with the root font`);
+    }
+  } finally { await page.close(); }
+});
+
+test('built-in and imported font timers fit at compact and enlarged sizes', async () => {
+  const page = await browser.newPage({ viewport: { width: 360, height: 478 }, reducedMotion: 'reduce' });
+  try {
+    await appearance(page);
+    await page.getByRole('button', { name: 'Import Font', exact: true }).click();
+    await page.waitForFunction(() => getComputedStyle(document.body).fontFamily.includes('GraceCustom-'));
+    const imported = await page.evaluate(() => sessionStorage.getItem('appearance-font'));
+    await page.getByRole('button', { name: 'Timer', exact: true }).click();
+    for (const pack of ['mona-sans', 'inter', 'roboto', 'jetbrains-mono', imported]) {
+      for (const ui_style of ['pomotroid', 'blocky', 'glass']) {
+        await page.evaluate(({ font_pack, ui_style }) => window.__motionTest.emit('settings:changed', { font_pack, ui_style }), { font_pack: pack, ui_style });
+        await page.waitForFunction(style => document.documentElement.dataset.uiStyle === style, ui_style);
+        await page.evaluate(() => document.fonts.ready);
+        for (const [width, height] of [[360, 478], [240, 240], [299, 299], [300, 300], [720, 840], [1200, 800]]) {
+          await page.setViewportSize({ width, height });
+          for (const [total, expected] of [[671, '11:11'], [1500, '25:00'], [7200, '120:00']]) {
+            await page.evaluate(total_secs => window.__motionTest.emit('timer:tick', { elapsed_secs: 0, total_secs }), total);
+            await page.waitForFunction(text => document.querySelector('.time')?.textContent === text, expected);
+            const geometry = await page.locator('.time').evaluate(el => {
+              const time = el.getBoundingClientRect(), dial = document.querySelector('.dial').getBoundingClientRect();
+              return { left: time.left - dial.left, right: dial.right - time.right };
+            });
+            assert.ok(geometry.left >= 0 && geometry.right >= 0, `${pack} ${ui_style} ${width}x${height} ${expected}: ${JSON.stringify(geometry)}`);
+          }
+        }
+      }
+    }
+  } finally { await page.close(); }
+});
 
 test('Blocky ring gives full-size digits breathing room without crowding compact controls', async () => {
   const page = await browser.newPage({ viewport: { width: 360, height: 478 }, reducedMotion: 'reduce' });

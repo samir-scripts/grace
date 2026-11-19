@@ -184,9 +184,8 @@
 
   .round-label {
     color: var(--color-foreground);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     /* Collapse the gap above: the flex gap already provides spacing from the dial. */
     margin-top: -8px;

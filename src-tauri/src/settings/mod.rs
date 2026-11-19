@@ -84,7 +84,7 @@ impl Default for Settings {
             theme_dark: "Pomotroid".to_string(),
             ui_style: "pomotroid".to_string(),
             glass_transparency: 100,
-            font_pack: "mona-sans".to_string(),
+            font_pack: "inter".to_string(),
             tick_sounds_during_work: false,
             animations_enabled: true,
             tick_sounds_during_break: false,
@@ -336,7 +336,7 @@ mod tests {
     fn appearance_values_validate_fallback_and_reset() {
         let conn = setup();
         assert_eq!(load(&conn).unwrap().ui_style, "pomotroid");
-        assert_eq!(load(&conn).unwrap().font_pack, "mona-sans");
+        assert_eq!(load(&conn).unwrap().font_pack, "inter");
         save_setting(&conn, "theme_mode", "dark").unwrap();
         seed_defaults(&conn).unwrap();
         assert_eq!(load(&conn).unwrap().theme_mode, "dark");
@@ -353,13 +353,18 @@ mod tests {
         save_setting(&conn, "font_pack", &missing).unwrap();
         save_setting(&conn, "ui_style", "invalid").unwrap();
         let loaded = load(&conn).unwrap();
-        assert_eq!(loaded.font_pack, "mona-sans");
+        assert_eq!(loaded.font_pack, "inter");
         assert_eq!(loaded.ui_style, "pomotroid");
         assert_eq!(get_setting(&conn, "font_pack").unwrap(), missing);
         conn.execute("DELETE FROM settings", []).unwrap();
         seed_defaults(&conn).unwrap();
         assert_eq!(load(&conn).unwrap().ui_style, "pomotroid");
-        assert_eq!(load(&conn).unwrap().font_pack, "mona-sans");
+        assert_eq!(load(&conn).unwrap().font_pack, "inter");
+        for selected in ["mona-sans", "inter", "roboto", "jetbrains-mono"] {
+            save_setting(&conn, "font_pack", selected).unwrap();
+            seed_defaults(&conn).unwrap();
+            assert_eq!(load(&conn).unwrap().font_pack, selected);
+        }
     }
 
     #[test]

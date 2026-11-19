@@ -321,6 +321,7 @@
   .picker-toolbar {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
   }
 
@@ -333,10 +334,10 @@
     border-radius: 6px;
     padding: 6px 12px;
     color: var(--color-foreground);
-    font-size: 11px;
+    font: var(--type-control);
     font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
-    font-family: inherit;
     transition: background 140ms ease-out, border-color 140ms ease-out, transform 100ms ease-out;
   }
 
@@ -415,7 +416,7 @@
     gap: 8px;
     width: 100%;
     max-height: 320px;
-    overflow: hidden;
+    overflow: auto;
   }
 
   .search-box {
@@ -438,9 +439,9 @@
     border: 1px solid var(--color-separator);
     border-radius: 6px;
     padding: 6px 26px 6px 28px;
-    font-size: 11px;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground);
-    font-family: inherit;
     outline: none;
     transition: border-color 140ms ease-out;
   }
@@ -462,13 +463,15 @@
   }
 
   .partial-warning {
-    font-size: 10px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground);
     padding: 2px 4px;
   }
 
   .apps-list {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     display: flex;
@@ -546,8 +549,9 @@
   }
 
   .app-title {
-    font-size: 11px;
+    font: var(--type-control);
     font-weight: 500;
+    letter-spacing: 0;
     color: var(--color-foreground);
     white-space: nowrap;
     overflow: hidden;
@@ -555,7 +559,8 @@
   }
 
   .app-meta {
-    font-size: 9px;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
     white-space: nowrap;
     overflow: hidden;
@@ -571,7 +576,8 @@
     flex-direction: column;
     gap: 6px;
     padding: 24px 12px;
-    font-size: 11px;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
     text-align: center;
   }
@@ -595,17 +601,21 @@
     color: var(--color-foreground);
     border-radius: 4px;
     padding: 3px 8px;
-    font-size: 10px;
+    font: var(--type-control);
+    letter-spacing: 0;
     cursor: pointer;
   }
 
   .picker-footer {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
     justify-content: space-between;
     padding-top: 4px;
     border-top: 1px solid var(--color-separator);
-    font-size: 10px;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 
@@ -615,8 +625,9 @@
     border: none;
     border-radius: 4px;
     padding: 3px 10px;
-    font-size: 10px;
-    font-weight: 600;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
     transition: transform 100ms ease-out;
   }
@@ -645,7 +656,8 @@
     padding: 3px 7px 3px 5px;
     background: var(--color-background-light);
     border-radius: 5px;
-    font-size: 11px;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground);
     max-width: 100%;
     min-width: 0;
@@ -697,7 +709,8 @@
   }
 
   .empty-hint {
-    font-size: 11px;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 

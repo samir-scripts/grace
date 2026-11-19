@@ -112,3 +112,37 @@ test('statistics layouts keep their content readable at desktop sizes', async ()
     } finally { await context.close(); }
   }
 });
+
+test('yearly heatmap labels do not overlap or clip across locales and font packs', async () => {
+  const context = await browser.newContext({ viewport: { width: 720, height: 480 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/?animations=false`);
+    await page.getByRole('button', { name: 'Statistics' }).click();
+    await page.getByRole('button', { name: 'All Time', exact: true }).click();
+    await page.waitForSelector('.heatmap-svg .month-label');
+    for (const language of ['en', 'de', 'es', 'fr', 'ja', 'pt', 'tr', 'zh']) {
+      for (const font_pack of ['mona-sans', 'inter', 'roboto', 'jetbrains-mono']) {
+        await page.evaluate(async ({ language, font_pack }) => {
+          await window.__motionTest.emit('settings:changed', { language, font_pack });
+          await document.fonts.ready;
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        }, { language, font_pack });
+        const problems = await page.locator('.heatmap-svg').evaluate(svg => {
+          const view = svg.viewBox.baseVal, problems = [];
+          const months = [...svg.querySelectorAll('.month-label')].map(el => ({ label: el.textContent, box: el.getBBox() }));
+          const days = [...svg.querySelectorAll('.dow-label')].map(el => ({ label: el.textContent, box: el.getBBox() }));
+          for (const { label, box } of [...months, ...days]) {
+            if (box.x < view.x - 0.1 || box.x + box.width > view.x + view.width + 0.1 || box.y < view.y - 0.1)
+              problems.push(`clipped ${label}`);
+          }
+          for (let i = 1; i < months.length; i++)
+            if (months[i - 1].box.x + months[i - 1].box.width > months[i].box.x + 0.1)
+              problems.push(`overlap ${months[i - 1].label}/${months[i].label}`);
+          return problems;
+        });
+        assert.deepEqual(problems, [], `${language}/${font_pack}: ${problems.join(', ')}`);
+      }
+    }
+  } finally { await context.close(); }
+});

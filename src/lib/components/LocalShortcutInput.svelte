@@ -55,8 +55,8 @@
     border-radius: 4px;
     color: var(--color-foreground);
     cursor: pointer;
-    font-size: 0.75rem;
-    font-family: var(--font-mono);
+    font: var(--type-code);
+    letter-spacing: 0;
     padding: 4px 8px;
     text-align: center;
     outline: none;
@@ -71,7 +71,7 @@
 
   .shortcut-input::placeholder {
     color: var(--color-foreground-darker, var(--color-foreground));
-    font-family: system-ui, sans-serif;
-    font-size: 0.7rem;
+    font: var(--type-support);
+    letter-spacing: 0;
   }
 </style>
