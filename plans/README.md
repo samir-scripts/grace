@@ -10,9 +10,11 @@
 
 [Documentation and native demos](grace-documentation-refresh.md) — reviewed desktop guide and historical local recordings.
 
-Chrome 1.1.2 became publicly available. Chrome 1.1.4 was submitted for review on November 17, 2026, with automatic publication after approval. [Submission and native verification](evidence/chrome-store-1.1.4/README.md).
+Chrome 1.1.4 was submitted for automatic publication on November 17, 2026, and the Web Store build paired during the first nightly's scoped macOS smoke. [Submission record](evidence/chrome-store-1.1.4/README.md)
 
-The first nightly candidate includes the AMO-signed Firefox 1.1.5 payload, SHA-256 `43b0d9ab3e9d8f597297c058ad0e6316e3fa6898a0f49f39dae41e4ec41a20f5`. Strict signed packaging and Chrome integration passed. The Chrome 1.1.4 release ZIP matched all 23 entries in the submitted archive. [Companion integration](https://github.com/samir-scripts/grace/pull/12)
+[First published nightly](https://github.com/samir-scripts/grace/releases/tag/v1.7.2-nightly.20261119) — manual prerelease from `dev` merge `912ba89`, with signed packages built at metadata child `6796b03` by [Release](https://github.com/samir-scripts/grace/actions/runs/44448779483). In a disposable macOS ARM64 guest the DMG launched, preserved Glass/font settings across relaunch, and paired with Web Store Chrome 1.1.4 and signed Firefox 1.1.5 for a blocking round and natural restoration. This was not an in-place upgrade, Intel, or Windows/Ubuntu x64 runtime test. The stable updater feed was unchanged.
+
+The nightly bundles AMO-signed Firefox 1.1.5 (SHA-256 `43b0d9ab3e9d8f597297c058ad0e6316e3fa6898a0f49f39dae41e4ec41a20f5`). Strict signed packaging and Chrome integration passed. The Chrome 1.1.4 ZIP matched all 23 submitted entries. [Companion integration](https://github.com/samir-scripts/grace/pull/12)
 
 The dedicated macOS preview at `a79270b` retained Glass transparency at 0%, 50% and 100% across relaunches. Compact controls, draft retention, keyboard dismissal and date navigation were exercised. The follow-up at `ed98c5b` verified picker focus restoration and chart navigation in the packaged app. The Linux opaque fallback was checked on ARM64 at `a79270b`. Windows and Ubuntu x64 runtime acceptance remains open. [Packaged desktop checks](https://github.com/samir-scripts/grace/pull/14)
 

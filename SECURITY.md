@@ -4,6 +4,8 @@
 
 Release automation requires a verified detached Tauri/Minisign signature (`.sig`) for every published desktop package. Releases include `grace-updater.pub`, the decoded public verification key, and `SHA256SUMS`. Checksums detect changed bytes; verify the signature before installing.
 
+Use `shasum -a 256 -c SHA256SUMS` on macOS, `sha256sum -c SHA256SUMS` on Linux, or `Get-FileHash PACKAGE -Algorithm SHA256` in PowerShell and compare the exact filename's entry. If downloading only one package, compare its digest against its own entry rather than checking the full inventory.
+
 Obtain the package, its matching `.sig`, and `grace-updater.pub` from the same versioned Grace release. Compare the public key with the updater key in `src-tauri/tauri.conf.json` at that release's source revision; that configuration stores the same key as base64-encoded text. The public-key fingerprint is recorded in the release plan.
 
 Tauri wraps its Minisign signature text in base64. With Python 3 and [Minisign](https://jedisct1.github.io/minisign/) installed, replace `PACKAGE` with the downloaded filename:
@@ -15,7 +17,7 @@ minisign -Vm PACKAGE -p grace-updater.pub -x PACKAGE.minisig
 
 A successful verification authenticates the exact package bytes against that public key. Missing, invalid, or mismatched signatures must stop installation. Do not treat a checksum alone as publisher authentication.
 
-These detached signatures are distinct from Windows Authenticode, Apple Developer ID signing/notarization, and Linux repository signing. They do not establish operating-system publisher trust or prove native runtime acceptance. Windows x64 and Ubuntu x64 beta blocking and recovery remain unverified / deferred to contributors.
+These detached signatures are distinct from Windows Authenticode, Apple Developer ID signing/notarization, and Linux repository signing. They do not establish operating-system publisher trust or native runtime acceptance. Windows x64 and Ubuntu x64 packaged blocking and recovery remain unverified unless a release explicitly records that evidence.
 
 ### Optional GPG signatures
 

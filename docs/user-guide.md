@@ -10,6 +10,8 @@ To try the default routine, open Grace and press **Play**. The dial starts count
 2. Select **New Session** (+) in **Timer & Sessions**, enter a name, and set the work and break durations. Set **Rounds per Cycle** to choose how many work rounds lead to a long break. Choose **Save Changes**.
 3. Return to the timer, choose the saved session, and press **Play**.
 
+Use Tab and Enter to pick a routine by keyboard. After choosing, or after pressing Escape to dismiss the choices, focus returns to the session selector.
+
 Edits stay in memory while you switch views. Choose **Save Changes** to keep them across a restart. If Grace asks whether to discard an edit, press Escape to keep editing.
 
 ![Full Grace window with the Writing session selected and a two-minute work round ready to start](media/writing-timer.webp)
@@ -39,7 +41,7 @@ Open **Emergency Exit** from the locked timer. Use **60-Second Hold** and keep p
 
 ## Change the timer’s appearance
 
-**Development build.** Blocky, Glass, font selection, and the Transparency slider are features of the current checkout. The downloadable `v1.7.2-beta.1` includes the earlier theme controls.
+The [published nightly](../README.md#install) includes Blocky, Glass, font selection and the Transparency slider. The historical `v1.7.2-beta.1` has the earlier theme controls.
 
 Open **Settings → Appearance** to select **Pomotroid**, **Blocky**, or **Glass**. Choose the font and light/dark palettes independently. Glass shows a **Transparency** slider. On systems that support native material, moving the slider lets you preview the tint. Other systems and relevant accessibility preferences use an opaque surface.
 
@@ -66,6 +68,8 @@ History is stored locally. **Settings → System** includes the action to clear 
 ## Shortcuts and integrations
 
 In **Settings → Shortcuts**, configure shortcuts for the timer. To cancel a recording by keyboard, tab to **Cancel recording** and press Enter. Local shortcuts apply while the Grace window has focus. Enable global shortcuts if you want to use them while another app is active.
+
+Tab to a **More information** button next to a setting to read its help without toggling the setting. Escape dismisses the help. Tab and keys used in modal dialogs do not run local timer shortcuts.
 
 For a local overlay or automation, enable **WebSocket Server** in **Settings → System**. The endpoint is `ws://127.0.0.1:1314/ws` by default. Use the port shown in Settings if you changed it. The connection is local and opt-in.
 
