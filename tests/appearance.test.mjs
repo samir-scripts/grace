@@ -88,6 +88,75 @@ test('blocky ring uses live timer progress at compact and normal sizes', async (
   } finally { await page.close(); }
 });
 
+test('Spanish timer controls and blocking recovery stay localized', async () => {
+  const page = await browser.newPage({ viewport: { width: 360, height: 478 }, reducedMotion: 'reduce' });
+  try {
+    await startTimerFixture(page);
+    await page.evaluate(() => window.__motionTest.emit('settings:changed', { language: 'es' }));
+    await page.getByRole('button', { name: 'Configuración', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Estadísticas', exact: true }).waitFor();
+    for (const name of ['Iniciar', 'Reiniciar ronda', 'Saltar ronda']) {
+      await page.getByRole('button', { name, exact: true }).waitFor();
+    }
+    await page.evaluate(() => window.__motionTest.emit('focus:changed', {
+      status: 'idle', current_phase: null, active_profile: null, current_work_round: 0,
+      total_work_rounds: 0, is_locked: false, blocking_active: false, unblock_during_breaks: false,
+      enforcement: { state: 'failed', applications_active: false, websites_active: false, error_code: 'lease_lost' },
+    }));
+    await page.getByRole('status').filter({ hasText: 'Se desconectó el bloqueo y se pausó el temporizador.' }).waitFor();
+    await page.getByRole('button', { name: 'Reintentar', exact: true }).waitFor();
+    await page.setViewportSize({ width: 240, height: 240 });
+    await page.locator('.mini-controls').getByRole('button', { name: 'Iniciar', exact: true }).waitFor();
+    await page.locator('.mini-controls').getByRole('button', { name: 'Saltar ronda', exact: true }).waitFor();
+  } finally { await page.close(); }
+});
+
+test('keyboard help is separate from the settings switch in both Glass modes', async () => {
+  const page = await browser.newPage({ viewport: { width: 840, height: 600 }, reducedMotion: 'reduce' });
+  try {
+    await startGlass(page);
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('tab', { name: 'System', exact: true }).click();
+    const toggle = page.getByRole('switch', { name: 'WebSocket Server', exact: true });
+    const help = page.getByRole('button', { name: 'More information', exact: true }).and(page.locator(':focus'));
+    const tooltip = page.getByRole('tooltip').filter({ hasText: 'Enables a local WebSocket server' });
+    for (const mode of ['frosted', 'opaque']) {
+      if (mode === 'opaque') await page.evaluate(() => window.__motionTest.setNativeMaterialAllowed(false));
+      await materialMode(page, mode);
+      await toggle.focus();
+      const saves = await page.evaluate(() => window.__motionTest.getSaveCount());
+      await page.keyboard.press('Tab');
+      await help.waitFor({ timeout: 5000 });
+      await tooltip.waitFor();
+      assert.equal(await help.getAttribute('aria-describedby'), await tooltip.getAttribute('id'));
+      const box = await tooltip.boundingBox();
+      const anchor = await help.boundingBox();
+      assert.ok(box.y >= 0 && box.y + box.height <= 600 && Math.abs(box.y - anchor.y) < box.height + 30);
+      assert.ok(box.x >= 0 && box.x + box.width <= 840 && anchor.x >= box.x && anchor.x <= box.x + box.width);
+      await page.keyboard.press('Enter');
+      assert.equal(await page.evaluate(() => window.__motionTest.getSaveCount()), saves);
+      await page.keyboard.press('Escape');
+      await tooltip.waitFor({ state: 'hidden' });
+      assert.equal(await help.count(), 1);
+      await toggle.focus();
+      await page.keyboard.press('Tab');
+      await tooltip.waitFor();
+      await page.getByRole('tabpanel').evaluate(el => { el.scrollTop = el.scrollHeight; });
+      await page.waitForFunction(() => {
+        const panel = document.querySelector('[role="tabpanel"]');
+        const tooltip = document.getElementById(document.activeElement?.getAttribute('aria-describedby') ?? '');
+        if (!panel || !tooltip || panel.scrollTop === 0) return false;
+        if (getComputedStyle(tooltip).visibility === 'hidden') return true;
+        const box = tooltip.getBoundingClientRect();
+        const anchor = document.activeElement.getBoundingClientRect();
+        return Math.abs(box.top - anchor.top) <= box.height + 30;
+      });
+      await toggle.click({ position: { x: 4, y: 12 } });
+      await page.waitForFunction(count => window.__motionTest.getSaveCount() > count, saves);
+    }
+  } finally { await page.close(); }
+});
+
 test('imported fonts decode, survive reload and removal restores the default face', async () => {
   const page = await browser.newPage({ viewport: { width: 840, height: 600 } });
   try {
@@ -610,12 +679,16 @@ test('Glass statistics navigation uses translucent chrome only when frosted', as
   } finally { await page.close(); }
 });
 
-test('Glass About text remains readable over a bright desktop with an accent palette', async () => {
+test('Glass About shows the Grace logo and readable text over a bright desktop', async () => {
   const page = await browser.newPage({ viewport: { width: 840, height: 600 } });
   try {
     await startGlass(page);
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await page.getByRole('tab', { name: 'About', exact: true }).click();
+    const logo = page.getByRole('img', { name: 'grace. logo', exact: true });
+    await logo.waitFor({ timeout: 5000 });
+    assert.equal(await logo.evaluate(img => img instanceof HTMLImageElement), true);
+    await logo.evaluate(img => img.decode());
     const { readFile } = await import('node:fs/promises');
     const theme = JSON.parse(await readFile(new URL('../static/themes/spandex.json', import.meta.url), 'utf8'));
     await page.evaluate(theme => window.__motionTest.emit('themes:changed', [theme]), theme);

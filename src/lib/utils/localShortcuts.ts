@@ -46,7 +46,7 @@ export interface LocalShortcutState {
  */
 export function createLocalShortcutHandler(state: LocalShortcutState): (e: KeyboardEvent) => void {
   return function handleKeydown(e: KeyboardEvent) {
-    if (e.defaultPrevented) return;
+    if (e.defaultPrevented || e.key === 'Tab') return;
 
     // Skip if a text input / shortcut capture field is focused.
     const target = e.target as HTMLElement | null;
@@ -55,8 +55,8 @@ export function createLocalShortcutHandler(state: LocalShortcutState): (e: Keybo
       if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return;
       if (tag === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
     }
-    // Skip if emergency escape modal is open.
-    if (document.querySelector('.escape-modal-backdrop')) return;
+    // Skip shortcuts while any modal dialog is open.
+    if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
 
     // Skip bare modifier keys.
     if (MODIFIER_KEYS.has(e.key)) return;

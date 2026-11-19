@@ -242,6 +242,11 @@ button:is(.btn-danger, .btn-delete, .btn-discard, .btn-remove, .remove-font, .co
   background-color: var(--color-hover) !important;
   color: var(--color-foreground) !important;
 }
+:root .settings-toggle .switch-content:hover:not(:disabled),
+:root .settings-toggle .info-icon:hover:not(:disabled) {
+  background-color: transparent !important;
+  color: var(--color-foreground) !important;
+}
 :root[data-ui-style] button:not(:disabled) {
   transition: background-color var(--transition-control), color var(--transition-control),
     border-color var(--transition-control);
@@ -301,7 +306,7 @@ button:is(.btn-danger, .btn-delete, .btn-discard, .btn-remove, .remove-font, .co
 :root[data-ui-style="glass"][data-window-material="frosted"] :is(.sidebar, .stats-section .tabs) {
   background-color: var(--glass-chrome-surface);
 }
-:root[data-ui-style="glass"][data-window-material="frosted"] :is(.themed-select, input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, .picker-trigger, .settings-view button[role="switch"], .duration-badge) {
+:root[data-ui-style="glass"][data-window-material="frosted"] :is(.themed-select, input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, .picker-trigger, .settings-toggle, .settings-view button[role="switch"]:not(.switch-content), .duration-badge) {
   background-color: var(--glass-control-surface);
   --button-hover-bg: var(--glass-selected-surface);
   --button-hover-text: var(--color-foreground);
@@ -322,7 +327,7 @@ button:is(.btn-danger, .btn-delete, .btn-discard, .btn-remove, .remove-font, .co
 :root[data-ui-style="glass"][data-window-material="frosted"] :is(.nav-item.active, .mode-btn.active, .stats-section .tab.active) {
   background-color: var(--glass-selected-surface);
 }
-:root[data-ui-style="glass"][data-window-material="frosted"] .settings-view button[role="switch"]:hover:not(:disabled) {
+:root[data-ui-style="glass"][data-window-material="frosted"] :is(.settings-toggle:hover:has(.switch-content:not(:disabled)), .settings-view button[role="switch"]:not(.switch-content):hover:not(:disabled)) {
   background-color: var(--glass-selected-surface) !important;
 }
 :root[data-ui-style="glass"][data-window-material="frosted"] .nav-item:not(.active):not(:hover) {

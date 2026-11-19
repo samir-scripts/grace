@@ -77,26 +77,7 @@
 
 <div class="section">
   <div class="hero">
-    <svg
-      version="1.2"
-      baseProfile="tiny"
-      width="64"
-      height="64"
-      viewBox="0 0 256 256"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="grace. logo"
-    >
-      <circle fill="var(--color-background-light)" cx="128" cy="128" r="126.81" />
-      <circle
-        fill="none"
-        stroke="var(--color-focus-round)"
-        stroke-width="40"
-        stroke-linecap="round"
-        cx="128"
-        cy="128"
-        r="73.31"
-      />
-    </svg>
+    <img src="/app-icon.png" width="64" height="64" alt="grace. logo" />
     <div>
       <h2 class="name">grace.</h2>
       <p class="version">Version {version}</p>
@@ -189,6 +170,10 @@
     display: flex;
     align-items: center;
     gap: 20px;
+  }
+
+  .hero img {
+    flex: none;
   }
 
   .name {

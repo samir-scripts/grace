@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$paraglide/messages.js';
   import { timerToggle, timerRestartRound, timerSkip } from '$lib/ipc';
   import { timerState } from '$lib/stores/timer';
 
@@ -7,7 +8,7 @@
 
 <div class="mini-controls">
   <!-- Restart current round -->
-  <button class="btn-side" onclick={timerRestartRound} aria-label="Restart round">
+  <button class="btn-side" onclick={timerRestartRound} aria-label={m.control_restart()}>
     <svg width="10" height="10" viewBox="0 0 16 16">
       <polygon points="15,1 6,8 15,15" fill="currentColor" />
       <rect x="1" y="1" width="3" height="14" rx="1" fill="currentColor" />
@@ -15,7 +16,7 @@
   </button>
 
   <!-- Play / Pause -->
-  <button class="play-pause" onclick={timerToggle} aria-label={state.is_running ? 'Pause' : 'Play'}>
+  <button class="play-pause" onclick={timerToggle} aria-label={state.is_running ? m.control_pause() : m.control_play()}>
     {#key state.is_running}
       <span class="icon">
         {#if state.is_running}
@@ -33,7 +34,7 @@
   </button>
 
   <!-- Skip round -->
-  <button class="btn-side" onclick={timerSkip} aria-label="Skip round">
+  <button class="btn-side" onclick={timerSkip} aria-label={m.control_skip()}>
     <svg width="10" height="10" viewBox="0 0 16 16">
       <polygon points="1,1 10,8 1,15" fill="currentColor" />
       <rect x="12" y="1" width="3" height="14" rx="1" fill="currentColor" />
