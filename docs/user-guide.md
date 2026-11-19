@@ -10,16 +10,18 @@ To try the default routine, open Grace and press **Play**. The dial starts count
 2. Select **New Session** (+) in **Timer & Sessions**, enter a name, and set the work and break durations. Set **Rounds per Cycle** to choose how many work rounds lead to a long break. Choose **Save Changes**.
 3. Return to the timer, choose the saved session, and press **Play**.
 
+Edits stay in memory while you switch views. Choose **Save Changes** to keep them across a restart. If Grace asks whether to discard an edit, press Escape to keep editing.
+
 ![Full Grace window with the Writing session selected and a two-minute work round ready to start](media/writing-timer.webp)
 
 Leave **Blocked Applications** and **Blocked Websites** empty for a timer-only session. The **Restart round** control to the left of Play restores the current countdown to its full duration and keeps its position in the cycle. A protected round keeps its blocking rules active. **Reset** is a separate action that restarts the cycle when the session allows it.
 
 ## Set up website blocking
 
-1. In **Settings → Timer & Sessions → Browser Companions**, choose **Set Up Extension** for a supported installed browser. Follow its installation steps.
+1. In **Settings → Timer & Sessions → Browser Companions**, choose **Install Chrome Companion** for Chrome or **Set Up Extension** for Firefox or Zen. If the Firefox companion is already installed, choose **Update Extension** to install the bundled version.
 2. Open the companion’s options in that browser. Read the sharing disclosure and choose **Accept & Connect**.
 3. Back in Grace, assign each newly connected profile under **Connected Browser Profiles** to its browser. Mark a profile **Required for session** if you want every session with website rules to wait for that browser.
-4. Add a domain such as `youtube.com` or `instagram.com` under **Blocked Websites**, choose **Add Domain** or press Enter, then **Save Changes** and start a focus round. Visit the domain from the paired browser to confirm the block page appears.
+4. Add a domain such as `youtube.com` or `instagram.com` under **Blocked Websites**, choose **Add Domain** or press Enter, then **Save Changes** and start a focus round. Visit the domain from the paired browser. A new Chrome navigation can show a browser message that an extension blocked the request. An already-open tab can switch to the companion’s block page.
 
 ![Chrome reports that YouTube was blocked by an extension during the Writing round](media/site-blocked.webp)
 
@@ -33,7 +35,7 @@ In **Timer & Sessions → Session Preferences**, enable **Temporarily unblock du
 
 ## Exit a protected session early
 
-Open **Emergency Exit** from the locked timer. Use **60-Second Hold** and keep pressing the control for the full count. Releasing early restarts the hold. To use a passphrase, set one before starting a protected round under **Timer & Sessions → Emergency Exit Passphrase (Optional)**. Enter at least 30 characters and choose **Save Passphrase**. When you need to exit, choose **Enter Passphrase** and confirm it twice.
+Open **Emergency Exit** from the locked timer. Use **60-Second Hold** and keep pressing the control for the full count. With keyboard focus on the hold control, hold Space. Releasing early restarts the hold. To use a passphrase, set one before starting a protected round under **Timer & Sessions → Emergency Exit Passphrase (Optional)**. Enter at least 30 characters and choose **Save Passphrase**. When you need to exit, choose **Enter Passphrase** and confirm it twice.
 
 ## Change the timer’s appearance
 
@@ -57,11 +59,13 @@ Open the chart icon in the timer titlebar after completing a work round.
 | **This Week** | Recent activity by day, the week’s total rounds, and the current streak. |
 | **All Time** | Total work rounds, focus hours, best streak, and a year-by-year activity heatmap. |
 
+Focus the annual heatmap and use Left or Right to move one week, or Up or Down to move one day. Grace announces the selected date and its completed rounds.
+
 History is stored locally. **Settings → System** includes the action to clear timer history.
 
 ## Shortcuts and integrations
 
-In **Settings → Shortcuts**, configure shortcuts for the timer. Local shortcuts apply while the Grace window has focus. Enable global shortcuts if you want to use them while another app is active.
+In **Settings → Shortcuts**, configure shortcuts for the timer. To cancel a recording by keyboard, tab to **Cancel recording** and press Enter. Local shortcuts apply while the Grace window has focus. Enable global shortcuts if you want to use them while another app is active.
 
 For a local overlay or automation, enable **WebSocket Server** in **Settings → System**. The endpoint is `ws://127.0.0.1:1314/ws` by default. Use the port shown in Settings if you changed it. The connection is local and opt-in.
 

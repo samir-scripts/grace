@@ -48,7 +48,7 @@ with this extension; updating the extension alone is insufficient.
 1. Run `node scripts/build-browser-extensions.mjs` to generate `extensions/dist/firefox`.
 2. Open `about:debugging#/runtime/this-firefox` in Firefox or Zen.
 3. Click **Load Temporary Add-on...** and select `extensions/dist/firefox/manifest.json`.
-4. Open the extension Options, paste your pairing token, and save.
+4. Register this browser in Grace’s Browser Companions settings. Open the extension options and choose **Accept & connect** to pair automatically. If automatic pairing needs a manual token, use the advanced controls after consent.
 
 Development builds (`npm run dev` or `node scripts/build-browser-extensions.mjs --development`) generate an unsigned package from current source, even when a signed artifact is present. The signed artifact is left untouched. The default builder still verifies any signed artifact before using it.
 
@@ -61,7 +61,7 @@ Production frontend and Tauri builds require the authorized unlisted signed XPI
 at `extensions/signed/firefox/focus@pomotroid.local.xpi` and its
 `provenance.json`. The build checks the artifact hash, identity and source
 payload and preserves its bytes; it does not verify Mozilla's signature.
-Update and re-sign the companion when its source changes.
+The November 18 development build includes the AMO-signed Firefox 1.1.5 payload. Update and re-sign the companion when its source changes.
 
 For connection troubleshooting, enable **Verbose Logging** in Pomotroid's
 System settings. Inspect the companion in `about:debugging` for
