@@ -1,7 +1,7 @@
 {
   "id": "focus@pomotroid.local",
-  "version": "1.1.1",
+  "version": "1.1.5",
   "channel": "unlisted",
-  "sha256": "4903f864b9154118a435476308a1a1c57e7468ca54a1691d2284e5db55b54443",
+  "sha256": "43b0d9ab3e9d8f597297c058ad0e6316e3fa6898a0f49f39dae41e4ec41a20f5",
   "amo_submission_url": "https://addons.mozilla.org/en-US/developers/addon/3f4853f52b9c427ba24c/versions"
 }

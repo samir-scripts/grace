@@ -63,6 +63,14 @@ at `extensions/signed/firefox/focus@pomotroid.local.xpi` and its
 payload and preserves its bytes; it does not verify Mozilla's signature.
 Update and re-sign the companion when its source changes.
 
+Chrome and Firefox compose the allowlisted `extensions/companion` artwork and
+markup over `extensions/focus`; Firefox then applies its link-preserving options
+page. Safari continues to package the unchanged focus source. The Chrome 1.1.4
+release entries must remain identical to the submitted archive; its packaging
+test records an inventory-and-content fingerprint. Regenerate artwork from
+`assets/brand/grace-mark.svg` with `npm run generate:brand-icons` into a staging
+directory before updating platform assets.
+
 For connection troubleshooting, enable **Verbose Logging** in Pomotroid's
 System settings. Inspect the companion in `about:debugging` for
 `[pomotroid-focus]` diagnostic stages, and use the Browser Console for native

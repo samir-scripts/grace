@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { assertSafeExtensionTree } from './extension-source-guard.mjs';
+import { applyCompanionOverlay, validateCompanionIcons } from './companion-payload.mjs';
 
 // One expected payload for unsigned builds, signing input, and signed verification.
 export function geckoPayload(sharedDir, manifestPath) {
@@ -15,6 +16,9 @@ export function geckoPayload(sharedDir, manifestPath) {
     }
   }
   collect(sharedDir);
+  applyCompanionOverlay(files, sharedDir);
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  validateCompanionIcons(files, manifest.icons, manifest.action?.default_icon);
   const overlay = path.join(path.dirname(manifestPath), 'payload');
   if (fs.existsSync(overlay)) {
     assertSafeExtensionTree(overlay);

@@ -14,7 +14,7 @@ const config = { extension_id: id, public_key: key, privacy_policy_url: 'https:/
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'grace-chrome-release-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  for (const dir of ['focus', 'chrome']) fs.cpSync(path.resolve('extensions', dir), path.join(root, 'extensions', dir), { recursive: true });
+  for (const dir of ['focus', 'companion', 'chrome']) fs.cpSync(path.resolve('extensions', dir), path.join(root, 'extensions', dir), { recursive: true });
   const manifestPath = path.join(root, 'extensions/chrome/manifest.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath));
   fs.writeFileSync(manifestPath, JSON.stringify({ ...manifest, key }));
