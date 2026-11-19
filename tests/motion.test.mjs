@@ -66,21 +66,26 @@ after(async () => {
 });
 
 test('nightly About offers its exact manual download without checking for updates', async () => {
-  for (const enabled of ['true', 'false']) {
+  for (const [enabled, version] of [
+    ['true', '1.7.2-nightly.20261118'],
+    ['false', '1.7.2-nightly.20261118'],
+    ['true', '1.7.2-nightly.20261118.1'],
+    ['false', '1.7.2-nightly.20261118.1'],
+  ]) {
     const context = await browser.newContext({ viewport: { width: 840, height: 520 }, locale: 'en', reducedMotion: 'reduce' });
     const page = await context.newPage();
     try {
-      await page.goto(`${serverUrl}/?version=1.7.2-nightly.20261118%2Babc123&check_updates=${enabled}`);
+      await page.goto(`${serverUrl}/?version=${version}%2Babc123&check_updates=${enabled}`);
       await page.getByRole('button', { name: 'Settings' }).click();
       await page.getByRole('tab', { name: 'About' }).click();
       await page.getByText('Nightly updates require a manual download.').waitFor();
-      assert.equal(await page.getByText('Version 1.7.2-nightly.20261118+abc123').count(), 1);
+      assert.equal(await page.getByText(`Version ${version}+abc123`).count(), 1);
       assert.equal(await page.getByText('Up to date', { exact: true }).count(), 0);
       assert.equal(await page.evaluate(() => window.__motionTest.getUpdateCheckCount()), 0);
       assert.equal(await page.evaluate(() => window.__motionTest.getSaveCount()), 0);
       await page.getByRole('button', { name: 'Release Notes' }).click();
       assert.deepEqual(await page.evaluate(() => window.__motionTest.getOpenedUrls()), [
-        'https://github.com/samir-scripts/grace/releases/tag/v1.7.2-nightly.20261118',
+        `https://github.com/samir-scripts/grace/releases/tag/v${version}`,
       ]);
     } finally { await context.close(); }
   }

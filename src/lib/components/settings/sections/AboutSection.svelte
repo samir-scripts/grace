@@ -25,7 +25,7 @@
   }
 
   let nightlyVersion = $derived(
-    /^\d+\.\d+\.\d+-nightly\.\d{8}$/.test(version.split('+')[0])
+    /^\d+\.\d+\.\d+-nightly\.\d{8}(?:\.[1-9]\d*)?$/.test(version.split('+')[0])
       ? version.split('+')[0]
       : null
   );

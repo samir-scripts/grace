@@ -18,14 +18,14 @@ test('classifies stable, beta, and calendar-dated nightly semver tags', () => {
   const allowNightly = { allowNightly: true };
   assert.throws(() => classifyTag('v1.7.2-nightly.20280229'), /Invalid release tag/);
   assert.deepEqual(classifyTag('v1.7.2-nightly.20280229', allowNightly), { version: '1.7.2-nightly.20280229', prerelease: 'true' });
-  for (const date of ['20270229', '20280431', '20280001', '20280100', '020280229', '2028-02-29']) {
+  for (const date of ['20270229', '20280431', '20280001', '20280100', '020280229', '2028-02-29', '20280229.0', '20280229.01', '20280229.1.2', '20270229.1', '20280229.x']) {
     assert.throws(() => classifyTag(`v1.7.2-nightly.${date}`, allowNightly), /Invalid release tag/);
   }
   for (const tag of ['1.7.2', 'refs/tags/v1.7.2', 'v1.7', 'v01.7.2', 'v1.7.2-beta.01', 'v1.7.2-rc.1', 'v1.7.2+build', '']) assert.throws(() => classifyTag(tag));
 });
 
 test('installer builds accept only stable or dated nightly tag pushes', () => {
-  for (const tag of ['v1.7.2', 'v1.7.2-nightly.20261120']) {
+  for (const tag of ['v1.7.2', 'v1.7.2-nightly.20261120', 'v1.7.2-nightly.20261120.12']) {
     const request = { tag, ref: `refs/tags/${tag}`, event: 'push' };
     assert.equal(validateReleaseTrigger(request).version, tag.slice(1));
     assert.throws(() => validateReleaseTrigger({ ...request, ref: 'refs/heads/dev' }));

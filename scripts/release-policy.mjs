@@ -9,7 +9,7 @@ const hex64 = /^[a-f0-9]{64}$/;
 const nonempty = (value) => typeof value === 'string' && value.trim().length > 0;
 
 export function classifyTag(tag, { allowNightly = false } = {}) {
-  const match = typeof tag === 'string' && /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:(-beta\.(?:0|[1-9]\d*))|(-nightly\.([1-9]\d{3})(\d{2})(\d{2})))?$/.exec(tag);
+  const match = typeof tag === 'string' && /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:(-beta\.(?:0|[1-9]\d*))|(-nightly\.([1-9]\d{3})(\d{2})(\d{2})(?:\.[1-9]\d*)?))?$/.exec(tag);
   if (!match || match[0] !== tag) throw new Error('Invalid release tag');
   const [, , , , beta, nightly, year, month, day] = match;
   if (nightly) {

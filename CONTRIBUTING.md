@@ -138,7 +138,9 @@ Choose the merged `dev` commit with passing Build / Test and CodeQL push runs. I
 )
 ```
 
-A `vX.Y.Z-nightly.YYYYMMDD` tag builds signed beta installers and creates a draft prerelease for manual downloads. If the tag run fails before creating a draft, inspect the failure and rerun the existing GitHub Actions run. Review the tagged commit and package revision against `provenance.json`, verify `SHA256SUMS` and the detached signatures against the trusted Grace key, and smoke-test the macOS installer in a disposable environment before publishing. Beta shares the stable app identity and uses manual updates. The stable updater feed is reserved for stable releases.
+The first beta of each UTC day uses `vX.Y.Z-nightly.YYYYMMDD`. Additional reviewed commits use `.1`, `.2`, and so on in numeric order. Preparing the same source again returns its existing tag. If another maintainer wins a tag push, retry in a fresh clone with the remote tags and the same reviewed source. Never move or overwrite a published tag.
+
+Each nightly tag builds signed beta installers and creates a draft prerelease for manual downloads. If the tag run fails before creating a draft, inspect the failure and rerun the existing GitHub Actions run. Review the tagged commit and package revision against `provenance.json`, verify `SHA256SUMS` and the detached signatures against the trusted Grace key, and smoke-test the macOS installer in a disposable environment before publishing. Beta shares the stable app identity and uses manual updates. The stable updater feed is reserved for stable releases.
 
 ### Stable
 

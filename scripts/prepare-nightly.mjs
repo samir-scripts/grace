@@ -6,7 +6,7 @@ import { classifyTag, readVersions, validateVersions } from './release-policy.mj
 
 const repo = 'samir-scripts/grace';
 const dev = 'refs/remotes/origin/dev';
-const nightly = /-nightly\.(\d{8})$/;
+const nightly = /-nightly\.(\d{8})(?:\.([1-9]\d*))?$/;
 const sha = /^[a-f0-9]{40}$/;
 const beta = 'v1.7.2-beta.1';
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -17,11 +17,11 @@ const tags = () => git('tag', '--list').trim().split('\n').filter(Boolean);
 const github = (...args) => execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 const api = (gh, endpoint) => JSON.parse(gh('api', '--paginate', '--slurp', `repos/${repo}/${endpoint}`));
 
-function dateFor(tag) {
+function nightlyPosition(tag) {
   classifyTag(tag, { allowNightly: true });
   const match = nightly.exec(tag);
   if (!match) throw new Error('A dated nightly tag is required');
-  return match[1];
+  return { date: match[1], sequence: BigInt(match[2] ?? 0) };
 }
 
 function parentOf(revision) {
@@ -35,16 +35,21 @@ function requireDevParent(source) {
   if (check.status !== 0) throw new Error('Nightly parent is not on origin/dev');
 }
 
+function comparePosition(a, b) {
+  return a.date.localeCompare(b.date) || Number(a.sequence - b.sequence);
+}
+
 function nightlies() {
   return tags().filter(tag => nightly.test(tag)).map(tag => {
-    const date = dateFor(tag);
+    const position = nightlyPosition(tag);
     if (git('cat-file', '-t', `refs/tags/${tag}`).trim() !== 'tag') throw new Error(`Nightly tag is not annotated: ${tag}`);
     const revision = resolve(`refs/tags/${tag}^{commit}`);
-    return { tag, date, revision, source: parentOf(revision) };
-  }).sort((a, b) => b.date.localeCompare(a.date, 'en'));
+    return { tag, ...position, source: parentOf(revision) };
+  }).sort((a, b) => comparePosition(b, a));
 }
 
 function nextTag(source, date) {
+  if (!/^\d{8}$/.test(date)) throw new Error('Expected UTC date in YYYYMMDD format');
   const versions = readVersions(path => show(source, path));
   validateVersions(versions.package, versions);
   classifyTag(`v${versions.package}`);
@@ -53,10 +58,12 @@ function nextTag(source, date) {
   const assigned = new Set(tags());
   while (assigned.has(`v${major}.${minor}.${next}`)) next++;
   const candidate = `v${major}.${minor}.${next}-nightly.${date}`;
-  dateFor(candidate);
+  nightlyPosition(candidate);
   const previous = nightlies();
-  return previous.find(item => item.source === source)?.tag
-    ?? (previous.some(item => item.date === date) ? null : candidate);
+  const existing = previous.find(item => item.source === source);
+  if (existing) return existing.tag;
+  const sameDay = previous.find(item => item.date === date);
+  return sameDay ? candidate + '.' + (sameDay.sequence + 1n) : candidate;
 }
 
 function rewriteCargo(text, header, version) {
@@ -67,7 +74,7 @@ function rewriteCargo(text, header, version) {
 }
 
 function nightlyFiles(source, tag) {
-  const date = dateFor(tag);
+  const position = nightlyPosition(tag);
   const { version } = classifyTag(tag, { allowNightly: true });
   const from = path => show(source, path);
   const before = readVersions(from);
@@ -78,7 +85,7 @@ function nightlyFiles(source, tag) {
     if (lock) doc.packages[''].version = version;
     return JSON.stringify(doc, null, 2) + '\n';
   };
-  const previous = nightlies().find(item => item.date < date)?.source ?? resolve(`refs/tags/${beta}^{commit}`);
+  const previous = nightlies().find(item => comparePosition(item, position) < 0)?.source ?? resolve(`refs/tags/${beta}^{commit}`);
   const files = new Map([
     ['package.json', jsonWithVersion('package.json')],
     ['package-lock.json', jsonWithVersion('package-lock.json', true)],
@@ -92,7 +99,7 @@ function nightlyFiles(source, tag) {
 }
 
 function verify(tag, checkout = resolve('HEAD')) {
-  dateFor(tag);
+  nightlyPosition(tag);
   const ref = `refs/tags/${tag}`;
   if (git('cat-file', '-t', ref).trim() !== 'tag') throw new Error('Nightly release tag must be annotated');
   const revision = resolve(`${ref}^{commit}`);
@@ -143,7 +150,7 @@ export function verifyNightlyRelease(tag, { env = process.env, gh = github } = {
 
 function main([command, arg, ...rest]) {
   if (rest.length) throw new Error('Unexpected arguments');
-  if (command === 'tag' && arg) console.log(nextTag(resolve('HEAD'), arg) ?? '');
+  if (command === 'tag' && arg) console.log(nextTag(resolve('HEAD'), arg));
   else if (command === 'prepare' && arg) {
     const files = nightlyFiles(resolve('HEAD'), arg);
     for (const [path, content] of files) writeFileSync(path, content);

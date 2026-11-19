@@ -20,7 +20,7 @@ Recorded in Tart using a local macOS build reporting version 1.7.1. The download
 
 ## Install
 
-Open [Grace releases](https://github.com/samir-scripts/grace/releases), choose the newest published `-nightly.` prerelease, and download the asset for your machine. Nightlies are manual installs; the in-app updater does not deliver them.
+Open [Grace releases](https://github.com/samir-scripts/grace/releases), choose the newest published `-nightly.` prerelease, and download the asset for your machine. When several betas share a date, choose the highest numbered revision. Nightlies are manual installs; the in-app updater does not deliver them.
 
 | Platform | Installer |
 | --- | --- |
