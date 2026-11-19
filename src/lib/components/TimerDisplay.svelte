@@ -30,7 +30,8 @@
   }
 
   .time {
-    font-family: 'Mona Sans Mono', monospace;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-size: 2.8rem;
     font-weight: 300;
     font-stretch: 85%;

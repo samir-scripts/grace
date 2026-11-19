@@ -8,6 +8,7 @@
   import type { UnlistenFn } from '@tauri-apps/api/event';
   import * as m from '$paraglide/messages.js';
   import SettingsToggle from '$lib/components/settings/SettingsToggle.svelte';
+  import AppearanceCustomization from '$lib/components/settings/AppearanceCustomization.svelte';
 
   let themes = $state<Theme[]>([]);
   let osDark = $state(window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -96,6 +97,7 @@
 </script>
 
 <div class="section">
+  <AppearanceCustomization />
   <!-- Mode selector -->
   <div class="group-label">{m.appearance_group_mode()}</div>
   <div class="mode-selector" role="group" aria-label={m.appearance_group_mode()}>

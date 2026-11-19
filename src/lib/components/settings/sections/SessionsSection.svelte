@@ -16,6 +16,7 @@
   import SettingsToggle from '$lib/components/settings/SettingsToggle.svelte';
   import InstalledAppPicker from '$lib/components/settings/InstalledAppPicker.svelte';
   import BrowserSetup from '$lib/components/settings/BrowserSetup.svelte';
+  import ThemedSelect from '$lib/components/ThemedSelect.svelte';
   import * as m from '$paraglide/messages.js';
 
   let profiles = $derived($focusProfiles);
@@ -90,15 +91,12 @@
     statusMessage = null;
   }
 
-  function handleSelectChange(e: Event) {
-    const targetVal = (e.target as HTMLSelectElement).value;
+  function handleSelectChange(targetVal: string) {
     if (targetVal === selectedId) return;
 
     if (isDirty) {
       pendingSwitchId = targetVal;
       showDiscardDialog = true;
-      // Revert select display until user confirms
-      (e.target as HTMLSelectElement).value = selectedId;
       return;
     }
 
@@ -260,22 +258,19 @@
     <div class="select-group">
       <label for="session-dropdown" class="toolbar-label">{m.session_select_edit()}</label>
       <div class="select-wrapper">
-        <select
+        <ThemedSelect
           id="session-dropdown"
-          class="session-select"
+          label={m.session_select_edit()}
           value={selectedId}
+          options={[
+            ...(selectedId === 'new' ? [{ value: 'new', label: `+ ${editingProfile.name || m.session_new_name()}` }] : []),
+            ...profiles.map((p) => ({
+              value: p.id,
+              label: `${p.name}${activeProfile?.id === p.id ? ` • ${m.session_active_label()}` : ''}`,
+            })),
+          ]}
           onchange={handleSelectChange}
-        >
-          {#if selectedId === 'new'}
-            <option value="new">+ {editingProfile.name || m.session_new_name()}</option>
-          {/if}
-          {#each profiles as p (p.id)}
-            <option value={p.id}>
-              {p.name}{activeProfile?.id === p.id ? ` • ${m.session_active_label()}` : ''}
-            </option>
-          {/each}
-        </select>
-        <span class="select-arrow" aria-hidden="true">▾</span>
+        />
       </div>
     </div>
 
@@ -610,43 +605,6 @@
     align-items: center;
   }
 
-  .session-select {
-    width: 100%;
-    appearance: none;
-    -webkit-appearance: none;
-    background: var(--color-background);
-    border: 1px solid var(--color-separator);
-    border-radius: 6px;
-    padding: 6px 26px 6px 10px;
-    color: var(--color-foreground);
-    font-size: 12px;
-    font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
-    outline: none;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-    transition: border-color 140ms ease-out, background 140ms ease-out;
-  }
-
-  .session-select:focus {
-    border-color: var(--color-accent);
-  }
-
-  @media (hover: hover) {
-    .session-select:hover {
-      border-color: color-mix(in oklch, var(--color-foreground) 24%, transparent);
-    }
-  }
-
-  .select-arrow {
-    position: absolute;
-    right: 8px;
-    font-size: 9px;
-    color: var(--color-foreground-darker);
-    pointer-events: none;
-  }
 
   .btn-add-session {
     display: inline-flex;

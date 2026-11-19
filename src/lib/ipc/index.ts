@@ -9,6 +9,8 @@ import { isLinux, isMac } from '$lib/utils/platform';
 import type {
   TimerState,
   Settings,
+  ImportedFont,
+  WindowMaterialStatus,
   Theme,
   CustomAudioInfo,
   DetailedStats,
@@ -43,6 +45,17 @@ export const reloadShortcuts = () => invoke<void>('shortcuts_reload');
 
 export const getThemes = () => invoke<Theme[]>('themes_list');
 
+// Imported fonts are app-owned files, never arbitrary filesystem reads.
+export const listFonts = () => invoke<ImportedFont[]>('fonts_list');
+export const importFont = (srcPath: string) => invoke<ImportedFont>('fonts_import', { srcPath });
+export const readFont = (id: string) => invoke<ArrayBuffer>('fonts_read', { id });
+export const removeFont = (id: string) => invoke<Settings>('fonts_remove', { id });
+export const openFontFilePicker = (): Promise<string | null> =>
+  dialogOpen({
+    multiple: false,
+    filters: [{ name: 'Fonts', extensions: ['woff2', 'woff', 'ttf', 'otf'] }],
+  }).then((path) => typeof path === 'string' ? path : null);
+
 // --- Notification commands ---
 
 export const notificationShow = (title: string, body: string) =>
@@ -56,6 +69,10 @@ export const setWindowViewSize = (
   view: 'timer' | 'settings' | 'stats',
   animate?: boolean
 ) => invoke<void>('window_set_view_size', { view, animate });
+export const setWindowMaterialAllowed = (allowed: boolean) =>
+  invoke<WindowMaterialStatus>('window_material_set_allowed', { allowed });
+export const onWindowMaterialChanged = (cb: (status: WindowMaterialStatus) => void): Promise<UnlistenFn> =>
+  listen<WindowMaterialStatus>('window:material-changed', event => cb(event.payload));
 
 // --- Audio commands ---
 

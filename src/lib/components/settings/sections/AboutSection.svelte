@@ -189,6 +189,10 @@
     margin-bottom: 4px;
   }
 
+  :global(:root[data-ui-style="glass"][data-window-material="frosted"]) .name {
+    color: var(--color-foreground);
+  }
+
   .version {
     font-size: 0.8rem;
     color: var(--color-foreground-darker, var(--color-foreground));

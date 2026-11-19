@@ -210,5 +210,19 @@
   "nav_back_timer": "タイマー",
   "browser_chrome_prepare": "Chrome コンパニオンをインストール",
   "browser_chrome_prepared": "Chrome ウェブストアを開きました。コンパニオンをインストールし、接続要求を承認してください。ペアリングは自動です。「接続中」が表示されたらプロファイルを割り当ててください。",
-  "browser_chrome_error": "Chrome の設定を開けませんでした。Grace がブラウザーホストを登録できることを確認して、再試行してください。"
+  "browser_chrome_error": "Chrome の設定を開けませんでした。Grace がブラウザーホストを登録できることを確認して、再試行してください。",
+  "appearance_ui_style": "インターフェーススタイル",
+  "appearance_style_pomotroid": "Pomotroid",
+  "appearance_style_blocky": "ブロック",
+  "appearance_style_glass": "ガラス",
+  "appearance_font_pack": "フォント",
+  "appearance_import_font": "フォントを読み込む",
+  "appearance_remove_font": "{name}を削除",
+  "appearance_customization_hint": "スタイル・フォント・色は個別に選べます。読み込んだフォントはこの端末に保存されます。",
+  "appearance_customization_error": "外観を保存できませんでした。以前の選択が維持されます。",
+  "appearance_font_import_error": "フォントを読み込めませんでした。20 MiB以下の有効なWOFF2、WOFF、TTF、OTFファイルを選んでください。",
+  "appearance_font_missing": "選択したフォントが利用できないため、Mona Sansを使用しています。再度読み込むか別のフォントを選んでください。",
+  "appearance_font_remove_error": "フォントを削除できませんでした。もう一度お試しください。",
+  "appearance_glass_transparency": "透明度",
+  "appearance_glass_transparency_hint": "100%では、ウィンドウに淡い色合いが残ります。"
 }

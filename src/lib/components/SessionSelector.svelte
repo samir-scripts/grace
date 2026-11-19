@@ -181,9 +181,9 @@
     letter-spacing: 0.01em;
     cursor: pointer;
     transition:
-      background var(--transition-snappy),
-      color var(--transition-snappy),
-      border-color var(--transition-snappy),
+      background var(--transition-control),
+      color var(--transition-control),
+      border-color var(--transition-control),
       transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
     min-width: 0;
     max-width: min(140px, 100%);
@@ -273,7 +273,7 @@
     cursor: pointer;
     text-align: left;
     width: 100%;
-    transition: background var(--transition-snappy), color var(--transition-snappy);
+    transition: background var(--transition-control), color var(--transition-control);
     animation: dropdown-item-rise 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: var(--delay, 0ms);
   }
@@ -310,7 +310,7 @@
   .item-cadence {
     flex: 0 0 auto;
     margin-left: auto;
-    font-family: 'Mona Sans Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 9.5px;
     font-variant-numeric: tabular-nums;
     color: var(--color-foreground-darker);
@@ -329,7 +329,7 @@
     border-radius: 50%;
     flex-shrink: 0;
     background: transparent;
-    transition: background var(--transition-snappy), box-shadow var(--transition-snappy);
+    transition: background var(--transition-control), box-shadow var(--transition-control);
   }
 
   .item-dot.active {
