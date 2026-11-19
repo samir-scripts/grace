@@ -1,7 +1,8 @@
 import { mockWindows, mockIPC } from '@tauri-apps/api/mocks';
-import { mount } from 'svelte';
-import type { Settings, Theme, TimerState, FocusSnapshot, DetailedStats, HeatmapStats } from '$lib/types';
+import { mount, unmount } from 'svelte';
+import type { Settings, Theme, TimerState, FocusSnapshot, DetailedStats, HeatmapStats, WindowMaterialStatus } from '$lib/types';
 import { emit } from '@tauri-apps/api/event';
+import type { invoke } from '@tauri-apps/api/core';
 
 declare global {
   interface Window {
@@ -33,6 +34,9 @@ const defaultSettings: Settings = {
   theme_mode: 'dark',
   theme_light: 'Pomotroid Light',
   theme_dark: 'Pomotroid',
+  ui_style: 'pomotroid',
+  glass_transparency: 100,
+  font_pack: 'inter',
   dial_countdown: true,
   language: 'en',
   verbose_logging: false,
@@ -63,7 +67,12 @@ let currentSettings: Settings = {
   ...defaultSettings,
   check_for_updates: urlParams.get('check_updates') !== 'false',
   animations_enabled: currentAnimationsEnabled,
+  glass_transparency: Number(sessionStorage.getItem('glass-transparency') ?? 100),
+  ui_style: (sessionStorage.getItem('appearance-style') ?? 'pomotroid') as Settings['ui_style'],
+  font_pack: (sessionStorage.getItem('appearance-font') ?? 'inter') as Settings['font_pack'],
 };
+
+const importedFonts: Array<{ id: string; display_name: string }> = JSON.parse(sessionStorage.getItem('appearance-fonts') ?? '[]');
 
 let currentTimer: TimerState = {
   round_type: 'work',
@@ -188,9 +197,88 @@ const appearanceMotionCalls: boolean[] = [];
 let startDraggingCount = 0;
 let holdResize = false;
 let resizeResolve: (() => void) | null = null;
+let holdFontRead = false;
+let releaseFontRead: (() => void) | undefined;
+
+const materialSupported = !urlParams.has('material_unsupported');
+let nativeMaterialAllowed = true;
+let materialAllowed = false;
+let materialRevision = 0;
+let holdMaterial = urlParams.has('material_deferred');
+let materialError = urlParams.has('material_error');
+let materialDeferred: PromiseWithResolvers<WindowMaterialStatus> | null = null;
+const materialCalls: boolean[] = [];
+const nativeStartupEvents: string[] = [];
+let mountedApp: Record<string, unknown> | undefined;
+
+function materialStatus(): WindowMaterialStatus {
+  const status = {
+    active: materialSupported && nativeMaterialAllowed && materialAllowed && currentSettings.ui_style === 'glass',
+    revision: ++materialRevision,
+  };
+  emit('window:material-changed', status).catch(() => {});
+  return status;
+}
 
 mockWindows('main');
+// Imported-font operations have their own dedicated browser/native coverage.
 mockIPC((cmd, args: unknown) => {
+  if (cmd === 'window_material_set_allowed') {
+    materialAllowed = readField(args, 'allowed') === true;
+    materialCalls.push(materialAllowed);
+    if (materialError) {
+      materialError = false;
+      throw new Error('Injected material failure');
+    }
+    if (holdMaterial) {
+      holdMaterial = false;
+      materialDeferred = Promise.withResolvers<WindowMaterialStatus>();
+      return materialDeferred.promise.then(status => {
+        nativeStartupEvents.push('material:acknowledged');
+        return status;
+      });
+    }
+    nativeStartupEvents.push('material:acknowledged');
+    return materialStatus();
+  }
+  if (cmd === 'settings_reset_defaults') {
+    currentSettings = { ...defaultSettings };
+    sessionStorage.setItem('appearance-style', currentSettings.ui_style);
+    sessionStorage.setItem('appearance-font', currentSettings.font_pack);
+    sessionStorage.setItem('motion-test-animations-enabled', String(currentSettings.animations_enabled));
+    materialStatus();
+    emit('settings:changed', currentSettings).catch(() => {});
+    return { ...currentSettings };
+  }
+  if (cmd === 'fonts_list') return [...importedFonts];
+  if (cmd === 'plugin:dialog|open') return '/fixture/Imported.woff2';
+  if (cmd === 'fonts_import') {
+    const font = { id: crypto.randomUUID(), display_name: 'Imported' };
+    importedFonts.push(font);
+    sessionStorage.setItem('appearance-fonts', JSON.stringify(importedFonts));
+    return font;
+  }
+  if (cmd === 'fonts_read') {
+    if (!importedFonts.some((font) => font.id === readField(args, 'id'))) throw new Error('Font not found');
+    if (urlParams.has('invalid_font')) return new Uint8Array([119, 79, 70, 50]).buffer;
+    if (holdFontRead) {
+      holdFontRead = false;
+      const { promise, resolve } = Promise.withResolvers<void>();
+      releaseFontRead = resolve;
+      return promise.then(() => fetch('/fonts/InterVF.woff2')).then((response) => response.arrayBuffer());
+    }
+    return fetch('/fonts/InterVF.woff2').then((response) => response.arrayBuffer());
+  }
+  if (cmd === 'fonts_remove') {
+    const id = readField(args, 'id');
+    const index = importedFonts.findIndex((font) => font.id === id);
+    if (index >= 0) importedFonts.splice(index, 1);
+    if (currentSettings.font_pack === `custom:${id}`) currentSettings.font_pack = defaultSettings.font_pack;
+    emit('settings:changed', currentSettings).catch(() => {});
+    sessionStorage.setItem('appearance-fonts', JSON.stringify(importedFonts));
+    sessionStorage.setItem('appearance-font', currentSettings.font_pack);
+    return { ...currentSettings };
+  }
   if (cmd === 'settings_get') {
     if (holdSettings) {
       const { promise, resolve, reject } = Promise.withResolvers<Settings>();
@@ -220,15 +308,25 @@ mockIPC((cmd, args: unknown) => {
     }
 
     if (key === 'theme_mode') currentSettings.theme_mode = value;
+    if (key === 'ui_style' && ['pomotroid', 'blocky', 'glass'].includes(value)) currentSettings.ui_style = value as Settings['ui_style'];
+    if (key === 'glass_transparency') { currentSettings.glass_transparency = Number(value); sessionStorage.setItem('glass-transparency', value); }
+    if (key === 'font_pack') currentSettings.font_pack = value as Settings['font_pack'];
+    if (key === 'volume') currentSettings.volume = Number(value) / 100;
+    if (key === 'notifications') currentSettings.notifications_enabled = value === 'true';
+    if (key === 'ui_style') sessionStorage.setItem('appearance-style', currentSettings.ui_style);
+    if (key === 'font_pack') sessionStorage.setItem('appearance-font', currentSettings.font_pack);
     if (key === 'animations_enabled') {
       currentSettings.animations_enabled = value === 'true';
       sessionStorage.setItem('motion-test-animations-enabled', value);
     }
+    if (key === 'ui_style') materialStatus();
     emit('settings:changed', currentSettings).catch(() => {});
     return JSON.parse(JSON.stringify(currentSettings));
   }
 
+  if (cmd === 'audio_get_custom_info') return { work_alert: null, short_break_alert: null, long_break_alert: null };
   if (cmd === 'themes_list') {
+    // Font metadata has a separate command and never affects color themes.
     return JSON.parse(JSON.stringify(themes));
   }
 
@@ -323,6 +421,7 @@ mockIPC((cmd, args: unknown) => {
   }
 
   if (cmd === 'plugin:window|show' || cmd === 'plugin:window|minimize' || cmd === 'plugin:window|close' || cmd === 'plugin:window|toggle_maximize') {
+    if (cmd === 'plugin:window|show') nativeStartupEvents.push('window:shown');
     return;
   }
 
@@ -383,8 +482,23 @@ mockIPC((cmd, args: unknown) => {
   throw new Error(`Unhandled mock IPC command: ${cmd}`);
 }, { shouldMockEvents: true });
 
+// The route can render before it subscribes to backend events.
+const registeredEvents = new Set<string>();
+const { __TAURI_INTERNALS__: internals } = window as Window & { __TAURI_INTERNALS__?: { invoke: typeof invoke } };
+if (!internals) throw new Error('Tauri IPC mock was not installed');
+const mockInvoke = internals.invoke;
+internals.invoke = async <T>(...args: Parameters<typeof invoke>): Promise<T> => {
+  const result = await mockInvoke<T>(...args);
+  if (args[0] === 'plugin:event|listen') {
+    const event = readField(args[1], 'event');
+    if (typeof event === 'string') registeredEvents.add(event);
+  }
+  return result;
+};
+
 export interface MotionTestController {
   emit: (event: string, payload: unknown) => Promise<void>;
+  hasRegisteredEvent: (event: string) => boolean;
   releaseSettings: (reject?: boolean) => void;
   holdNextSave: () => void;
   releaseSave: (reject?: boolean) => void;
@@ -401,9 +515,43 @@ export interface MotionTestController {
   getBrowserSetupCalls: () => string[];
   getStartDraggingCount: () => number;
   clearStartDraggingCount: () => void;
+  holdFontRead: () => void;
+  releaseFontRead: () => void;
+  fontReadPending: () => boolean;
+  getMaterialCalls: () => boolean[];
+  getNativeStartupEvents: () => string[];
+  holdNextMaterial: () => void;
+  releaseMaterial: (reject?: boolean) => void;
+  materialPending: () => boolean;
+  failNextMaterial: () => void;
+  setNativeMaterialAllowed: (allowed: boolean) => void;
+  unmountApp: () => Promise<void>;
 }
 
 const controller: MotionTestController = {
+  hasRegisteredEvent: event => registeredEvents.has(event),
+  getMaterialCalls: () => [...materialCalls],
+  getNativeStartupEvents: () => [...nativeStartupEvents],
+  holdNextMaterial: () => { holdMaterial = true; },
+  releaseMaterial: (reject = false) => {
+    if (!materialDeferred) return;
+    if (reject) materialDeferred.reject(new Error('Injected material failure'));
+    else materialDeferred.resolve(materialStatus());
+    materialDeferred = null;
+  },
+  materialPending: () => materialDeferred !== null,
+  failNextMaterial: () => { materialError = true; },
+  setNativeMaterialAllowed: (allowed) => {
+    nativeMaterialAllowed = allowed;
+    materialStatus();
+  },
+  unmountApp: async () => {
+    if (mountedApp) await unmount(mountedApp);
+    mountedApp = undefined;
+  },
+  holdFontRead: () => { holdFontRead = true; },
+  releaseFontRead: () => { releaseFontRead?.(); releaseFontRead = undefined; },
+  fontReadPending: () => Boolean(releaseFontRead),
   emit: async (event: string, payload: unknown) => {
     if (event === 'settings:changed') {
       const partial = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
@@ -432,6 +580,12 @@ const controller: MotionTestController = {
         if (nextSaveDeferred.key === 'animations_enabled') {
           currentSettings.animations_enabled = nextSaveDeferred.value === 'true';
           sessionStorage.setItem('motion-test-animations-enabled', nextSaveDeferred.value);
+        }
+        if (nextSaveDeferred.key === 'glass_transparency') { currentSettings.glass_transparency = Number(nextSaveDeferred.value); sessionStorage.setItem('glass-transparency', nextSaveDeferred.value); }
+        if (nextSaveDeferred.key === 'ui_style') {
+          currentSettings.ui_style = nextSaveDeferred.value as Settings['ui_style'];
+          sessionStorage.setItem('appearance-style', currentSettings.ui_style);
+          materialStatus();
         }
         emit('settings:changed', currentSettings).catch(() => {});
         nextSaveDeferred.resolve(JSON.parse(JSON.stringify(currentSettings)));
@@ -468,7 +622,7 @@ import('../../src/routes/+page.svelte').then((mod) => {
   const App = mod.default;
   const target = document.getElementById('motion-root');
   if (target) {
-    mount(App, { target });
+    mountedApp = mount(App, { target });
   }
 }).catch((err: unknown) => {
   console.error('[motion-fixture] failed to mount root page:', err);

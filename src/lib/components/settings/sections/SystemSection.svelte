@@ -279,9 +279,8 @@
   }
 
   .group-heading {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-foreground-darker, var(--color-foreground));
     margin: 0;
@@ -292,14 +291,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
     padding: 10px 20px;
     border-bottom: 1px solid var(--color-separator);
   }
 
   .label {
-    font-size: 0.85rem;
+    font: var(--type-control);
     color: var(--color-foreground);
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
   }
 
   .port-input {
@@ -307,8 +308,8 @@
     border: 1px solid color-mix(in oklch, var(--color-foreground) 18%, transparent);
     border-radius: 4px;
     color: var(--color-foreground);
-    font-size: 0.85rem;
-    font-family: monospace;
+    font: var(--type-code);
+    letter-spacing: 0;
     padding: 4px 10px;
     width: 90px;
     text-align: right;
@@ -321,15 +322,15 @@
   }
 
   .note {
-    font-size: 0.75rem;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker, var(--color-foreground));
     padding: 16px 20px;
-    line-height: 1.6;
   }
 
   code {
-    font-family: monospace;
-    font-size: 0.75em;
+    font: var(--type-code);
+    letter-spacing: 0;
     background: var(--color-background-light);
     padding: 1px 5px;
     border-radius: 3px;
@@ -353,7 +354,8 @@
     border: 1px solid color-mix(in oklch, var(--color-foreground) 18%, transparent);
     border-radius: 4px;
     color: var(--color-foreground);
-    font-size: 0.85rem;
+    font: var(--type-control);
+    letter-spacing: 0;
     padding: 6px 10px;
     cursor: pointer;
     outline: none;
@@ -395,7 +397,8 @@
 
   .lang-option {
     padding: 7px 12px;
-    font-size: 0.85rem;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground);
     cursor: pointer;
     transition: background 0.1s;
@@ -427,8 +430,8 @@
     border-bottom: 1px solid var(--color-separator);
     cursor: pointer;
     color: var(--color-foreground-darker, var(--color-foreground));
-    font-size: 0.85rem;
-    letter-spacing: 0.02em;
+    font: var(--type-control);
+    letter-spacing: 0;
     text-align: left;
     transition:
       background 0.12s,
@@ -457,13 +460,15 @@
   }
 
   .confirm-label {
-    font-size: 0.8rem;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker, var(--color-foreground));
   }
 
   .confirm-actions {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
     justify-content: flex-end;
   }
 
@@ -472,7 +477,8 @@
     background: var(--color-background);
     border: 1px solid color-mix(in oklch, var(--color-foreground) 18%, transparent);
     border-radius: 4px;
-    font-size: 0.8rem;
+    font: var(--type-control);
+    letter-spacing: 0;
     padding: 5px 14px;
     cursor: pointer;
     transition:

@@ -199,10 +199,14 @@
     margin-bottom: 4px;
   }
 
+  :global(:root[data-ui-style="glass"][data-window-material="frosted"]) .name {
+    color: var(--color-foreground);
+  }
+
   .version {
-    font-size: 0.8rem;
+    font: var(--type-code);
     color: var(--color-foreground-darker, var(--color-foreground));
-    letter-spacing: 0.04em;
+    letter-spacing: 0;
   }
 
   .links {
@@ -223,8 +227,8 @@
     border-bottom: 1px solid var(--color-separator);
     cursor: pointer;
     color: var(--color-foreground);
-    font-size: 0.85rem;
-    letter-spacing: 0.02em;
+    font: var(--type-body);
+    letter-spacing: 0;
     text-align: left;
     transition: background 0.12s;
   }
@@ -249,8 +253,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    font-size: 0.85rem;
-    letter-spacing: 0.02em;
+    font: var(--type-body);
+    letter-spacing: 0;
   }
 
   .update-row--muted {
@@ -273,9 +277,9 @@
   }
 
   .credit {
-    font-size: 0.72rem;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker, var(--color-foreground));
     opacity: 0.5;
-    line-height: 1.6;
   }
 </style>

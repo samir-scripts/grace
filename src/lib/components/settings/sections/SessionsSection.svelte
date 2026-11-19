@@ -16,6 +16,7 @@
   import SettingsToggle from '$lib/components/settings/SettingsToggle.svelte';
   import InstalledAppPicker from '$lib/components/settings/InstalledAppPicker.svelte';
   import BrowserSetup from '$lib/components/settings/BrowserSetup.svelte';
+  import ThemedSelect from '$lib/components/ThemedSelect.svelte';
   import * as m from '$paraglide/messages.js';
 
   let profiles = $derived($focusProfiles);
@@ -90,15 +91,12 @@
     statusMessage = null;
   }
 
-  function handleSelectChange(e: Event) {
-    const targetVal = (e.target as HTMLSelectElement).value;
+  function handleSelectChange(targetVal: string) {
     if (targetVal === selectedId) return;
 
     if (isDirty) {
       pendingSwitchId = targetVal;
       showDiscardDialog = true;
-      // Revert select display until user confirms
-      (e.target as HTMLSelectElement).value = selectedId;
       return;
     }
 
@@ -260,22 +258,19 @@
     <div class="select-group">
       <label for="session-dropdown" class="toolbar-label">{m.session_select_edit()}</label>
       <div class="select-wrapper">
-        <select
+        <ThemedSelect
           id="session-dropdown"
-          class="session-select"
+          label={m.session_select_edit()}
           value={selectedId}
+          options={[
+            ...(selectedId === 'new' ? [{ value: 'new', label: `+ ${editingProfile.name || m.session_new_name()}` }] : []),
+            ...profiles.map((p) => ({
+              value: p.id,
+              label: `${p.name}${activeProfile?.id === p.id ? ` • ${m.session_active_label()}` : ''}`,
+            })),
+          ]}
           onchange={handleSelectChange}
-        >
-          {#if selectedId === 'new'}
-            <option value="new">+ {editingProfile.name || m.session_new_name()}</option>
-          {/if}
-          {#each profiles as p (p.id)}
-            <option value={p.id}>
-              {p.name}{activeProfile?.id === p.id ? ` • ${m.session_active_label()}` : ''}
-            </option>
-          {/each}
-        </select>
-        <span class="select-arrow" aria-hidden="true">▾</span>
+        />
       </div>
     </div>
 
@@ -576,6 +571,7 @@
   .session-toolbar {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     justify-content: space-between;
     padding: 10px 18px;
     background: var(--color-background-light);
@@ -593,8 +589,7 @@
   }
 
   .toolbar-label {
-    font-size: 11px;
-    font-weight: 600;
+    font: var(--type-eyebrow);
     color: var(--color-foreground-darker);
     white-space: nowrap;
     text-transform: uppercase;
@@ -610,43 +605,6 @@
     align-items: center;
   }
 
-  .session-select {
-    width: 100%;
-    appearance: none;
-    -webkit-appearance: none;
-    background: var(--color-background);
-    border: 1px solid var(--color-separator);
-    border-radius: 6px;
-    padding: 6px 26px 6px 10px;
-    color: var(--color-foreground);
-    font-size: 12px;
-    font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
-    outline: none;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-    transition: border-color 140ms ease-out, background 140ms ease-out;
-  }
-
-  .session-select:focus {
-    border-color: var(--color-accent);
-  }
-
-  @media (hover: hover) {
-    .session-select:hover {
-      border-color: color-mix(in oklch, var(--color-foreground) 24%, transparent);
-    }
-  }
-
-  .select-arrow {
-    position: absolute;
-    right: 8px;
-    font-size: 9px;
-    color: var(--color-foreground-darker);
-    pointer-events: none;
-  }
 
   .btn-add-session {
     display: inline-flex;
@@ -700,14 +658,15 @@
   }
 
   .modal-title {
-    font-size: 13px;
-    font-weight: 600;
+    font: var(--type-heading);
+    letter-spacing: 0;
     color: var(--color-foreground);
     margin: 0;
   }
 
   .modal-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 8px;
   }
@@ -718,10 +677,10 @@
     color: var(--color-foreground);
     border-radius: 6px;
     padding: 6px 12px;
-    font-size: 11px;
-    font-weight: 600;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
-    font-family: inherit;
     transition: background 140ms ease-out, transform 100ms ease-out;
   }
 
@@ -765,7 +724,8 @@
   }
 
   .name-field label {
-    font-size: 12px;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
     font-weight: 500;
   }
@@ -783,8 +743,8 @@
     border-radius: 6px;
     padding: 6px 10px;
     color: var(--color-foreground);
-    font-size: 12px;
-    font-family: inherit;
+    font: var(--type-control);
+    letter-spacing: 0;
     outline: none;
     transition: border-color 140ms ease-out;
   }
@@ -800,10 +760,10 @@
     border: none;
     border-radius: 6px;
     padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 600;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
-    font-family: inherit;
     transition: background 140ms ease-out, transform 100ms ease-out, opacity 140ms ease-out;
   }
 
@@ -823,10 +783,10 @@
     color: var(--color-foreground);
     border-radius: 6px;
     padding: 6px 12px;
-    font-size: 11px;
+    font: var(--type-control);
     font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
-    font-family: inherit;
     transition: background 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out, transform 100ms ease-out;
   }
 
@@ -856,10 +816,10 @@
     color: var(--color-foreground-darker);
     border-radius: 6px;
     padding: 6px 12px;
-    font-size: 11px;
+    font: var(--type-control);
     font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
-    font-family: inherit;
     transition: background 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out, transform 100ms ease-out;
   }
 
@@ -900,8 +860,8 @@
   }
 
   .group-title {
-    font-size: 13px;
-    font-weight: 600;
+    font: var(--type-heading);
+    letter-spacing: 0;
     color: var(--color-foreground);
     margin: 0;
   }
@@ -915,13 +875,17 @@
   .slider-label-row {
     display: flex;
     justify-content: space-between;
-    font-size: 11px;
+    font: var(--type-control);
+    letter-spacing: 0;
+    gap: 8px;
+    flex-wrap: wrap;
     color: var(--color-foreground-darker);
   }
 
   .duration-badge {
     color: var(--color-foreground);
-    font-weight: 600;
+    font: var(--type-code);
+    letter-spacing: 0;
   }
 
   .slider-container {
@@ -1018,7 +982,8 @@
     padding: 3px 8px;
     background: var(--color-background-light);
     border-radius: 4px;
-    font-size: 11px;
+    font: var(--type-code);
+    letter-spacing: 0;
     color: var(--color-foreground);
     max-width: 100%;
     min-width: 0;
@@ -1049,12 +1014,14 @@
   }
 
   .empty-hint {
-    font-size: 11px;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 
   .unblock-note {
-    font-size: 10px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 
@@ -1072,12 +1039,14 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    font-size: 11px;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground);
   }
 
   .passphrase-sub {
-    font-size: 10px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 
@@ -1099,7 +1068,8 @@
   }
 
   .passphrase-status {
-    font-size: 10px;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground);
   }
 
@@ -1110,7 +1080,8 @@
   .alert {
     padding: 8px 12px;
     border-radius: 6px;
-    font-size: 12px;
+    font: var(--type-support);
+    letter-spacing: 0;
   }
 
   .alert.error {

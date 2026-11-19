@@ -27,6 +27,10 @@ pub struct Settings {
     pub theme_mode: String,
     pub theme_light: String,
     pub theme_dark: String,
+    pub ui_style: String,
+    /// 0 = solid; 100 = the clearest contrast-safe Glass material.
+    pub glass_transparency: u8,
+    pub font_pack: String,
     pub animations_enabled: bool,
     pub tick_sounds_during_work: bool,
     pub tick_sounds_during_break: bool,
@@ -78,6 +82,9 @@ impl Default for Settings {
             theme_mode: "auto".to_string(),
             theme_light: "Pomotroid Light".to_string(),
             theme_dark: "Pomotroid".to_string(),
+            ui_style: "pomotroid".to_string(),
+            glass_transparency: 100,
+            font_pack: "inter".to_string(),
             tick_sounds_during_work: false,
             animations_enabled: true,
             tick_sounds_during_break: false,
@@ -194,6 +201,15 @@ pub fn load(conn: &Connection) -> Result<Settings> {
             .get("theme_dark")
             .cloned()
             .unwrap_or(d.theme_dark),
+        ui_style: map.get("ui_style")
+            .filter(|value| validate_appearance(conn, "ui_style", value).is_ok())
+            .cloned().unwrap_or(d.ui_style),
+        glass_transparency: map.get("glass_transparency")
+            .and_then(|value| value.parse::<u8>().ok())
+            .filter(|value| *value <= 100).unwrap_or(d.glass_transparency),
+        font_pack: map.get("font_pack")
+            .filter(|value| validate_appearance(conn, "font_pack", value).is_ok())
+            .cloned().unwrap_or(d.font_pack),
         tick_sounds_during_work: parse_bool(&map, "tick_sounds_work", d.tick_sounds_during_work),
         animations_enabled: parse_bool(&map, "animations_enabled", d.animations_enabled),
         tick_sounds_during_break: parse_bool(
@@ -239,6 +255,24 @@ pub fn load(conn: &Connection) -> Result<Settings> {
         window_width: parse_opt_u32(&map, "window_width"),
         window_height: parse_opt_u32(&map, "window_height"),
     })
+}
+
+/// Validate appearance preferences before persisting them.
+pub fn validate_appearance(conn: &Connection, key: &str, value: &str) -> std::result::Result<(), String> {
+    match key {
+        "glass_transparency" if value.parse::<u8>().map_or(true, |value| value > 100) =>
+            Err("Glass transparency must be an integer from 0 to 100".into()),
+        "ui_style" if !matches!(value, "pomotroid" | "blocky" | "glass") =>
+            Err("Invalid UI style".into()),
+        "font_pack" if !matches!(value, "mona-sans" | "inter" | "roboto" | "jetbrains-mono") => {
+            let id = value.strip_prefix("custom:").ok_or("Invalid font ID")?;
+            if !crate::fonts::valid_id(id) || !crate::fonts::exists(conn, id).map_err(|_| "Could not validate font")? {
+                return Err("Invalid or missing font ID".into());
+            }
+            Ok(())
+        }
+        _ => Ok(()),
+    }
 }
 
 /// Upsert a single setting by its DB key. The caller is responsible for
@@ -296,6 +330,61 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         migrations::run(&conn).unwrap();
         conn
+    }
+
+    #[test]
+    fn appearance_values_validate_fallback_and_reset() {
+        let conn = setup();
+        assert_eq!(load(&conn).unwrap().ui_style, "pomotroid");
+        assert_eq!(load(&conn).unwrap().font_pack, "inter");
+        save_setting(&conn, "theme_mode", "dark").unwrap();
+        seed_defaults(&conn).unwrap();
+        assert_eq!(load(&conn).unwrap().theme_mode, "dark");
+        for style in ["blocky", "glass"] {
+            validate_appearance(&conn, "ui_style", style).unwrap();
+            save_setting(&conn, "ui_style", style).unwrap();
+            assert_eq!(load(&conn).unwrap().ui_style, style);
+        }
+        assert!(validate_appearance(&conn, "ui_style", "unknown").is_err());
+        assert_eq!(load(&conn).unwrap().ui_style, "glass");
+        assert!(validate_appearance(&conn, "font_pack", "custom:../bad").is_err());
+        let missing = format!("custom:{}", uuid::Uuid::new_v4());
+        assert!(validate_appearance(&conn, "font_pack", &missing).is_err());
+        save_setting(&conn, "font_pack", &missing).unwrap();
+        save_setting(&conn, "ui_style", "invalid").unwrap();
+        let loaded = load(&conn).unwrap();
+        assert_eq!(loaded.font_pack, "inter");
+        assert_eq!(loaded.ui_style, "pomotroid");
+        assert_eq!(get_setting(&conn, "font_pack").unwrap(), missing);
+        conn.execute("DELETE FROM settings", []).unwrap();
+        seed_defaults(&conn).unwrap();
+        assert_eq!(load(&conn).unwrap().ui_style, "pomotroid");
+        assert_eq!(load(&conn).unwrap().font_pack, "inter");
+        for selected in ["mona-sans", "inter", "roboto", "jetbrains-mono"] {
+            save_setting(&conn, "font_pack", selected).unwrap();
+            seed_defaults(&conn).unwrap();
+            assert_eq!(load(&conn).unwrap().font_pack, selected);
+        }
+    }
+
+    #[test]
+    fn glass_transparency_is_validated_persisted_and_seeded_without_overwriting() {
+        let conn = setup();
+        assert_eq!(serde_json::to_value(load(&conn).unwrap()).unwrap()["glass_transparency"], 100);
+        seed_defaults(&conn).unwrap();
+        assert_eq!(get_setting(&conn, "glass_transparency").as_deref(), Some("100"));
+        for value in ["0", "25", "50", "100"] {
+            validate_appearance(&conn, "glass_transparency", value).unwrap();
+            save_setting(&conn, "glass_transparency", value).unwrap();
+            seed_defaults(&conn).unwrap();
+            assert_eq!(serde_json::to_value(load(&conn).unwrap()).unwrap()["glass_transparency"], value.parse::<u8>().unwrap());
+        }
+        for invalid in ["-1", "101", "1.5", "not-a-number"] {
+            assert!(validate_appearance(&conn, "glass_transparency", invalid).is_err());
+            save_setting(&conn, "glass_transparency", invalid).unwrap();
+            assert_eq!(serde_json::to_value(load(&conn).unwrap()).unwrap()["glass_transparency"], 100);
+            assert_eq!(get_setting(&conn, "glass_transparency").unwrap(), invalid);
+        }
     }
 
     #[test]

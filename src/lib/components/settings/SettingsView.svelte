@@ -91,13 +91,11 @@
     background: var(--color-background);
     border: none;
     border-bottom: 2px solid transparent;
-    font-size: 0.78rem;
-    font-weight: 500;
-    letter-spacing: 0.03em;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground-darker, var(--color-foreground));
     cursor: pointer;
     white-space: nowrap;
-    font-family: inherit;
     transition:
       color 0.12s,
       background 0.12s,
@@ -113,7 +111,7 @@
     color: var(--color-foreground);
     border-bottom-color: var(--color-accent);
     background: var(--color-hover);
-    font-weight: 600;
+    font-weight: 500;
   }
 
   /* Content pane */
@@ -156,12 +154,40 @@
       border-bottom: none;
       border-left: 3px solid transparent;
       padding: 9px 16px;
-      font-size: 0.85rem;
     }
 
     .nav-item.active {
       border-left-color: var(--color-accent);
       border-bottom-color: transparent;
+    }
+  }
+
+  /* Glass navigation is one inset selection, rather than edge-to-edge pills.
+     Keep this geometry in the opaque accessibility/unsupported fallback too. */
+  :global(:root[data-ui-style="glass"]) .sidebar {
+    padding: 8px;
+  }
+
+  :global(:root[data-ui-style="glass"]) .nav-list {
+    gap: 4px;
+  }
+
+  :global(:root[data-ui-style="glass"]) .nav-item {
+    border: 0;
+    border-radius: 8px;
+    padding: 9px 8px;
+    background: transparent;
+  }
+
+  :global(:root[data-ui-style="glass"]) .nav-item.active {
+    background: var(--color-selected);
+  }
+
+  @media (min-width: 560px) {
+    :global(:root[data-ui-style="glass"]) .nav-item {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-align: left;
     }
   }
 </style>

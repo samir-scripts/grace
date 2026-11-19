@@ -136,8 +136,8 @@
   });
 
   const GRID_W = $derived(weekCount * STRIDE - GAP);
-  const LEFT_OFFSET = 28;
-  const MONTH_LABEL_H = 16;
+  const LEFT_OFFSET = 40;
+  const MONTH_LABEL_H = 20;
   const SVG_W = $derived(LEFT_OFFSET + GRID_W);
   const SVG_H = MONTH_LABEL_H + GRID_H;
 
@@ -221,14 +221,14 @@
         >
           <!-- Month labels -->
           {#each months as mo}
-            <text x={LEFT_OFFSET + mo.x} y={10} class="month-label">{mo.label}</text>
+            <text x={LEFT_OFFSET + mo.x} y={12} class="month-label">{mo.label}</text>
           {/each}
 
           <!-- Day-of-week labels -->
           {#each Object.entries(ROW_LABELS) as [rowIdx, rowLabel]}
             <text
               x={LEFT_OFFSET - 4}
-              y={MONTH_LABEL_H + Number(rowIdx) * STRIDE + CELL / 2 + 4}
+              y={MONTH_LABEL_H + Number(rowIdx) * STRIDE + CELL / 2 + 3.5}
               text-anchor="end"
               class="dow-label">{rowLabel}</text
             >
@@ -331,7 +331,8 @@
     align-items: center;
     justify-content: center;
     color: var(--color-foreground-darker);
-    font-size: 0.85rem;
+    font: var(--type-support);
+    letter-spacing: normal;
   }
 
   /* ── Heatmap ──────────────────────────────────────────────── */
@@ -360,14 +361,13 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-left: 28px; /* align with heatmap grid left edge */
+    margin-left: 40px; /* align with heatmap grid left edge */
   }
 
   .year-label {
-    font-size: 0.82rem;
-    font-weight: 600;
+    font: var(--type-control);
     font-variant-numeric: tabular-nums;
-    letter-spacing: 0.04em;
+    letter-spacing: normal;
     color: var(--color-foreground-darker);
     min-width: 3.2em;
     text-align: center;
@@ -431,16 +431,17 @@
 
   .month-label {
     fill: var(--color-foreground-darker);
-    font-size: 9px;
-    font-weight: 500;
-    letter-spacing: 0.03em;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: normal;
     cursor: default;
   }
 
   .dow-label {
     fill: var(--color-foreground-darker);
-    font-size: 8px;
-    letter-spacing: 0.02em;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: normal;
     cursor: default;
   }
 
@@ -453,8 +454,8 @@
     transform: translateY(-100%);
     background: var(--tooltip-bg);
     color: var(--color-foreground);
-    font-size: 0.72rem;
-    line-height: 1.4;
+    font: var(--type-support);
+    letter-spacing: normal;
     padding: 5px 9px;
     border-radius: 4px;
     width: max-content;
@@ -481,11 +482,12 @@
     display: flex;
     align-items: center;
     gap: 3px;
-    margin-left: 28px;
+    margin-left: 40px;
   }
 
   .legend-label {
-    font-size: 9px;
+    font: var(--type-support);
+    letter-spacing: normal;
     color: var(--color-foreground-darker);
     padding: 0 3px;
   }
@@ -531,9 +533,8 @@
   .total-label {
     text-align: center;
     overflow-wrap: anywhere;
-    font-size: 0.62rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-foreground-darker);
   }
@@ -543,11 +544,11 @@
     justify-content: center;
     overflow-wrap: anywhere;
     font-size: 1.8rem;
-    font-weight: 700;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
+    letter-spacing: normal;
     color: var(--color-foreground);
-    line-height: 1;
+    line-height: 1.15;
     display: flex;
     align-items: baseline;
     gap: 4px;
@@ -579,7 +580,8 @@
     align-items: center;
     justify-content: center;
     color: var(--color-foreground-darker);
-    font-size: 0.82rem;
+    font: var(--type-support);
+    letter-spacing: normal;
     font-style: italic;
     pointer-events: none;
   }

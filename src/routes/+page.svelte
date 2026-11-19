@@ -26,6 +26,8 @@
   import { settings } from '$lib/stores/settings';
   import * as m from '$paraglide/messages.js';
   import { applyTheme, getAppliedThemeColors, setThemePublisher } from '$lib/stores/theme';
+  import { applyAppearance, getTimerDialDimensions } from '$lib/stores/appearance';
+  import { initWindowMaterial } from '$lib/stores/windowMaterial';
   import { resolveThemeName } from '$lib/utils/theme';
   import { isMac } from '$lib/utils/platform';
   import { setLocale } from '$lib/locale.svelte.js';
@@ -130,6 +132,7 @@
   });
 
   $effect(() => {
+    const { width, height } = getTimerDialDimensions($settings.ui_style);
     function update() {
       const w = window.innerWidth;
       const h = window.innerHeight;
@@ -137,8 +140,11 @@
       if (isCompact) {
         // Scale so the dial fills the available space, reserving
         // COMPACT_BOTTOM_PAD px for the intentional bottom whitespace.
-        const available = Math.min(w - 16, h - TITLEBAR_H - 16 - COMPACT_BOTTOM_PAD);
-        uiScale = Math.max(0.4, Math.min(available / 220, 4));
+        uiScale = Math.max(0.4, Math.min(
+          (w - 16) / width,
+          (h - TITLEBAR_H - 16 - COMPACT_BOTTOM_PAD) / height,
+          4
+        ));
       } else {
         // Scale proportionally to the base window dimensions.
         uiScale = Math.max(0.5, Math.min(w / BASE_W, (h - TITLEBAR_H) / (BASE_H - TITLEBAR_H), 4));
@@ -226,6 +232,12 @@
         const osDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const active = themes.find((t) => t.name === resolveThemeName(s, osDark)) ?? themes[0];
         if (active) applyTheme(active);
+        await applyAppearance(s);
+        if (isDestroyed) return;
+        const material = initWindowMaterial();
+        cleanups.push(material.destroy);
+        await material.ready;
+        if (isDestroyed) return;
         await getCurrentWebviewWindow().show();
         await info(`[main] initialized, theme=${active?.name ?? 'none'}`);
 
@@ -306,6 +318,7 @@
           const prevLanguage = $settings.language;
           settings.set(updated);
           localVolume = updated.volume;
+          await applyAppearance(updated);
           if (updated.language !== prevLanguage) {
             setLocale(updated.language);
           }

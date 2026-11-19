@@ -16,6 +16,7 @@
 
   // SVG constants (matching original Pomotroid geometry)
   const CIRCUMFERENCE = 691.15; // 2π × 110 ≈ 691.15
+  const BLOCK_RING = 'M18 1H29V6H32V11H35V14H32V19H29V24H7V19H4V14H1V11H4V6H7V1Z';
 
   // Tweened offset: starts at full circumference (invisible), animates toward 0 (full arc).
   const dashOffset = tweened(CIRCUMFERENCE, { duration: 800, easing: cubicOut });
@@ -46,7 +47,18 @@
   });
 </script>
 
-<svg class="dial" viewBox="0 0 230 230" aria-hidden="true">
+<svg class="dial" viewBox={$settings.ui_style === 'blocky' ? '0 25 230 180' : '0 0 230 230'} aria-hidden="true">
+  {#if $settings.ui_style === 'blocky'}
+    <!-- Logo-inspired stepped centerline; keep the time aperture open. -->
+    <g transform="translate(16 46.25) scale(5.5)">
+      <path class="block-track" d={BLOCK_RING} fill="none"
+        stroke="var(--color-background-light)" stroke-width="2" stroke-linejoin="miter" />
+      <path class="block-progress" d={BLOCK_RING} fill="none"
+        stroke={strokeColor(snap.round_type)} stroke-width="2"
+        stroke-linecap="butt" stroke-linejoin="miter" pathLength="100"
+        stroke-dasharray="100" stroke-dashoffset={$dashOffset / CIRCUMFERENCE * 100} />
+    </g>
+  {:else}
   <!-- Background track -->
   <path
     class="track"
@@ -66,12 +78,13 @@
     stroke-dasharray={CIRCUMFERENCE}
     stroke-dashoffset={$dashOffset}
   />
+  {/if}
 </svg>
 
 <style>
   .dial {
-    width: 220px;
-    height: 220px;
+    width: var(--timer-dial-width, 220px);
+    height: var(--timer-dial-height, 220px);
     display: block;
   }
 </style>

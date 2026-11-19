@@ -71,6 +71,37 @@ pub fn settings_get(db: State<'_, DbState>) -> Result<Settings, String> {
     })
 }
 
+#[tauri::command]
+pub fn fonts_list(db: State<'_, DbState>) -> Result<Vec<crate::fonts::ImportedFont>, String> {
+    let conn = db.lock().map_err(|_| "Could not access database")?;
+    crate::fonts::list(&conn)
+}
+
+#[tauri::command]
+pub fn fonts_import(src_path: String, db: State<'_, DbState>, app: AppHandle) -> Result<crate::fonts::ImportedFont, String> {
+    let dir = app.path().app_data_dir().map_err(|_| "Could not resolve app data directory")?;
+    let conn = db.lock().map_err(|_| "Could not access database")?;
+    crate::fonts::import(&conn, &dir, std::path::Path::new(&src_path))
+}
+
+#[tauri::command]
+pub fn fonts_read(id: String, db: State<'_, DbState>, app: AppHandle) -> Result<tauri::ipc::Response, String> {
+    let dir = app.path().app_data_dir().map_err(|_| "Could not resolve app data directory")?;
+    let conn = db.lock().map_err(|_| "Could not access database")?;
+    Ok(tauri::ipc::Response::new(crate::fonts::read(&conn, &dir, &id)?))
+}
+
+#[tauri::command]
+pub fn fonts_remove(id: String, db: State<'_, DbState>, app: AppHandle) -> Result<Settings, String> {
+    let dir = app.path().app_data_dir().map_err(|_| "Could not resolve app data directory")?;
+    let settings = {
+        let conn = db.lock().map_err(|_| "Could not access database")?;
+        crate::fonts::remove(&conn, &dir, &id)?
+    };
+    app.emit("settings:changed", &settings).map_err(|_| "Could not broadcast settings")?;
+    Ok(settings)
+}
+
 /// Persist a single setting and emit `settings:changed` with the updated set.
 ///
 /// `key` must be one of the DB column names (see `settings::defaults::DEFAULTS`).
@@ -88,6 +119,7 @@ pub fn settings_set(
     log::debug!("[settings] set {key}={value}");
     let new_settings = {
         let conn = db.lock().map_err(|e| e.to_string())?;
+        settings::validate_appearance(&conn, &key, &value)?;
         settings::save_setting(&conn, &key, &value).map_err(|e| {
             log::error!("[settings] failed to save '{key}': {e}");
             e.to_string()
@@ -99,11 +131,19 @@ pub fn settings_set(
             settings::save_setting(&conn, "min_to_tray", "false").map_err(|e| e.to_string())?;
             settings::save_setting(&conn, "min_to_tray_on_close", "false").map_err(|e| e.to_string())?;
         }
-        settings::load(&conn).map_err(|e| {
+        let updated = settings::load(&conn).map_err(|e| {
             log::error!("[settings] failed to reload after save: {e}");
             e.to_string()
-        })?
+        })?;
+        if key == "ui_style" {
+            app.state::<crate::window_material::WindowMaterialState>()
+                .set_requested_style(&updated.ui_style);
+        }
+        updated
     };
+    if key == "ui_style" {
+        crate::window_material::schedule_reconcile(&app);
+    }
 
     // Apply verbose_logging change immediately without a restart.
     if key == "verbose_logging" {
@@ -250,8 +290,12 @@ pub fn settings_reset_defaults(
         conn.execute("DELETE FROM settings", [])
             .map_err(|e| e.to_string())?;
         settings::seed_defaults(&conn).map_err(|e| e.to_string())?;
-        settings::load(&conn).map_err(|e| e.to_string())?
+        let updated = settings::load(&conn).map_err(|e| e.to_string())?;
+        app.state::<crate::window_material::WindowMaterialState>()
+            .set_requested_style(&updated.ui_style);
+        updated
     };
+    crate::window_material::schedule_reconcile(&app);
 
     timer.apply_settings(new_settings.clone());
     *tray_state.countdown_mode.lock().unwrap() = new_settings.dial_countdown;
@@ -399,6 +443,15 @@ pub fn window_set_visibility(visible: bool, app: AppHandle) -> Result<(), String
         window.hide().map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+/// Reconcile native material with the current style and browser accessibility policy.
+#[tauri::command]
+pub async fn window_material_set_allowed(
+    allowed: bool,
+    app: AppHandle,
+) -> Result<crate::window_material::WindowMaterialStatus, String> {
+    crate::window_material::set_allowed(app, allowed).await
 }
 
 /// Set the main window size to the optimal layout for the target view.

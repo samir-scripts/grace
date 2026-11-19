@@ -56,7 +56,7 @@
     cursor: pointer;
     text-align: left;
     gap: 16px;
-    transition: background 0.12s;
+    transition: background-color var(--transition-control);
   }
 
   .row:hover {
@@ -75,15 +75,15 @@
   }
 
   .label {
-    font-size: 0.85rem;
+    font: var(--type-control);
     color: var(--color-foreground);
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
   }
 
   .desc {
-    font-size: 0.72rem;
+    font: var(--type-support);
     color: var(--color-foreground-darker, var(--color-foreground));
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
   }
 
   /* Pill toggle */
@@ -97,7 +97,7 @@
     background: var(--color-background-light);
     border: 1px solid var(--color-border);
     flex-shrink: 0;
-    transition: background 0.2s;
+    transition: background-color var(--transition-control);
   }
 
   .toggle::after {
@@ -112,8 +112,8 @@
     top: 3px;
     left: 3px;
     transition:
-      transform 0.2s,
-      background 0.2s;
+      transform var(--transition-toggle),
+      background-color var(--transition-control);
   }
 
   .toggle.on {

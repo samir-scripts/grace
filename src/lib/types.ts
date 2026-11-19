@@ -16,6 +16,19 @@ export interface TimerState {
   session_work_count: number; // monotonic focus round count since last reset
 }
 
+export type UiStyle = 'pomotroid' | 'blocky' | 'glass';
+export type FontPack = 'mona-sans' | 'inter' | 'roboto' | 'jetbrains-mono' | `custom:${string}`;
+export interface ImportedFont {
+  id: string;
+  display_name: string;
+}
+
+/** Runtime native composition status; never persisted with Settings. */
+export interface WindowMaterialStatus {
+  active: boolean;
+  revision: number;
+}
+
 /** Mirrors Rust `Settings` struct returned by `settings_get`. */
 export interface Settings {
   short_breaks_enabled: boolean;
@@ -41,6 +54,9 @@ export interface Settings {
   theme_mode: string; // 'auto' | 'light' | 'dark'
   theme_light: string;
   theme_dark: string;
+  ui_style: UiStyle;
+  glass_transparency: number; // 0–100, capped by readable material contrast
+  font_pack: FontPack;
   dial_countdown: boolean;
   animations_enabled: boolean;
   language: string; // 'auto' | 'en' | 'es' | 'fr' | 'de' | 'ja'

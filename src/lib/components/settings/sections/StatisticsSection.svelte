@@ -157,13 +157,11 @@
     min-width: 0;
     padding: 10px 4px;
     overflow-wrap: anywhere;
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    font: var(--type-control);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-foreground-darker);
     cursor: pointer;
-    font-family: inherit;
     transition:
       color 0.15s,
       border-color 0.15s;
@@ -175,6 +173,7 @@
 
   .tab.active {
     color: var(--color-foreground);
+    font-weight: 500;
     border-bottom-color: var(--color-focus-round);
   }
 

@@ -145,6 +145,8 @@ export function resolveThemeColors(theme: Pick<Theme, 'colors'>): Record<string,
   c['--color-status-error'] = readable('#c53748', 4.5);
   c['--color-status-success'] = readable('#28783b', 4.5);
   c['--color-status-warning'] = readable('#946000', 4.5);
+  c['--color-danger-button-text'] = contrastRatio('#000000', c['--color-status-error']) >= 4.5
+    ? '#000000' : '#ffffff';
 
   // Installed is a quiet accent tint; active uses the short-round color as a
   // stronger fill, with both badge text colors adjusted for readable contrast.
@@ -164,4 +166,60 @@ export function resolveThemeColors(theme: Pick<Theme, 'colors'>): Record<string,
   c['--color-browser-active-bg'] = activeBg;
   c['--color-browser-active-text'] = activeText;
   return c;
+}
+
+/** Derive view-only colors readable over native material and solid controls. */
+export function resolveGlassColors(colors: Record<string, string>, transparency = 100): Record<string, string> {
+  const bg = colors['--color-background'];
+  const ink = (parseHexLuminance(bg) ?? 0) > .179 ? '#000000' : '#ffffff';
+  const controls = ['--color-background', '--color-background-light', '--color-hover', '--color-selected']
+    .map(key => colors[key]);
+  const surfaces = [...controls];
+  const readable = (candidate: string, minimum: number) => {
+    for (let step = 0; step <= 100; step++) {
+      const color = mix(candidate, ink, step / 100);
+      if (surfaces.every(surface => contrastRatio(color, surface) >= minimum)) return color;
+    }
+    return ink;
+  };
+  const channels = (color: string) => {
+    const hex = color.slice(1);
+    const expanded = hex.length === 3 ? [...hex].map(c => c + c).join('') : hex;
+    return [0, 2, 4].map(i => parseInt(expanded.slice(i, i + 2), 16));
+  };
+  const rgb = channels(bg);
+  const fraction = Number.isFinite(transparency) ? Math.max(0, Math.min(100, transparency)) / 100 : 1;
+  // Keep the outer frost visible; content and controls supply readable backing.
+  const canvasAlpha = 1 - .75 * fraction;
+  const canvases = ['#000000', '#ffffff'].map(back => mix(back, bg, canvasAlpha));
+  const surface = (minimum: number, color = bg, protectText = false) => {
+    let opacity = Math.round((1 - (1 - minimum) * fraction) * 100);
+    let backgrounds = canvases.map(canvas => mix(canvas, color, opacity / 100));
+    while (protectText && opacity < 100 && backgrounds.some(back => contrastRatio(ink, back) < 4.5)) {
+      opacity++;
+      backgrounds = canvases.map(canvas => mix(canvas, color, opacity / 100));
+    }
+    return { paint: `rgba(${channels(color).join(', ')}, ${opacity / 100})`, backgrounds };
+  };
+  const content = surface(.60, bg, true);
+  const control = surface(.18, bg, true);
+  const chrome = surface(.10, bg, true);
+  const selected = surface(.40, colors['--color-selected'], true);
+  surfaces.push(...content.backgrounds, ...control.backgrounds, ...selected.backgrounds, ...chrome.backgrounds);
+  const error = readable(colors['--color-status-error'], 4.5);
+  return {
+    '--glass-canvas': `rgba(${rgb.join(', ')}, ${canvasAlpha})`,
+    '--glass-content-surface': content.paint,
+    '--glass-control-surface': control.paint,
+    '--glass-chrome-surface': chrome.paint,
+    '--glass-selected-surface': selected.paint,
+    '--glass-foreground': readable(colors['--color-foreground'], 4.5),
+    '--glass-foreground-darker': readable(colors['--color-foreground-darker'], 4.5),
+    '--glass-border': readable(colors['--color-border'], 3),
+    '--glass-status-error': error,
+    '--glass-status-success': readable(colors['--color-status-success'], 4.5),
+    '--glass-status-warning': readable(colors['--color-status-warning'], 4.5),
+    '--glass-danger-button-text': contrastRatio('#000000', error) >= contrastRatio('#ffffff', error)
+      ? '#000000' : '#ffffff',
+  };
 }

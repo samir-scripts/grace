@@ -234,5 +234,19 @@
   "nav_back_timer": "Timer",
   "browser_chrome_prepare": "Install Chrome Companion",
   "browser_chrome_prepared": "Chrome Web Store opened. Install the companion and approve its connection request. Pairing happens automatically; assign a browser profile once its Connected badge appears.",
-  "browser_chrome_error": "Could not open Chrome setup. Check that Grace can register its browser host, then try again."
+  "browser_chrome_error": "Could not open Chrome setup. Check that Grace can register its browser host, then try again.",
+  "appearance_ui_style": "Interface style",
+  "appearance_style_pomotroid": "Pomotroid",
+  "appearance_style_blocky": "Blocky",
+  "appearance_style_glass": "Glass",
+  "appearance_font_pack": "Font",
+  "appearance_import_font": "Import Font",
+  "appearance_remove_font": "Remove {name}",
+  "appearance_customization_hint": "Style, fonts and colors are independent. Imported fonts stay on this device.",
+  "appearance_customization_error": "Could not save this appearance. Your previous selection is unchanged.",
+  "appearance_font_import_error": "Could not load this font. Choose a valid WOFF2, WOFF, TTF or OTF file up to 20 MiB.",
+  "appearance_font_missing": "The selected font is unavailable. Mona Sans is being used; reimport the font or choose another.",
+  "appearance_font_remove_error": "Could not remove the font. Please try again.",
+  "appearance_glass_transparency": "Transparency",
+  "appearance_glass_transparency_hint": "At 100%, the window keeps a light tint."
 }

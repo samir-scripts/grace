@@ -8,6 +8,11 @@
 
 ## Unreleased
 
+### Typography preview
+
+- Use Inter interface text and JetBrains Mono timer digits for fresh/reset settings while preserving saved font selections.
+- Improve text hierarchy, timer weight, safety instructions and chart labels across the desktop interface.
+
 ### Bug Fixes
 
 - Focus session startup checks browser companions before closing blocked apps, and Retry starts the timer after protection is restored. Chrome companions reconnect after service-worker suspension and use a stable development identity.

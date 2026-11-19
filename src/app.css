@@ -3,7 +3,7 @@
 
 /* ---------------------------------------------------------------------------
    Embedded variable fonts
-   font-display: block — app is offline-first, no FOUT risk
+   Local fonts load before the native window appears; swap provides fallback elsewhere.
    --------------------------------------------------------------------------- */
 
 @font-face {
@@ -12,18 +12,51 @@
   font-weight: 200 900;
   font-stretch: 75% 125%;
   font-style: normal;
-  font-display: block;
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'Mona Sans Mono';
   src: url('/fonts/MonaSansMonoVF.woff2') format('woff2');
   font-weight: 200 900;
-  font-stretch: 75% 125%;
-  font-display: block;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/InterVF.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Roboto';
+  src: url('/fonts/RobotoVF.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMonoVF.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
 }
 
 :root {
+  --font-ui: 'Inter', 'Mona Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Mona Sans Mono', monospace;
+  --type-control: 400 .8125rem / 1.125rem var(--font-ui);
+  --type-body: 400 .8125rem / 1.25rem var(--font-ui);
+  --type-support: 400 .75rem / 1.125rem var(--font-ui);
+  --type-heading: 600 .875rem / 1.25rem var(--font-ui);
+  --type-eyebrow: 500 .6875rem / 1rem var(--font-ui);
+  --type-code: 400 .75rem / 1.125rem var(--font-mono);
+  --type-timer: 400 2.8rem / 1 var(--font-mono);
+  --timer-dial-width: 220px;
+  --timer-dial-height: 220px;
   /* Theme colors (defaults; overridden by the active theme at runtime) */
   --color-long-round: #c75000;
   --color-short-round: #417505;
@@ -50,6 +83,8 @@
   --transition-snappy: 0.15s cubic-bezier(0.22, 1, 0.36, 1);
   --transition-exit: 0.12s cubic-bezier(0.22, 1, 0.36, 1);
   --transition-slow: 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-control: 280ms cubic-bezier(0.2, 0, 0.2, 1);
+  --transition-toggle: 300ms cubic-bezier(0.22, 0.61, 0.36, 1);
 
   /* Optical sizing — adapts letterforms to font-size automatically */
   font-optical-sizing: auto;
@@ -68,10 +103,13 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  font-family: 'Mona Sans', system-ui, sans-serif;
   background-color: var(--color-background);
   color: var(--color-foreground);
   user-select: none;
+}
+
+body {
+  font: var(--type-control);
 }
 /* ---------------------------------------------------------------------------
    Theme-aware Scrollbars
@@ -178,3 +216,120 @@ body {
   outline-offset: 3px;
 }
 button:disabled { cursor: not-allowed; }
+button, input, select, textarea { font-family: inherit; }
+
+/* Appearance is independent of the resolved color palette. Scoped component
+   sheets keep their original Pomotroid metrics; these cross-component states
+   deliberately win over local hover/radius declarations. */
+button {
+  --button-hover-bg: var(--color-button);
+  --button-hover-text: var(--color-button-text);
+  transition: background-color var(--transition-control), color var(--transition-control),
+    border-color var(--transition-control);
+}
+button:is(.btn-danger, .btn-delete, .btn-discard, .btn-remove, .remove-font, .confirm-destructive, .close) {
+  --button-hover-bg: var(--color-status-error);
+  --button-hover-text: var(--color-danger-button-text);
+}
+:root button:hover:not(:disabled):not(.suppress-hover *) {
+  background-color: var(--button-hover-bg) !important;
+  color: var(--button-hover-text) !important;
+}
+:root button:hover:not(:disabled):not(.suppress-hover *) :where(span, small, code, svg) {
+  color: inherit !important;
+}
+:root button[role="switch"]:hover:not(:disabled) {
+  background-color: var(--color-hover) !important;
+  color: var(--color-foreground) !important;
+}
+:root[data-ui-style] button:not(:disabled) {
+  transition: background-color var(--transition-control), color var(--transition-control),
+    border-color var(--transition-control);
+}
+:root[data-ui-style="blocky"] :where(*):not(img),
+:root[data-ui-style="blocky"] *::before,
+:root[data-ui-style="blocky"] *::after {
+  border-radius: 0 !important;
+}
+:root[data-ui-style="blocky"] { --radius-control: 0px; }
+:root[data-ui-style="blocky"] ::-webkit-scrollbar-thumb { border-radius: 0; }
+:root[data-ui-style="glass"] { --radius-control: 6px; }
+:root[data-ui-style="glass"] :is(input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, .themed-select, .import-font, .remove-font, .picker-trigger, .themed-options, .browser-card, .picker-panel, .dropdown-menu) {
+  border-radius: var(--radius-control);
+}
+:root[data-ui-style="glass"] :is(.modal-card, .escape-modal) {
+  border-radius: 12px;
+}
+:root[data-ui-style="glass"] .titlebar .btn-icon {
+  border-radius: 50%;
+}
+/* Opaque material is the baseline, including engines without the preference. */
+:root[data-ui-style="glass"] :is(.themed-options, .sidebar, .modal-card, .escape-modal, .dropdown-menu, .picker-panel, .titlebar) {
+  background-color: var(--color-background-light);
+  border-color: var(--color-border);
+}
+/* The root controller and native policy authorize transparency. WebKit can
+   evaluate both an unsupported preference query and its negation as false,
+   so do not gate the acknowledged material behind negated media queries. */
+:root[data-ui-style="glass"][data-window-material="frosted"] {
+  background-color: transparent;
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] body {
+  background-color: var(--glass-canvas);
+  --color-foreground: var(--glass-foreground);
+  --color-foreground-darker: var(--glass-foreground-darker);
+  --color-foreground-darkest: var(--glass-foreground-darker);
+  --color-border: var(--glass-border);
+  --color-status-error: var(--glass-status-error);
+  --color-status-success: var(--glass-status-success);
+  --color-status-warning: var(--glass-status-warning);
+  --color-danger-button-text: var(--glass-danger-button-text);
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] :is(.settings-view, .stats-section .tab:not(.active):not(:hover)) {
+  background-color: transparent;
+}
+/* Keep form/statistics content readable while the timer rests on native frost. */
+:root[data-ui-style="glass"][data-window-material="frosted"] :is(.settings-view > .content, .stats-section > .content) {
+  background-color: var(--glass-content-surface);
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] .titlebar {
+  background-color: transparent;
+  border-bottom-color: transparent;
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] :is(.sidebar, .stats-section .tabs) {
+  background-color: var(--glass-chrome-surface);
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] :is(.themed-select, input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, .picker-trigger, .settings-view button[role="switch"], .duration-badge) {
+  background-color: var(--glass-control-surface);
+  --button-hover-bg: var(--glass-selected-surface);
+  --button-hover-text: var(--color-foreground);
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] :is(.btn-back, .btn-icon, .btn-side, .btn-text, .play-pause, .session-btn:not(.locked), .link-row, .update-row) {
+  background-color: transparent;
+  --button-hover-bg: var(--glass-selected-surface);
+  --button-hover-text: var(--color-foreground);
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] .mode-selector {
+  background-color: var(--glass-chrome-surface);
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] .mode-btn {
+  background-color: transparent;
+  --button-hover-bg: var(--glass-selected-surface);
+  --button-hover-text: var(--color-foreground);
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] :is(.nav-item.active, .mode-btn.active, .stats-section .tab.active) {
+  background-color: var(--glass-selected-surface);
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] .settings-view button[role="switch"]:hover:not(:disabled) {
+  background-color: var(--glass-selected-surface) !important;
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] .nav-item:not(.active):not(:hover) {
+  background-color: transparent;
+}
+:root[data-ui-style="glass"][data-window-material="frosted"] :is(.themed-options, .modal-card, .escape-modal, .dropdown-menu, .picker-panel) {
+  background-color: color-mix(in srgb, var(--color-background-light) 96%, transparent);
+  box-shadow: inset 0 1px color-mix(in srgb, var(--color-foreground) 12%, transparent);
+}
+@media (forced-colors: active) {
+  :root button:hover:not(:disabled) { background-color: Highlight !important; color: HighlightText !important; }
+}

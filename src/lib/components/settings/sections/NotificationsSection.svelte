@@ -206,9 +206,8 @@
   }
 
   .group-heading {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-foreground-darker, var(--color-foreground));
     margin: 0;
@@ -228,14 +227,14 @@
   }
 
   .label {
-    font-size: 0.85rem;
+    font: var(--type-control);
     color: var(--color-foreground);
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
   }
 
   .value {
-    font-size: 0.8rem;
-    font-family: monospace;
+    font: var(--type-code);
+    letter-spacing: 0;
     color: var(--color-foreground-darker, var(--color-foreground));
     background: var(--color-hover);
     padding: 2px 8px;
@@ -308,8 +307,8 @@
   }
 
   .file-name {
-    font-size: 0.72rem;
-    font-family: monospace;
+    font: var(--type-code);
+    letter-spacing: 0;
     color: var(--color-foreground-darker, rgba(255, 255, 255, 0.35));
     white-space: nowrap;
     overflow: hidden;
@@ -324,12 +323,14 @@
   .audio-actions {
     display: flex;
     gap: 6px;
+    flex-wrap: wrap;
     flex-shrink: 0;
   }
 
   .btn-choose,
   .btn-restore {
-    font-size: 0.72rem;
+    font: var(--type-control);
+    letter-spacing: 0;
     padding: 4px 10px;
     border-radius: 4px;
     cursor: pointer;
@@ -358,6 +359,6 @@
     padding: 2px 20px 8px;
     font-size: 0.72rem;
     color: var(--color-danger, #e05252);
-    font-family: monospace;
+    font-family: var(--font-mono);
   }
 </style>

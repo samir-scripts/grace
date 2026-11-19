@@ -166,9 +166,8 @@
   }
 
   .summary-label {
-    font-size: 0.67rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-foreground-darker);
   }
@@ -177,6 +176,8 @@
     font-size: 1.1rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+    letter-spacing: normal;
     color: var(--color-foreground);
     display: flex;
     align-items: center;
@@ -184,8 +185,8 @@
   }
 
   .streak-none {
-    font-size: 0.9rem;
-    font-weight: 400;
+    font: var(--type-support);
+    letter-spacing: normal;
     color: var(--color-foreground-darker);
   }
 
@@ -211,7 +212,8 @@
     align-items: center;
     justify-content: center;
     color: var(--color-foreground-darker);
-    font-size: 0.85rem;
+    font: var(--type-support);
+    letter-spacing: normal;
     font-style: italic;
   }
 
@@ -260,7 +262,8 @@
   .count-label {
     fill: var(--color-foreground-darker);
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 500;
+    letter-spacing: normal;
     font-variant-numeric: tabular-nums;
     animation: app-fade-in 0.3s ease both;
     animation-delay: 0.35s;
@@ -270,15 +273,15 @@
   .day-label {
     fill: var(--color-foreground-darker);
     font-size: 10px;
-    font-weight: 500;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: normal;
     cursor: default;
   }
 
   .day-label-today {
     fill: var(--color-focus-round);
-    font-weight: 700;
+    font-weight: 500;
   }
 
   .baseline {

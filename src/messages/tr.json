@@ -211,5 +211,19 @@
   "nav_back_timer": "Zamanlayıcı",
   "browser_chrome_prepare": "Chrome Yardımcısını Yükle",
   "browser_chrome_prepared": "Chrome Web Mağazası açıldı. Yardımcıyı yükleyin ve bağlantı isteğini onaylayın. Eşleştirme otomatik yapılır; “Bağlı” rozeti görününce profili atayın.",
-  "browser_chrome_error": "Chrome kurulumu açılamadı. Grace’in tarayıcı ana bilgisayarını kaydedebildiğini kontrol edip tekrar deneyin."
+  "browser_chrome_error": "Chrome kurulumu açılamadı. Grace’in tarayıcı ana bilgisayarını kaydedebildiğini kontrol edip tekrar deneyin.",
+  "appearance_ui_style": "Arayüz stili",
+  "appearance_style_pomotroid": "Pomotroid",
+  "appearance_style_blocky": "Köşeli",
+  "appearance_style_glass": "Cam",
+  "appearance_font_pack": "Yazı tipi",
+  "appearance_import_font": "Yazı tipi içe aktar",
+  "appearance_remove_font": "{name} yazı tipini kaldır",
+  "appearance_customization_hint": "Stil, yazı tipi ve renkler bağımsızdır. İçe aktarılan yazı tipleri bu cihazda kalır.",
+  "appearance_customization_error": "Görünüm kaydedilemedi. Önceki seçim korundu.",
+  "appearance_font_import_error": "Yazı tipi yüklenemedi. En fazla 20 MiB boyutunda geçerli bir WOFF2, WOFF, TTF veya OTF dosyası seçin.",
+  "appearance_font_missing": "Seçili yazı tipi kullanılamıyor. Mona Sans kullanılıyor; yazı tipini yeniden aktarın veya başka birini seçin.",
+  "appearance_font_remove_error": "Yazı tipi kaldırılamadı. Lütfen tekrar deneyin.",
+  "appearance_glass_transparency": "Şeffaflık",
+  "appearance_glass_transparency_hint": "%100 düzeyinde pencere hafif bir renk tonu korur."
 }

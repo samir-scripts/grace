@@ -211,5 +211,19 @@
   "nav_back_timer": "计时器",
   "browser_chrome_prepare": "安装 Chrome 伴侣扩展",
   "browser_chrome_prepared": "已打开 Chrome 网上应用店。安装伴侣扩展并同意连接请求。配对会自动完成；出现“已连接”标记后，请分配浏览器配置。",
-  "browser_chrome_error": "无法打开 Chrome 设置。请检查 Grace 是否可以注册浏览器主机，然后重试。"
+  "browser_chrome_error": "无法打开 Chrome 设置。请检查 Grace 是否可以注册浏览器主机，然后重试。",
+  "appearance_ui_style": "界面风格",
+  "appearance_style_pomotroid": "Pomotroid",
+  "appearance_style_blocky": "方块",
+  "appearance_style_glass": "玻璃",
+  "appearance_font_pack": "字体",
+  "appearance_import_font": "导入字体",
+  "appearance_remove_font": "移除{name}",
+  "appearance_customization_hint": "风格、字体和颜色可独立选择。导入的字体仅保存在此设备上。",
+  "appearance_customization_error": "无法保存外观。已保留之前的选择。",
+  "appearance_font_import_error": "无法加载字体。请选择不超过20 MiB的有效WOFF2、WOFF、TTF或OTF文件。",
+  "appearance_font_missing": "所选字体不可用，现使用Mona Sans。请重新导入或选择其他字体。",
+  "appearance_font_remove_error": "无法移除字体。请重试。",
+  "appearance_glass_transparency": "透明度",
+  "appearance_glass_transparency_hint": "100% 时，窗口仍保留淡淡的色调。"
 }

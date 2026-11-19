@@ -175,15 +175,14 @@
     border: 1px solid var(--color-separator);
     border-radius: 6px;
     color: var(--color-foreground);
-    font-family: inherit;
-    font-size: 11.5px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
     transition:
-      background var(--transition-snappy),
-      color var(--transition-snappy),
-      border-color var(--transition-snappy),
+      background var(--transition-control),
+      color var(--transition-control),
+      border-color var(--transition-control),
       transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
     min-width: 0;
     max-width: min(140px, 100%);
@@ -268,12 +267,12 @@
     border: none;
     border-radius: 4px;
     color: var(--color-foreground-darker);
-    font-family: inherit;
-    font-size: 11px;
+    font: var(--type-control);
+    letter-spacing: 0;
     cursor: pointer;
     text-align: left;
     width: 100%;
-    transition: background var(--transition-snappy), color var(--transition-snappy);
+    transition: background var(--transition-control), color var(--transition-control);
     animation: dropdown-item-rise 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: var(--delay, 0ms);
   }
@@ -310,11 +309,10 @@
   .item-cadence {
     flex: 0 0 auto;
     margin-left: auto;
-    font-family: 'Mona Sans Mono', monospace;
-    font-size: 9.5px;
+    font: var(--type-code);
     font-variant-numeric: tabular-nums;
     color: var(--color-foreground-darker);
-    letter-spacing: 0.01em;
+    letter-spacing: 0;
     white-space: nowrap;
   }
 
@@ -329,7 +327,7 @@
     border-radius: 50%;
     flex-shrink: 0;
     background: transparent;
-    transition: background var(--transition-snappy), box-shadow var(--transition-snappy);
+    transition: background var(--transition-control), box-shadow var(--transition-control);
   }
 
   .item-dot.active {
@@ -348,7 +346,7 @@
     align-items: center;
     gap: 6px;
     color: var(--color-foreground-darker);
-    font-size: 10px;
+    font: var(--type-control);
   }
 
   .manage-icon {

@@ -343,13 +343,12 @@
     height: 24px;
     padding: 0 8px;
     border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font: var(--type-control);
+    font-weight: 500;
     color: var(--color-foreground);
     background: var(--color-background-light);
     border: 1px solid color-mix(in oklch, var(--color-accent) 35%, transparent);
     cursor: pointer;
-    font-family: inherit;
     transition: background 0.12s, border-color 0.12s;
     white-space: nowrap;
   }

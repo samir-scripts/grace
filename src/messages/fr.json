@@ -211,5 +211,19 @@
   "nav_back_timer": "Minuteur",
   "browser_chrome_prepare": "Installer le compagnon Chrome",
   "browser_chrome_prepared": "Le Chrome Web Store est ouvert. Installez le compagnon et acceptez la demande de connexion. L’association est automatique ; attribuez le profil lorsque « Connecté » apparaît.",
-  "browser_chrome_error": "Impossible d’ouvrir la configuration Chrome. Vérifiez que Grace peut enregistrer son hôte de navigateur, puis réessayez."
+  "browser_chrome_error": "Impossible d’ouvrir la configuration Chrome. Vérifiez que Grace peut enregistrer son hôte de navigateur, puis réessayez.",
+  "appearance_ui_style": "Style d’interface",
+  "appearance_style_pomotroid": "Pomotroid",
+  "appearance_style_blocky": "Angulaire",
+  "appearance_style_glass": "Verre",
+  "appearance_font_pack": "Police",
+  "appearance_import_font": "Importer une police",
+  "appearance_remove_font": "Supprimer {name}",
+  "appearance_customization_hint": "Le style, les polices et les couleurs sont indépendants. Les polices importées restent sur cet appareil.",
+  "appearance_customization_error": "Impossible d’enregistrer l’apparence. La sélection précédente est conservée.",
+  "appearance_font_import_error": "Impossible de charger la police. Choisissez un fichier WOFF2, WOFF, TTF ou OTF valide de 20 MiB maximum.",
+  "appearance_font_missing": "La police choisie est indisponible. Mona Sans est utilisée ; réimportez la police ou choisissez-en une autre.",
+  "appearance_font_remove_error": "Impossible de supprimer la police. Réessayez.",
+  "appearance_glass_transparency": "Transparence",
+  "appearance_glass_transparency_hint": "À 100 %, la fenêtre conserve une légère teinte."
 }
