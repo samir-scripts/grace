@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$paraglide/messages.js';
   import { focusSnapshot } from '$lib/stores/focus';
   import { retryFocusEnforcement } from '$lib/ipc';
 
@@ -39,18 +40,18 @@
       </svg>
       <span class="text">
         {#if enf.state === 'recovery_required'}
-          Blocking cleanup required. Click Retry to restore access.
+          {m.enforcement_cleanup()}
         {:else if enf.error_code === 'authorization_denied' || enf.error_code === 'authorization_required'}
-          Distraction blocking needs operating system permission. Check permissions, then retry.
+          {m.enforcement_permission()}
         {:else if enf.error_code === 'lease_lost'}
-          Distraction blocking disconnected and the timer paused. Reconnect, then retry.
+          {m.enforcement_disconnected()}
         {:else}
-          Distraction blocking could not start. Check the selected apps and browser extension, then retry.
+          {m.enforcement_failed()}
         {/if}
       </span>
     </div>
     <button class="retry-btn" onclick={handleRetry} disabled={isRetrying}>
-      {isRetrying ? 'Retrying...' : 'Retry'}
+      {isRetrying ? m.enforcement_retrying() : m.apps_retry()}
     </button>
   </div>
 {/if}

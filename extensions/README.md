@@ -5,13 +5,13 @@ The browser companions apply Grace’s website blocking rules directly in the br
 Before connecting, open the companion's options and select **Accept & Connect**
 on the data-sharing disclosure. The companion shares its persistent profile ID,
 authentication proofs, policy acknowledgements and connection checks with
-Pomotroid on this computer. It does not send visited URLs, browser identity or
+Grace on this computer. It does not send visited URLs, browser identity or
 error reports to the desktop bridge. The native messaging connection remains
 open while sharing is enabled and closes when sharing stops. Select **Stop
 sharing and disconnect** to withdraw; existing browser rules may remain until
 an authenticated release.
 
-In Pomotroid's browser setup, assign each newly connected profile to its actual
+In Grace's browser setup, assign each newly connected profile to its actual
 browser before starting website blocking. Browser identity is not sent by the
 extension. Desktop and companion must both use protocol version 3; older
 versions cannot connect. Firefox 115–139 uses the extension's own consent page;
@@ -144,7 +144,7 @@ the add-on's AMO version management page, not a specific version record.
 
 Grace uses the same Chrome identity for unpacked acceptance and the Web Store: `cgibenlmgmblmalggjalnoaikjkdnoid`. In Settings > Timer & Sessions, Install Chrome Companion registers the bundled native host and opens the listing in Google Chrome. Repair Connection repeats registration and opens the listing; Remove Setup removes Grace registration/profile assignment, not the extension itself. Stop sharing or uninstall the companion separately after an authenticated release.
 
-Chrome 1.1.2 is publicly available. Chrome 1.1.4 was submitted for review on November 17, 2026; see the [dated submission record](../plans/evidence/chrome-store-1.1.4/README.md). Store-installed acceptance of a newer version is separate from unpacked testing. Windows and Linux x64 packaged acceptance remain unverified; see the [native checklist](../plans/contributor-native-acceptance.md).
+Chrome 1.1.4 was submitted on November 17, 2026; see the [dated submission record](../plans/evidence/chrome-store-1.1.4/README.md). The store-installed 1.1.4 paired in the [first nightly's macOS smoke](../plans/README.md). Broader recovery and Windows/Linux x64 remain unverified; see the [native checklist](../plans/contributor-native-acceptance.md).
 
 Build the inspected Chrome ZIP with `npm run extensions:chrome:release`. Chrome-only diagnostics are injected into the Chrome output; the shared Gecko payload and signed XPI remain unchanged. CI runs `npm run test:chrome-integration` with Chromium installed. Universal macOS packaging uses `npm run build:macos-universal`; release signing uses `-- --updater`.
 

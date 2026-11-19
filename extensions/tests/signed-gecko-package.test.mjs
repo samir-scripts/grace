@@ -194,3 +194,17 @@ test('signed release rejects changed, removed and extra Firefox overrides', t =>
     assert.equal(fs.existsSync(f.output), false);
   }
 });
+
+test('a changed companion icon leaves the previous signed release output intact', t => {
+  const f = fixture(t);
+  const signed = f.stage(f.payload());
+  const first = f.run('--require-signed');
+  assert.equal(first.status, 0, first.stderr);
+
+  const icon = path.join(f.root, 'extensions/companion/icon-128.png');
+  fs.appendFileSync(icon, 'changed bytes after signing');
+  const second = f.run('--require-signed');
+  assert.notEqual(second.status, 0);
+  assert.match(second.stderr, /Gecko archive payload differs from source/);
+  assert.deepEqual(fs.readFileSync(f.output), signed);
+});

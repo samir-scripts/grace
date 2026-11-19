@@ -1,5 +1,7 @@
 ## Purpose
 
+For the current Appearance controls, including independent styles and fonts, see [Grace appearance and themes](../../../THEMES.md). This spec describes palette selection only.
+
 Defines the collapsible accordion UI for selecting light and dark themes in the Appearance settings section, including trigger row previews, active-mode indicators, checkmark behavior, and interaction isolation.
 
 ## Requirements

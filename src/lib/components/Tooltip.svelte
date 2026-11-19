@@ -48,6 +48,26 @@
     tooltipStyle = '';
   }
 
+  function handleScroll(event: Event) {
+    if (!wrapper) return;
+    if (event.target instanceof Element && !event.target.contains(wrapper)) return;
+    const anchor = wrapper.getBoundingClientRect();
+    const clip = event.target instanceof Element
+      ? event.target.getBoundingClientRect()
+      : { top: 0, bottom: window.innerHeight, left: 0, right: window.innerWidth };
+    if (anchor.bottom <= clip.top || anchor.top >= clip.bottom || anchor.right <= clip.left || anchor.left >= clip.right) {
+      hide();
+    } else {
+      updatePosition();
+    }
+  }
+
+  $effect(() => {
+    if (!visible) return;
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  });
+
   function describeTrigger(node: HTMLSpanElement) {
     const trigger = node.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]');
     const previous = trigger?.getAttribute('aria-describedby');

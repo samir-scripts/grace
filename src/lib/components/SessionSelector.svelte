@@ -12,6 +12,8 @@
   let { onEmergencyClick }: Props = $props();
 
   let isOpen = $state(false);
+  let selector: HTMLDivElement;
+  let trigger: HTMLButtonElement;
   let isLocked = $derived($focusSnapshot.is_locked);
   let activeProfile = $derived($focusSnapshot.active_profile);
   let profiles = $derived($focusProfiles);
@@ -37,6 +39,7 @@
       await selectFocusProfile(id);
       isOpen = false;
       showTimerView();
+      trigger?.focus();
     } catch (err) {
       console.error('[SessionSelector] failed to select profile:', err);
     }
@@ -48,11 +51,10 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape' && isOpen) {
-      e.stopPropagation();
+    if (e.key === 'Escape' && !e.defaultPrevented && isOpen) {
+      e.preventDefault();
       isOpen = false;
-      const btn = document.querySelector('.session-btn') as HTMLElement | null;
-      btn?.focus();
+      trigger.focus();
     }
   }
 
@@ -64,23 +66,24 @@
       }
     }
     window.addEventListener('click', handleClickOutside);
-    window.addEventListener('keydown', handleKeydown);
+    selector.addEventListener('keydown', handleKeydown);
     return () => {
       window.removeEventListener('click', handleClickOutside);
-      window.removeEventListener('keydown', handleKeydown);
+      selector.removeEventListener('keydown', handleKeydown);
     };
   });
 </script>
 
-<div class="session-selector-container" data-tauri-drag-region="false">
+<div bind:this={selector} class="session-selector-container" data-tauri-drag-region="false">
   <button
+    bind:this={trigger}
     class="session-btn"
     class:locked={isLocked}
     class:active={isOpen}
     onclick={toggleDropdown}
     title={isLocked ? m.session_locked() : m.session_select()}
-    aria-haspopup="listbox"
-    aria-expanded={isOpen}
+    aria-expanded={isLocked ? undefined : isOpen}
+    aria-controls={isOpen && !isLocked ? 'session-menu' : undefined}
   >
     {#if isLocked}
       <svg
@@ -105,15 +108,14 @@
   </button>
 
   {#if isOpen && !isLocked}
-    <div class="dropdown-menu" role="listbox">
+    <div id="session-menu" class="dropdown-menu">
       {#if profiles.length > 0}
         {#each profiles as profile, idx (profile.id)}
           {@const isSelected = activeProfile?.id === profile.id}
           <button
             class="dropdown-item"
             class:selected={isSelected}
-            role="option"
-            aria-selected={isSelected}
+            aria-pressed={isSelected}
             style="--delay: {idx * 25}ms"
             onclick={() => handleSelect(profile.id)}
           >

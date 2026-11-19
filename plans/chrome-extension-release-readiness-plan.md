@@ -1,5 +1,9 @@
 # Chrome Extension Release Readiness Implementation Plan
 
+## Current status
+
+The original private-submission and cross-platform holds below are historical. Chrome 1.1.4 was [submitted on November 17](evidence/chrome-store-1.1.4/README.md). A store-installed copy paired, blocked and restored access in the [first public nightly's scoped macOS smoke](README.md). This does not establish the full recovery matrix or Windows and Ubuntu x64 acceptance. Stable promotion still requires the reviewed [exact-package contributor checks](contributor-native-acceptance.md).
+
 **Goal:** Align Chrome identity, make privacy access public, and prove packaged integration before submission.
 
 **Architecture:** Keep store draft `cgibenlmgmblmalggjalnoaikjkdnoid`; use its public key for development and its ID for native authorization. Change the existing support Site access only.
@@ -100,7 +104,7 @@ Review boundaries: native packaged scenarios and store-installed behavior were n
 Next required input is disposable Windows and Linux native test capacity. After those scenarios pass, supply exact matching desktop candidate downloads, update the pending reviewer note, upload the verified ZIP, and select Public distribution at the separate release handoff.
 
 
-### Current submission hold
+### Historical submission hold
 
 macOS packaged acceptance is complete, including authorized crash recovery repair and final candidate reruns. Public privacy/support evidence remains recorded above. Windows/Linux native acceptance and exact matching public desktop candidate downloads remain outstanding; distribution stays Private and no upload/submission was performed. Historical identity artifact hashes are explicitly marked superseded by the current Tart evidence.
 

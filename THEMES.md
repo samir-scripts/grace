@@ -22,6 +22,8 @@ without outlines, and action buttons gain a translucent fill on hover. Settings/
 content, form controls and open menus keep readability backing; accessibility preferences
 still force opaque surfaces. Bare timer contrast depends on the desktop behind the material.
 Form controls share restrained 6px corners.
+Duration readouts use localized units on the protected Settings surface. The
+Notifications volume slider uses the active palette for its rail, fill and focus ring.
 
 Mona Sans, Inter, Roboto and JetBrains Mono are bundled for offline use. The default
 uses Inter for interface text and JetBrains Mono for timer digits and shortcuts;

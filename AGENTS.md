@@ -6,6 +6,8 @@ Grace is an offline-first, themeable Pomodoro desktop app and focus blocker: **T
 
 Before changing behavior, trace the route/component → typed IPC wrapper → Rust command → owning module. Reuse existing patterns, keep changes narrow, and verify the affected desktop behavior. Frontend-only rendering cannot prove native IPC, tray, audio, or window behavior.
 
+For a cross-layer change, start with the [architecture guide](docs/architecture.md) and verify the linked owner in source. For user-visible changes, update the relevant task in the [user guide](docs/user-guide.md).
+
 ## Plans and Roadmaps
 
 Before multi-step work, check `plans/README.md` and the relevant master plan and subplans in `plans/`. They record completed work, verification evidence, remaining steps, and blockers across sessions. Update their progress as work lands; do not repeat completed steps or treat planned checks as passing evidence.
@@ -19,10 +21,9 @@ Before multi-step work, check `plans/README.md` and the relevant master plan and
 | `src/app.html` | SvelteKit HTML shell. |
 | `src/routes/+layout.ts` | Disables SSR; this is a static desktop SPA, not a Node server. |
 | `src/routes/+layout.svelte` | Shared layout and context-menu suppression. |
-| `src/routes/+page.svelte` (`/`, window `main`) | Timer window; settings/theme/locale initialization, local shortcuts, resizing and compact mode. |
-| `src/routes/settings/+page.svelte` (`/settings`, window `settings`) | Settings window and settings-section composition. |
-| `src/routes/stats/+page.svelte` (`/stats`, window `stats`) | Statistics window, detailed statistics and heatmap loading. |
-| `src/lib/components/Titlebar.svelte` | Creates or focuses the settings/stats windows with `WebviewWindow`; main-window controls. |
+| `src/routes/+page.svelte` (`/`, window `main`) | Composes the timer, settings and statistics views; initializes state, shortcuts, resizing and compact mode. |
+| `src/lib/stores/navigation.ts` | Active timer/settings/statistics view and navigation within `main`. |
+| `src/lib/components/Titlebar.svelte` | Switches views and exposes main-window controls. |
 | `src/lib/ipc/index.ts` | Typed frontend command/event boundary. |
 | `src-tauri/src/commands.rs` | Rust IPC handlers, including timer, settings, sessions/stats, audio, diagnostics and updates. |
 | `src-tauri/src/websocket/mod.rs` → `start()` | Optional external-control entry at `127.0.0.1:<configured port>/ws`, using axum. Preserve opt-in and loopback binding. |
@@ -34,7 +35,7 @@ Build/development entry points:
 - `svelte.config.js`: static adapter, `index.html` fallback and `$paraglide` alias.
 - `src-tauri/tauri.conf.json`: native window, build hooks, bundle, CSP and updater configuration.
 - `src-tauri/build.rs`: build version/SHA metadata and `tauri_build::build()`.
-- `.github/workflows/build.yml`, `.github/workflows/release.yml`, `.github/workflows/codeql-analysis.yml`: CI build, release and security-analysis entry points.
+- `.github/workflows/build.yml`, `.github/workflows/nightly.yml`, `.github/workflows/release.yml`, `.github/workflows/codeql-analysis.yml`: CI, nightly drafts, release and security analysis.
 
 ## Core modules
 
@@ -47,6 +48,8 @@ Build/development entry points:
 | `src/lib/types.ts` | TypeScript mirrors of serialized Rust data, with snake_case field names. |
 | `src/lib/stores/theme.ts` | `applyTheme()` sets CSS custom properties on `:root`. |
 | `src/lib/utils/theme.ts` | Active theme resolution, including OS light/dark preference. |
+| `src/lib/stores/appearance.ts`, `src/lib/stores/windowMaterial.ts` | Interface style/font and acknowledged native material lifecycle. |
+| `src/lib/components/settings/SettingsView.svelte`, `AppearanceCustomization.svelte` in the same directory | Settings composition and independent style/font/transparency controls. |
 | `src/lib/components/settings/sections/` | Timer, appearance, notifications, shortcuts, system and about settings. |
 | `src/lib/components/stats/` | Daily, weekly and yearly statistics views. |
 | `src/lib/utils/localShortcuts.ts` | Focused-window keyboard shortcuts, distinct from Rust global shortcuts. |
@@ -67,16 +70,19 @@ Build/development entry points:
 | `notifications/mod.rs` | OS notifications. |
 | `shortcuts/mod.rs` | Global shortcut registration through tauri-plugin-global-shortcut. |
 | `themes/mod.rs`, `themes/watcher.rs` | Bundled/custom theme loading and custom-directory watching. |
+| `window_material.rs`, `window_view.rs` | Native Glass capability/accessibility policy and per-view window sizing. |
+| `fonts/mod.rs` | Local custom-font import, storage and reads. |
+| `focus/controller.rs`, `focus/browser.rs`, `focus/browser_auth.rs`, `focus/enforcer/`, `focus/escape.rs` | Focus lifecycle, authenticated browser integration, app enforcement and emergency exit. |
 | `tray/mod.rs` | Tray icon/menu, timer display and tiny-skia icon rendering. |
 | `websocket/mod.rs` | Optional axum WebSocket control and event broadcasts. |
 
 ## Contracts and change rules
 
-### IPC and cross-window synchronization
+### IPC and state synchronization
 
 Route backend commands and event subscriptions through `src/lib/ipc/index.ts`; keep `invoke()` out of components. Register new Rust commands in `src-tauri/src/lib.rs`. Fallible commands use `Result<T, String>`; some timer commands return snapshots or unit directly.
 
-`src-tauri/capabilities/default.json` covers **main, settings and stats**. Review permissions when adding native/plugin APIs and grant only the required capabilities; custom command registration and plugin permission grants are separate concerns.
+`src-tauri/capabilities/default.json` covers the **main** window. Review permissions when adding native/plugin APIs and grant only the required capabilities; custom command registration and plugin permission grants are separate concerns.
 
 | Rust event | Payload |
 | --- | --- |
@@ -87,7 +93,7 @@ Route backend commands and event subscriptions through `src/lib/ipc/index.ts`; k
 | `themes:changed` | `Theme[]` |
 | `sessions:cleared` | No data |
 
-Keep `src/lib/types.ts` and consumers synchronized with Rust `Settings`, `TimerSnapshot`, statistics and other serialized structures. Clean up event listeners when components unmount. Settings changes must propagate to open windows, not just the initiating view.
+Keep `src/lib/types.ts` and consumers synchronized with serialized Rust structures. Clean up event listeners on unmount. Settings changes propagate through shared state and remain consistent when switching views.
 
 ### Settings, persistence and timer
 
@@ -115,12 +121,12 @@ Paraglide configuration lives in `project.inlang/settings.json`; **message sourc
 
 The timer dial is the visual focus. Extend the existing compact desktop design rather than introducing a generic dashboard or a new design system.
 
-- Reuse `src/app.css` tokens, bundled **Mona Sans / Mona Sans Mono**, component spacing, round colors and transition timing. Prefer theme variables and derived chrome colors over hardcoded foreground/background values.
+- Reuse `src/app.css` tokens, round colors, component spacing and transition timing. See [appearance defaults and material behavior](THEMES.md). Prefer theme variables and derived chrome colors over hardcoded foreground/background values.
 - Keep the custom titlebar and platform-specific behavior. On macOS native decorations remain enabled with an overlay titlebar for event handling/tiling; other platforms disable decorations in Rust setup. Do not apply a blanket decorations-off change.
 - Compact mode is `w < 300 || h < 300`: hide the regular label/footer/play-pause layout while retaining the dial and `MiniControls`. Preserve intentional bottom whitespace and scaling behavior.
 - Apply `uiScale` using CSS `zoom` on `.timer`, not `transform: scale`.
 - Slider fill/thumb alignment uses `calc(frac * (100% - 14px) + 7px)`.
-- Apply the active theme before showing windows to avoid a white flash. Preserve light, dark, automatic and custom-theme behavior across all three windows.
+- Apply the active theme before showing `main` to avoid a white flash. Preserve light, dark, automatic and custom-theme behavior across views.
 - For UI changes, inspect the actual surface before and after: default timer size, compact size, enlarged window, settings and stats where affected. Check keyboard focus/shortcuts, readable contrast, localized text fit and motion accessibility. Native drag/resize/close behavior requires Tauri, not only a browser preview.
 
 ## Skills to use
@@ -150,10 +156,12 @@ npm run dev                  # Frontend-only Vite; native IPC unavailable
 npm run build                # Static frontend production build
 npm run check                # Paraglide compile + SvelteKit sync + Svelte/TS checks
 npm test                     # Frontend unit + browser extension test suites
+npm run test:native-glass    # Real macOS system WebKit regression
+npm run test:guest-focus     # Guest tooling tests; does not boot a VM
 npm run paraglide:compile    # Regenerate localization output
 npm run format               # Prettier --write . (repository-wide; avoid unrelated churn)
 cargo test --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_commands_callable
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 ```
 
-Development follows a 3-branch pipeline: PRs merge to `dev`, promote to `stage` for cross-platform artifact testing, and tag releases on `release`. Rust unit/integration tests exist in `src-tauri/src` and `src-tauri/tests`. Run `npm run check` and `npm test` for frontend/extension changes; for Rust changes run `cargo test --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_commands_callable` and `cargo clippy`.
+PRs merge to `dev`, then promote to `stage` for cross-platform artifact testing and to `release` for stable tags. The nightly workflow builds a reviewed `dev` commit separately. See [release process](CONTRIBUTING.md#release-process) and [verification commands](#commands-and-verification).

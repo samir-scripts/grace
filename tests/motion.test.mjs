@@ -608,7 +608,8 @@ test('rendered theme roles remain opaque and readable across light, dark and cus
       const row = document.querySelector('button[role="switch"][aria-label="Animations"]');
       const label = row.querySelector('.label');
       const actualText = parse(getComputedStyle(label).color);
-      const actualSurface = parse(getComputedStyle(row).backgroundColor);
+      const surface = getComputedStyle(row).backgroundColor;
+      const actualSurface = parse(surface === 'rgba(0, 0, 0, 0)' ? getComputedStyle(row.parentElement).backgroundColor : surface);
       return { colors: [...surfaces, ...inks, actualText, actualSurface], ratios: [...inks.flatMap(ink => surfaces.map(surface => contrast(ink, surface))), contrast(actualText, actualSurface)], opacity: getComputedStyle(label).opacity, actualText, actualSurface, separatorRatio: contrast(separator, surfaces[0]), borderRatio: contrast(border, surfaces[0]), buttonRatio: contrast(button, buttonText) };
     }, palette);
     assert.equal(results.opacity, '1', `${palette.name}: label opacity`);
@@ -708,9 +709,9 @@ test('long session name stays clear of titlebar controls in compact and normal w
           assert.ok(result.right <= control.left || result.left >= control.right, `${platform} ${width}: selector overlaps ${control.label}`);
         }
         await page.locator('.session-btn').click();
-        assert.equal(await page.getByRole('listbox').isVisible(), true);
+        assert.equal(await page.locator('.dropdown-menu').isVisible(), true);
         await page.keyboard.press('Escape');
-        assert.equal(await page.getByRole('listbox').count(), 0);
+        assert.equal(await page.locator('.dropdown-menu').count(), 0);
         await page.getByRole('button', { name: 'Statistics' }).click();
         assert.equal(await page.getByRole('button', { name: 'This Week' }).isVisible(), true);
       } finally { await context.close(); }
@@ -896,6 +897,96 @@ test('session selector has themed pill, no chevron, aligns with dial center, and
 
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.dropdown-menu').count(), 0, 'Escape closes dropdown');
+  } finally {
+    await context.close();
+  }
+});
+
+test('session choices expose pressed state and return focus after selection or Escape', async () => {
+  const context = await browser.newContext({ viewport: { width: 840, height: 520 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/`);
+    await page.waitForFunction(() => window.__motionTest?.hasRegisteredEvent('focus:changed'));
+    await page.waitForFunction(() => window.__motionTest.hasRegisteredEvent('settings:changed'));
+    await page.evaluate(() => window.__motionTest.emit('settings:changed', { local_shortcut_mute: 'Escape' }));
+    await page.locator('.session-btn').click();
+    await page.locator('.dropdown-item').filter({ hasText: 'Deep Focus' }).waitFor();
+    await page.keyboard.press('Escape');
+    await page.evaluate(async () => {
+      const { focusSnapshot, focusProfiles } = await import('/src/lib/stores/focus.ts');
+      let profile;
+      focusProfiles.subscribe(profiles => { profile = profiles[0]; })();
+      focusSnapshot.update(snapshot => ({ ...snapshot, active_profile: profile }));
+      const internals = window.__TAURI_INTERNALS__;
+      const invoke = internals.invoke;
+      internals.invoke = (cmd, args, options) => {
+        if (cmd !== 'focus_profile_select') return invoke(cmd, args, options);
+        let selected;
+        focusProfiles.subscribe(profiles => { selected = profiles.find(item => item.id === args.id); })();
+        if (!selected) return Promise.reject(new Error('Unknown focus profile'));
+        focusSnapshot.update(snapshot => ({ ...snapshot, active_profile: selected }));
+        return Promise.resolve();
+      };
+    });
+    const trigger = page.locator('.session-btn');
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const menu = page.locator('.dropdown-menu');
+    assert.equal(await trigger.getAttribute('aria-controls'), await menu.getAttribute('id'));
+    assert.equal(await menu.getByRole('button', { name: /Work/ }).getAttribute('aria-pressed'), 'true');
+    const choice = menu.getByRole('button', { name: /Deep Focus/ });
+    assert.equal(await choice.getAttribute('aria-pressed'), 'false');
+    await choice.evaluate(el => el.addEventListener('keydown', event => {
+      if (event.key === 'Escape') event.preventDefault();
+    }, { once: true }));
+    await choice.focus();
+    await page.keyboard.press('Escape');
+    assert.equal(await menu.isVisible(), true);
+    await choice.focus();
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('.dropdown-menu', { state: 'detached' });
+    assert.equal(await trigger.evaluate(el => document.activeElement === el), true);
+    await page.keyboard.press('Enter');
+    assert.equal(await menu.getByRole('button', { name: /Work/ }).getAttribute('aria-pressed'), 'false');
+    assert.equal(await choice.getAttribute('aria-pressed'), 'true');
+    await choice.focus();
+    const saves = await page.evaluate(() => window.__motionTest.getSaveCount());
+    await page.keyboard.press('Escape');
+    assert.equal(await menu.count(), 0);
+    assert.equal(await trigger.evaluate(el => document.activeElement === el), true);
+    assert.equal(await page.evaluate(() => window.__motionTest.getSaveCount()), saves);
+  } finally {
+    await context.close();
+  }
+});
+
+test('modal dialogs and Tab navigation suppress local shortcuts', async () => {
+  const context = await browser.newContext({ viewport: { width: 840, height: 520 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${serverUrl}/`);
+    await page.waitForFunction(() => window.__motionTest?.hasRegisteredEvent('settings:changed'));
+    await page.evaluate(() => window.__motionTest.emit('settings:changed', { local_shortcut_mute: 'Tab' }));
+    const trigger = page.locator('.session-btn');
+    await trigger.focus();
+    const saves = await page.evaluate(() => window.__motionTest.getSaveCount());
+    await page.keyboard.press('Tab');
+    assert.equal(await trigger.evaluate(el => document.activeElement === el), false);
+    assert.equal(await page.evaluate(() => window.__motionTest.getSaveCount()), saves);
+
+    await page.evaluate(() => window.__motionTest.emit('settings:changed', { local_shortcut_mute: 'm' }));
+    await trigger.click();
+    await page.locator('.manage-link').click();
+    await page.locator('#prof-name').fill('Changed session');
+    await page.locator('.btn-add-session').click();
+    await page.getByRole('dialog').waitFor();
+    await page.keyboard.press('m');
+    assert.equal(await page.evaluate(() => window.__motionTest.getSaveCount()), saves);
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state: 'detached' });
+    await page.keyboard.press('m');
+    await page.waitForFunction(count => window.__motionTest.getSaveCount() > count, saves);
   } finally {
     await context.close();
   }

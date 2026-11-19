@@ -118,7 +118,7 @@
       class="btn-icon"
       class:active={$activeView === 'settings'}
       onclick={openSettings}
-      aria-label="Settings"
+      aria-label={m.settings_title()}
       aria-pressed={$activeView === 'settings'}
     >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -184,7 +184,7 @@
       class="btn-icon"
       class:active={$activeView === 'stats'}
       onclick={openStats}
-      aria-label="Statistics"
+      aria-label={m.stats_title()}
       aria-pressed={$activeView === 'stats'}
     >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -232,7 +232,7 @@
       {@render statsBtn()}
       {@render settingsBtn()}
     {:else}
-      <button class="btn-icon" onclick={minimize} aria-label="Minimize">
+      <button class="btn-icon" onclick={minimize} aria-label={m.control_minimize()}>
         <svg width="12" height="12" viewBox="0 0 12 12">
           <line
             x1="1"
@@ -248,7 +248,7 @@
       <button
         class="btn-icon"
         onclick={toggleMaximize}
-        aria-label={maximized ? 'Restore' : 'Maximize'}
+        aria-label={maximized ? m.notif_btn_restore() : m.control_maximize()}
       >
         {#if maximized}
           <svg width="12" height="12" viewBox="0 0 12 12">
@@ -289,7 +289,7 @@
       <button
         class="btn-icon close"
         onclick={close}
-        aria-label="Close"
+        aria-label={m.control_close()}
       >
         <svg width="12" height="12" viewBox="0 0 12 12">
           <line

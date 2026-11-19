@@ -1,5 +1,5 @@
 <script lang="ts">
-  // A labelled toggle-switch row. Click anywhere on the row to toggle.
+  // A labelled toggle-switch row with an independent help control.
   import TooltipInfo from '$lib/components/TooltipInfo.svelte';
 
   interface Props {
@@ -13,43 +13,38 @@
 
   let { label, checked, description, tooltip, disabled = false, onclick }: Props = $props();
 
-  function handleKeyDown(e: KeyboardEvent) {
-    if (disabled) return;
-    if (e.key === ' ' || e.key === 'Enter') {
-      e.preventDefault();
-      onclick();
-    }
-  }
 </script>
 
-<button
-  type="button"
-  class="row"
-  {onclick}
-  onkeydown={handleKeyDown}
-  {disabled}
-  role="switch"
-  aria-checked={checked}
-  aria-label={label}
->
-  <span class="text">
-    <span class="label"
-      >{label}{#if tooltip}<TooltipInfo text={tooltip} />{/if}</span
-    >
-    {#if description}
-      <span class="desc">{description}</span>
-    {/if}
-  </span>
-  <span class="toggle" class:on={checked} aria-hidden="true"></span>
-</button>
+<div class="settings-toggle" class:has-help={!!tooltip}>
+  <button
+    type="button"
+    class="switch-content"
+    {onclick}
+    {disabled}
+    role="switch"
+    aria-checked={checked}
+    aria-label={label}
+  >
+    <span class="text">
+      <span class="label">{label}</span>
+      {#if description}
+        <span class="desc">{description}</span>
+      {/if}
+    </span>
+    <span class="toggle" class:on={checked} aria-hidden="true"></span>
+  </button>
+  {#if tooltip}
+    <span class="switch-help"><TooltipInfo text={tooltip} /></span>
+  {/if}
+</div>
 
 <style>
-  .row {
+  .settings-toggle {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 10px 20px;
     background: var(--color-background);
     border: none;
     border-bottom: 1px solid var(--color-separator);
@@ -59,10 +54,47 @@
     transition: background-color var(--transition-control);
   }
 
-  .row:hover {
+  .switch-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
+    padding: 10px 20px;
+    background: transparent;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .has-help .text {
+    padding-inline-end: 26px;
+  }
+
+  .switch-help {
+    position: absolute;
+    inset-inline-end: 61px;
+    inset-block: 0;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .switch-help :global(.info-icon) {
+    pointer-events: auto;
+  }
+
+  .switch-content:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .settings-toggle:hover {
     background: var(--color-hover);
   }
-  .row:disabled {
+  .switch-content:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
