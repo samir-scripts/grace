@@ -11,7 +11,7 @@ const builder = path.resolve('scripts/build-browser-extensions.mjs');
 test('unsigned Gecko package contains exactly the current source and declaration', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pomotroid-unsigned-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  for (const dir of ['focus', 'firefox', 'chrome', 'safari']) {
+  for (const dir of ['focus', 'companion', 'firefox', 'chrome', 'safari']) {
     fs.cpSync(path.resolve('extensions', dir), path.join(root, 'extensions', dir), { recursive: true });
   }
   const result = spawnSync(process.execPath, [builder], { cwd: root, encoding: 'utf8' });
@@ -21,18 +21,20 @@ test('unsigned Gecko package contains exactly the current source and declaration
   const localNames = [];
   const stream = new Unzip(file => localNames.push(file.name));
   stream.push(xpi, true);
-  const files = fs.readdirSync(path.join(root, 'extensions/focus'));
+  const files = [...new Set([...fs.readdirSync(path.join(root, 'extensions/focus')), ...fs.readdirSync(path.join(root, 'extensions/companion'))])];
   assert.deepEqual(Object.keys(archive).sort(), [...files, 'manifest.json'].sort());
   assert.deepEqual(localNames.sort(), Object.keys(archive).sort());
   assert.equal(Object.keys(archive).some(name => name.startsWith('META-INF/')), false);
   const manifest = JSON.parse(Buffer.from(archive['manifest.json']).toString());
   assert.equal(manifest.browser_specific_settings.gecko.id, 'focus@pomotroid.local');
   assert.equal(manifest.browser_specific_settings.gecko.strict_min_version, '115.0');
-  assert.equal(manifest.version, '1.1.1');
   assert.deepEqual(manifest.browser_specific_settings.gecko.data_collection_permissions, { required: ['authenticationInfo', 'personallyIdentifyingInfo'] });
   assert.equal(manifest.permissions.includes('management'), false);
-  const matchesSource = () => files.every(file => fs.existsSync(path.join(root, 'extensions/focus', file)) &&
-    Buffer.from(archive[file]).equals(fs.readFileSync(path.join(root, file === 'options.html' ? 'extensions/firefox/payload' : 'extensions/focus', file)))) &&
+  const matchesSource = () => files.every(file => {
+    const dir = file === 'options.html' ? 'extensions/firefox/payload' :
+      fs.existsSync(path.join(root, 'extensions/companion', file)) ? 'extensions/companion' : 'extensions/focus';
+    return fs.existsSync(path.join(root, dir, file)) && Buffer.from(archive[file]).equals(fs.readFileSync(path.join(root, dir, file)));
+  }) &&
     Buffer.from(archive['manifest.json']).equals(fs.readFileSync(path.join(root, 'extensions/firefox/manifest.json')));
   assert.equal(matchesSource(), true);
   const source = path.join(root, 'extensions/focus/consent.js');

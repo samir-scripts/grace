@@ -1,7 +1,15 @@
 {
   "manifest_version": 3,
   "name": "grace. Focus Companion",
-  "version": "1.1.2",
+  "version": "1.1.4",
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "64": "icon-64.png",
+    "96": "icon-96.png",
+    "128": "icon-128.png"
+  },
   "minimum_chrome_version": "116",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnbDJidFskZDHAVq41nfLbjtFNqJfWXY6/SJcBUlnCR7w8thXM9z0AglU3AASRgv83fKnc16UT3QznL/BlE3nn7X0QSFo/RLAHu5DSV7yZSYSjVK62MTwac2YB9NE+cFb8hfz+Th6XdGRaiKvUQwsxvoa3vpG/BNA3sPngWYfsuvUAjEUHZSWtUuQcaqGTcBP4MmmYWY+ZyMp6J+YGb2HoweN7qdrrXEzBZmJv4uz66sRWedMIAxExKNbRSpEoIpHKg14+Grv2D27v1ATuvWd/nRfa0EDsn5H4vHFXcDoUgbBY+MBRDlRV50Vn7wxjWOeG+/8IUX8krDCZZF+izLiawIDAQAB",
   "description": "Enforces distraction blocking during grace. focus sessions.",
@@ -23,19 +31,13 @@
     "page": "options.html",
     "open_in_tab": true
   },
-  "icons": {
-    "16": "icons/16.png",
-    "32": "icons/32.png",
-    "48": "icons/48.png",
-    "128": "icons/128.png"
-  },
   "action": {
     "default_title": "Open grace. Focus Companion",
     "default_icon": {
-      "16": "icons/16.png",
-      "32": "icons/32.png",
-      "48": "icons/48.png",
-      "128": "icons/128.png"
+      "16": "icon-16.png",
+      "32": "icon-32.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
     }
   },
   "homepage_url": "https://grace-focus.github.io/"

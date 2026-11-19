@@ -5,6 +5,7 @@ import { geckoPayload } from './gecko-payload.mjs';
 import { verifySignedGeckoArtifact } from './gecko-signed-artifact.mjs';
 import { readChromeReleaseConfig } from './chrome-release-config.mjs';
 import { assertSafeExtensionTree } from './extension-source-guard.mjs';
+import { applyCompanionOverlay, validateCompanionIcons } from './companion-payload.mjs';
 
 const rootDir = process.cwd();
 const sharedDir = path.join(rootDir, 'extensions', 'focus');
@@ -44,10 +45,10 @@ else if (!development) {
   chromeManifest.key = config.public_key;
 }
 // Validate before touching any previous output.
-for (const size of [16, 32, 48, 128]) {
-  const icon = fs.readFileSync(path.join(chromeSource, chromeManifest.icons?.[size] ?? 'missing-icon'));
-  if (icon.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || icon.readUInt32BE(16) !== size || icon.readUInt32BE(20) !== size) throw new Error('Invalid Chrome icon dimensions');
-}
+const chromePayload = applyCompanionOverlay(new Map(), sharedDir);
+if ([16, 32, 48, 64, 96, 128].some(size => !chromeManifest.icons?.[size]) ||
+    [16, 32, 48, 128].some(size => !chromeManifest.action?.default_icon?.[size])) throw new Error('Missing required companion icon');
+validateCompanionIcons(chromePayload, chromeManifest.icons, chromeManifest.action?.default_icon);
 if (chromeManifest.manifest_version !== 3 || chromeManifest.minimum_chrome_version !== '116' || !chromeManifest.options_ui?.page || !chromeManifest.background?.service_worker) throw new Error('Invalid Chrome manifest');
 
 function createZipFromDirectory(sourceDir, targetZipPath) {
@@ -155,6 +156,9 @@ for (const browser of browsers) {
     for (const file of fs.readdirSync(sharedDir)) {
       fs.copyFileSync(path.join(sharedDir, file), path.join(browserDist, file));
     }
+    if (browser === 'chrome') {
+      for (const [name, bytes] of chromePayload) fs.writeFileSync(path.join(browserDist, name), bytes);
+    }
   }
 
   // Copy browser manifest
@@ -162,7 +166,6 @@ for (const browser of browsers) {
   if (fs.existsSync(manifestPath)) {
     if (browser === 'chrome') {
       fs.writeFileSync(path.join(browserDist, 'manifest.json'), JSON.stringify(chromeManifest, null, 2) + '\n');
-      fs.cpSync(path.join(chromeSource, 'icons'), path.join(browserDist, 'icons'), { recursive: true });
       fs.copyFileSync(path.join(chromeSource, 'chrome-background.js'), path.join(browserDist, 'chrome-background.js'));
       for (const name of ['chrome-options.js', 'chrome-diagnostics.js']) fs.copyFileSync(path.join(chromeSource, name), path.join(browserDist, name));
       const options = fs.readFileSync(path.join(browserDist, 'options.html'), 'utf8');
