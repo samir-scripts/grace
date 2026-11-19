@@ -4,7 +4,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { classifyTag, validateVersions, validateAcceptance } from './release-policy.mjs';
+import { classifyTag, validateReleaseTrigger, validateVersions, validateAcceptance } from './release-policy.mjs';
 
 const sha = 'a'.repeat(40);
 const hashes = { 'windows-x64': 'b'.repeat(64), 'ubuntu-x64': 'c'.repeat(64) };
@@ -22,6 +22,25 @@ test('classifies stable, beta, and calendar-dated nightly semver tags', () => {
     assert.throws(() => classifyTag(`v1.7.2-nightly.${date}`, allowNightly), /Invalid release tag/);
   }
   for (const tag of ['1.7.2', 'refs/tags/v1.7.2', 'v1.7', 'v01.7.2', 'v1.7.2-beta.01', 'v1.7.2-rc.1', 'v1.7.2+build', '']) assert.throws(() => classifyTag(tag));
+});
+
+test('installer builds accept only stable or dated nightly tag pushes', () => {
+  for (const tag of ['v1.7.2', 'v1.7.2-nightly.20261120']) {
+    const request = { tag, ref: `refs/tags/${tag}`, event: 'push' };
+    assert.equal(validateReleaseTrigger(request).version, tag.slice(1));
+    assert.throws(() => validateReleaseTrigger({ ...request, ref: 'refs/heads/dev' }));
+    assert.throws(() => validateReleaseTrigger({ ...request, event: 'schedule' }));
+    assert.throws(() => validateReleaseTrigger({ ...request, event: 'workflow_dispatch' }));
+  }
+  assert.throws(() => validateReleaseTrigger({ tag: 'v1.7.2-beta.2', ref: 'refs/tags/v1.7.2-beta.2', event: 'push' }));
+});
+
+test('manual dispatch accepts only stable promotion with a candidate and reviewed evidence', () => {
+  const request = { tag: 'v1.7.2', ref: 'refs/tags/v1.7.2', event: 'workflow_dispatch', candidateRunId: '42', acceptanceRef: sha };
+  assert.equal(validateReleaseTrigger(request).prerelease, 'false');
+  for (const changes of [{ tag: 'v1.7.3' }, { candidateRunId: '' }, { acceptanceRef: 'main' }, {
+    tag: 'v1.7.2-nightly.20261120', ref: 'refs/tags/v1.7.2-nightly.20261120',
+  }]) assert.throws(() => validateReleaseTrigger({ ...request, ...changes }));
 });
 
 test('requires every manifest version to match the tag', () => {

@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-nightly.[0-9]+'
   workflow_dispatch:
     inputs:
       tag:
@@ -13,52 +13,26 @@ on:
         type: string
       candidate_run_id:
         description: Existing exact-source release build run to promote (stable only; avoids rebuilding accepted bytes)
-        required: false
+        required: true
         type: string
       acceptance_ref:
         description: Reviewed evidence commit SHA (stable releases only)
-        required: false
+        required: true
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: ${{ (contains(inputs.tag, '-nightly.') || contains(github.ref_name, '-nightly.')) && format('release-nightly-{0}', github.ref_name) || format('release-{0}', github.run_id) }}
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  nightly-preflight:
-    name: Check nightly tag and draft availability
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Verify dispatch identity and absence of a release
-        if: contains(inputs.tag, '-nightly.') || contains(github.ref_name, '-nightly.')
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.tag }}
-          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
-          ACCEPTANCE_REF: ${{ inputs.acceptance_ref }}
-        run: |
-          if [[ "$GITHUB_REPOSITORY" != samir-scripts/grace || "$GITHUB_EVENT_NAME" != workflow_dispatch ||
-            "$GITHUB_REF" != "refs/tags/$RELEASE_TAG" || "$RELEASE_TAG" != *-nightly.* ||
-            -n "$CANDIDATE_RUN_ID" || -n "$ACCEPTANCE_REF" ]]; then
-            echo 'Nightly release requires its own tag dispatch with no stable inputs'
-            exit 1
-          fi
-          existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | .tag_name')
-          if grep -Fxq -- "$RELEASE_TAG" <<< "$existing"; then
-            echo 'Nightly release already exists; refusing to rebuild'
-            exit 1
-          fi
-
   # ── Pre-Release Quality & Verification Gate ────────────────────────────────
   release-check:
+    if: github.ref_type == 'tag' && (github.event_name != 'push' || github.event.created)
     name: Release Gate (Typecheck, Extension Integrity, Tests)
     runs-on: ubuntu-latest
-    needs: nightly-preflight
     permissions:
       contents: read
       actions: read
@@ -67,14 +41,15 @@ jobs:
       version: ${{ steps.policy.outputs.version }}
       prerelease: ${{ steps.policy.outputs.prerelease }}
       nightly_date: ${{ steps.policy.outputs.nightly_date }}
-      nightly_sha: ${{ steps.nightly.outputs.sha }}
+      revision: ${{ steps.policy.outputs.revision }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ contains(github.ref_name, '-nightly.') && github.sha || inputs.tag || github.ref }}
+          # Check out the event SHA and preserve annotated tags fetched with history.
+          ref: ${{ github.sha }}
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -82,17 +57,34 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Verify immutable nightly source and dev checks
-        id: nightly
-        if: contains(github.ref_name, '-nightly.')
+      - name: Validate release tag and project versions
+        id: policy
         env:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
           CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
           ACCEPTANCE_REF: ${{ inputs.acceptance_ref }}
-          GH_TOKEN: ${{ github.token }}
         run: |
-          node scripts/prepare-nightly.mjs verify-release "$RELEASE_TAG"
-          echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          revision=$(git rev-parse HEAD)
+          test "$revision" = "$(git rev-parse "$GITHUB_SHA^{commit}")"
+          printf 'revision=%s\n' "$revision" >> "$GITHUB_OUTPUT"
+          node --input-type=module <<'JS'
+          import { appendFileSync } from 'node:fs';
+          import { validateReleaseTrigger, validateVersions, readVersions } from './scripts/release-policy.mjs';
+          const { RELEASE_TAG: tag, GITHUB_REF: ref, GITHUB_EVENT_NAME: event,
+            CANDIDATE_RUN_ID: candidateRunId, ACCEPTANCE_REF: acceptanceRef, GITHUB_OUTPUT: output } = process.env;
+          const { version, prerelease } = validateReleaseTrigger({ tag, ref, event, candidateRunId, acceptanceRef });
+          validateVersions(version, readVersions());
+          appendFileSync(output, 'version=' + version + '\nprerelease=' + prerelease + '\n');
+          const date = /-nightly\.(\d{4})(\d{2})(\d{2})$/.exec(version);
+          if (date) appendFileSync(output, 'nightly_date=' + date.slice(1).join('-') + '\n');
+          JS
+
+      - name: Verify immutable nightly source and dev checks
+        if: steps.policy.outputs.nightly_date != ''
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/prepare-nightly.mjs verify-release "$RELEASE_TAG"
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -121,24 +113,6 @@ jobs:
 
       - name: Install Playwright Chromium and system dependencies
         run: npx playwright install --with-deps chromium
-
-      - name: Validate release tag and project versions
-        id: policy
-        env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
-          NIGHTLY_SHA: ${{ steps.nightly.outputs.sha }}
-        run: |
-          node --input-type=module <<'JS'
-          import fs from 'node:fs';
-          import {classifyTag, validateVersions, readVersions} from './scripts/release-policy.mjs';
-          const result = classifyTag(process.env.RELEASE_TAG, { allowNightly: Boolean(process.env.NIGHTLY_SHA) });
-          validateVersions(result.version, readVersions());
-          if(result.prerelease === 'true' && process.env.CANDIDATE_RUN_ID) throw new Error('Candidate reuse is reserved for stable promotion');
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${result.version}\nprerelease=${result.prerelease}\n`);
-          const date = /-nightly\.(\d{4})(\d{2})(\d{2})$/.exec(result.version);
-          if (date) fs.appendFileSync(process.env.GITHUB_OUTPUT, `nightly_date=${date.slice(1).join('-')}\n`);
-          JS
 
       - name: Verify signed extension correspondence
         run: node scripts/build-browser-extensions.mjs --require-signed
@@ -175,7 +149,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.release-check.outputs.nightly_sha || inputs.tag || github.ref }}
+          ref: ${{ needs.release-check.outputs.revision }}
 
       - name: Extract CHANGELOG section
         id: extract
@@ -195,7 +169,7 @@ jobs:
 
   # ── Linux build ────────────────────────────────────────────────────────────
   build-linux:
-    if: inputs.candidate_run_id == ''
+    if: github.event_name == 'push'
     name: Linux x64
     runs-on: ubuntu-latest
     needs: [release-check, changelog]
@@ -208,7 +182,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ needs.release-check.outputs.nightly_sha || inputs.tag || github.ref }}
+          ref: ${{ needs.release-check.outputs.revision }}
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -282,7 +256,7 @@ jobs:
 
   # ── macOS build ────────────────────────────────────────────────────────────
   build-macos:
-    if: inputs.candidate_run_id == ''
+    if: github.event_name == 'push'
     name: macOS (universal)
     runs-on: macos-latest
     needs: [release-check, changelog]
@@ -295,7 +269,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ needs.release-check.outputs.nightly_sha || inputs.tag || github.ref }}
+          ref: ${{ needs.release-check.outputs.revision }}
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -336,7 +310,7 @@ jobs:
 
   # ── Windows build ──────────────────────────────────────────────────────────
   build-windows:
-    if: inputs.candidate_run_id == ''
+    if: github.event_name == 'push'
     name: Windows x64
     runs-on: windows-latest
     needs: [release-check, changelog]
@@ -351,7 +325,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ needs.release-check.outputs.nightly_sha || inputs.tag || github.ref }}
+          ref: ${{ needs.release-check.outputs.revision }}
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -397,7 +371,13 @@ jobs:
 
   # ── Create draft GitHub Release ────────────────────────────────────────────
   release:
-    if: always() && needs.changelog.result == 'success' && (inputs.candidate_run_id != '' || (needs.build-linux.result == 'success' && needs.build-macos.result == 'success' && needs.build-windows.result == 'success'))
+    if: >-
+      !cancelled() && needs.changelog.result == 'success' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (needs.changelog.outputs.prerelease == 'true' &&
+        needs.build-linux.result == 'success' &&
+        needs.build-macos.result == 'success' &&
+        needs.build-windows.result == 'success'))
     name: Create draft release
     permissions:
       contents: write
@@ -410,7 +390,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.release-check.outputs.nightly_sha || inputs.tag || github.ref }}
+          ref: ${{ needs.release-check.outputs.revision }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify immutable stable candidate
@@ -418,7 +398,7 @@ jobs:
         env:
           CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/verify-candidate-run.mjs "$CANDIDATE_RUN_ID" "$(git rev-parse HEAD)"
+        run: node scripts/verify-candidate-run.mjs "$CANDIDATE_RUN_ID" "$(git rev-parse HEAD)" "$GITHUB_REF_NAME"
 
       - name: Download Linux artifacts
         uses: actions/download-artifact@v4
@@ -520,20 +500,34 @@ jobs:
             (cd release-assets && sha256sum latest.json >> SHA256SUMS)
           fi
 
-      - name: Refuse to replace an existing nightly release
-        if: needs.release-check.outputs.nightly_date != ''
+      - name: Confirm the release tag still points to the tested commit
         env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.tag }}
+          REVISION: ${{ needs.release-check.outputs.revision }}
         run: |
-          remote_tag=$(git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG^{}")
-          if [[ "${remote_tag%%$'\t'*}" != "$GITHUB_SHA" ]]; then
-            echo 'Nightly tag moved after verification; refusing to publish'
+          ref="refs/tags/$GITHUB_REF_NAME"
+          refs=$(git ls-remote --exit-code origin "$ref" "$ref^{}")
+          revision=$(awk -v ref="$ref" '
+            $2 == ref { direct = $1 }
+            $2 == ref "^{}" { peeled = $1 }
+            END { print (peeled ? peeled : direct) }
+          ' <<< "$refs")
+          if [[ "$revision" != "$REVISION" ]]; then
+            echo 'Release tag moved after verification'
             exit 1
           fi
-          existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | .tag_name')
-          if grep -Fxq -- "$RELEASE_TAG" <<< "$existing"; then
-            echo 'Nightly release already exists; refusing to replace assets'
+
+      - name: Reject existing releases that cannot be updated
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ needs.changelog.outputs.prerelease }}
+        run: |
+          filter='.[] | select(.draft == false) | .tag_name'
+          if [[ "$PRERELEASE" == true ]]; then
+            filter='.[] | .tag_name'
+          fi
+          existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq "$filter")
+          if grep -Fxq -- "$GITHUB_REF_NAME" <<< "$existing"; then
+            echo 'Release already exists; refusing to replace its assets'
             exit 1
           fi
 
@@ -544,7 +538,7 @@ jobs:
           draft: true
           prerelease: ${{ needs.changelog.outputs.prerelease == 'true' }}
           make_latest: false
-          name: ${{ needs.release-check.outputs.nightly_date && format('Grace Nightly — {0}', needs.release-check.outputs.nightly_date) || inputs.tag || github.ref_name }}
+          name: ${{ needs.release-check.outputs.nightly_date && format('Grace Beta — {0}', needs.release-check.outputs.nightly_date) || inputs.tag || github.ref_name }}
           body: ${{ needs.changelog.outputs.notes }}
           overwrite_files: ${{ needs.release-check.outputs.nightly_date == '' }}
           fail_on_unmatched_files: true

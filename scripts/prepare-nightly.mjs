@@ -1,18 +1,14 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { classifyTag, readVersions, validateVersions } from './release-policy.mjs';
-
-import { requiredPackages } from './prepare-release.mjs';
 
 const repo = 'samir-scripts/grace';
 const dev = 'refs/remotes/origin/dev';
 const nightly = /-nightly\.(\d{8})$/;
 const sha = /^[a-f0-9]{40}$/;
 const beta = 'v1.7.2-beta.1';
-const buildJobs = ['Linux x64', 'macOS (universal)', 'Windows x64'];
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 const resolve = ref => git('rev-parse', '--verify', ref).trim();
 const read = path => readFileSync(path, 'utf8');
@@ -95,8 +91,9 @@ function nightlyFiles(source, tag) {
   return files;
 }
 
-function verify(tag, checkout = resolve('HEAD'), ref = `refs/tags/${tag}`) {
+function verify(tag, checkout = resolve('HEAD')) {
   dateFor(tag);
+  const ref = `refs/tags/${tag}`;
   if (git('cat-file', '-t', ref).trim() !== 'tag') throw new Error('Nightly release tag must be annotated');
   const revision = resolve(`${ref}^{commit}`);
   if (revision !== checkout) throw new Error('Nightly checkout does not match the tag');
@@ -131,123 +128,28 @@ function requireGreenDev(gh, source) {
     const [run] = matchingRuns(gh, workflow, source, 'push', 'dev');
     const details = run ? `https://github.com/${repo}/actions/runs/${run.id}` : `no push run for ${source}`;
     if (run?.status !== 'completed' || run.conclusion !== 'success') throw new Error(`${workflow} must pass: ${details}`);
-    if (workflow === 'build.yml') {
-      const jobs = api(gh, `actions/runs/${run.id}/jobs?filter=all&per_page=100`).flatMap(page => page.jobs).sort((a, b) => b.id - a.id);
-      if (!buildJobs.every(name => jobs.find(job => job.name === name)?.conclusion === 'success')) {
-        throw new Error(`All dev platform builds must pass: ${details}`);
-      }
-    }
   }
 }
 
-function existingDraft(gh, tag, revision) {
-  const releaseJson = gh('api', '--paginate', `repos/${repo}/releases?per_page=100`, '--jq', `.[] | select(.tag_name == ${JSON.stringify(tag)})`).trim();
-  const release = releaseJson ? JSON.parse(releaseJson) : null;
-  const runs = matchingRuns(gh, 'release.yml', revision, 'workflow_dispatch');
-  const [run] = runs;
-  if (run && run.status !== 'completed') return 'active';
-  if (!release) return run?.conclusion ?? 'missing';
-  const incomplete = () => { throw new Error(`Existing nightly needs asset/run verification before proceeding: ${release.html_url}`); };
-  if (!runs.some(attempt => attempt.conclusion === 'success') || !release.prerelease) incomplete();
-  const assets = new Map();
-  for (const asset of release.assets) {
-    if (asset.state !== 'uploaded' || asset.size <= 0 || !/^sha256:[a-f0-9]{64}$/.test(asset.digest) ||
-        assets.has(asset.name) || asset.name === 'latest.json') incomplete();
-    assets.set(asset.name, asset);
+export function verifyNightlyRelease(tag, { env = process.env, gh = github } = {}) {
+  if (env.GITHUB_REPOSITORY !== repo || env.GITHUB_EVENT_NAME !== 'push' ||
+      env.GITHUB_REF !== `refs/tags/${tag}` || !sha.test(env.GITHUB_SHA ?? '') ||
+      resolve('HEAD') !== resolve(`${env.GITHUB_SHA}^{commit}`)) {
+    throw new Error('Nightly packages require the exact tag push');
   }
-  const metadata = name => {
-    const asset = assets.get(name);
-    if (!asset || !Number.isSafeInteger(asset.id)) incomplete();
-    const text = gh('api', '-H', 'Accept: application/octet-stream', `repos/${repo}/releases/assets/${asset.id}`);
-    if ('sha256:' + createHash('sha256').update(text).digest('hex') !== asset.digest ||
-        Buffer.byteLength(text) !== asset.size) incomplete();
-    return text;
-  };
-  const checksumNames = new Set(['SHA256SUMS']);
-  for (const line of metadata('SHA256SUMS').trimEnd().split('\n')) {
-    const match = /^([a-f0-9]{64})  (.+)$/.exec(line);
-    if (!match || checksumNames.has(match[2]) || assets.get(match[2])?.digest !== `sha256:${match[1]}`) incomplete();
-    checksumNames.add(match[2]);
-  }
-  const provenance = JSON.parse(metadata('provenance.json'));
-  if (!assets.has('grace-updater.pub')) incomplete();
-  for (const [platform, , file] of requiredPackages(tag.slice(1))) {
-    if (!assets.has(file)) incomplete();
-    if (platform === 'macos-universal') continue;
-    const entry = provenance.platforms?.[platform];
-    if (entry?.file !== file || assets.get(file).digest !== 'sha256:' + entry.sha256) incomplete();
-  }
-  for (const file of assets.keys()) {
-    if (/(-setup\.exe|\.deb|\.dmg|\.AppImage|\.rpm|\.app\.tar\.gz)$/.test(file) && !assets.has(file + '.sig')) incomplete();
-  }
-  const reportedNames = new Set(['SHA256SUMS', 'provenance.json']);
-  for (const { file, sha256 } of provenance.artifacts) {
-    if (reportedNames.has(file) || assets.get(file)?.digest !== `sha256:${sha256}`) incomplete();
-    reportedNames.add(file);
-  }
-  if (checksumNames.size !== assets.size || reportedNames.size !== assets.size ||
-      provenance.source_revision !== revision || provenance.version !== tag.slice(1) || provenance.prerelease !== 'true') incomplete();
-  return 'ready';
-}
-
-export function schedule({ env = process.env, now = new Date(), gh = github } = {}) {
-  if (env.GITHUB_REPOSITORY !== repo || env.GITHUB_REF !== 'refs/heads/dev' || !sha.test(env.GITHUB_SHA ?? '') || resolve('HEAD') !== env.GITHUB_SHA || !['schedule', 'workflow_dispatch'].includes(env.GITHUB_EVENT_NAME)) {
-    throw new Error('Nightly scheduler only accepts a pinned dev run in samir-scripts/grace');
-  }
-  const source = env.GITHUB_SHA;
-  requireDevParent(source);
-  const tag = nextTag(source, now.toISOString().slice(0, 10).replaceAll('-', ''));
-  if (!tag) { console.log('Today already has a nightly for another source; leaving its tag intact.'); return; }
-  const existing = nightlies().find(item => item.tag === tag);
-  if (existing) {
-    verify(tag, existing.revision);
-    const state = existingDraft(gh, tag, existing.revision);
-    if (state === 'ready' || state === 'active') { console.log(`${tag}: ${state}; no new dispatch`); return; }
-    if (state === 'success') throw new Error(`${tag}: successful release run without a release; inspect GitHub before retrying`);
-    if (state !== 'missing' && env.GITHUB_EVENT_NAME !== 'workflow_dispatch') throw new Error(`${tag}: release run ${state}; use manual dispatch to retry this tag`);
-  }
+  const source = verify(tag);
   requireGreenDev(gh, source);
-  if (!existing) {
-    const files = nightlyFiles(source, tag);
-    for (const [path, content] of files) writeFileSync(path, content);
-    const config = ['-c', 'user.name=github-actions[bot]', '-c', 'user.email=41898282+github-actions[bot]@users.noreply.github.com'];
-    git('add', '--', ...files.keys());
-    git(...config, 'commit', '-m', `chore: prepare ${tag}`);
-    git(...config, 'tag', '-a', tag, '-m', `Grace nightly ${tag}`);
-    verify(tag);
-    try { git('push', 'origin', `refs/tags/${tag}:refs/tags/${tag}`); }
-    catch {
-      const remote = git('ls-remote', '--exit-code', '--tags', 'origin', `refs/tags/${tag}^{}`).trim();
-      const [revision] = remote.split('\t');
-      if (!sha.test(revision)) throw new Error('Unable to push or confirm nightly tag');
-      const ref = 'refs/nightly-check/collision';
-      git('fetch', '--no-tags', 'origin', `refs/tags/${tag}:${ref}`);
-      if (parentOf(revision) !== source) { console.log(`${tag} belongs to another source; leaving it intact.`); return; }
-      verify(tag, revision, ref);
-      const state = existingDraft(gh, tag, revision);
-      if (state !== 'missing') { console.log(`${tag}: ${state}; no new dispatch`); return; }
-    }
-  }
-  gh('workflow', 'run', 'release.yml', '--ref', tag, '-f', `tag=${tag}`, '-R', repo);
-  console.log(`Requested signed draft for ${tag}: https://github.com/${repo}/actions/workflows/release.yml`);
 }
 
 function main([command, arg, ...rest]) {
   if (rest.length) throw new Error('Unexpected arguments');
-  if (command === 'schedule' && !arg) schedule();
-  else if (command === 'tag' && arg) console.log(nextTag(resolve('HEAD'), arg) ?? '');
+  if (command === 'tag' && arg) console.log(nextTag(resolve('HEAD'), arg) ?? '');
   else if (command === 'prepare' && arg) {
     const files = nightlyFiles(resolve('HEAD'), arg);
     for (const [path, content] of files) writeFileSync(path, content);
   } else if (command === 'verify' && arg) console.log(verify(arg));
-  else if (command === 'verify-release' && arg) {
-    const env = process.env;
-    if (env.GITHUB_REPOSITORY !== repo || env.GITHUB_EVENT_NAME !== 'workflow_dispatch' || env.GITHUB_REF !== `refs/tags/${arg}` || env.CANDIDATE_RUN_ID || env.ACCEPTANCE_REF || resolve('HEAD') !== env.GITHUB_SHA) {
-      throw new Error('Nightly release requires its own tag dispatch with no stable inputs');
-    }
-    const source = verify(arg);
-    requireGreenDev(github, source);
-  } else throw new Error('Usage: prepare-nightly.mjs schedule | tag YYYYMMDD | (prepare|verify|verify-release) TAG');
+  else if (command === 'verify-release' && arg) verifyNightlyRelease(arg);
+  else throw new Error('Usage: prepare-nightly.mjs tag YYYYMMDD | (prepare|verify|verify-release) TAG');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolvePath(process.argv[1])).href) {
