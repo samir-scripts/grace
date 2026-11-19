@@ -167,12 +167,42 @@ test('statistics expose selected period and keyboard-accessible annual dates', a
     });
     const announcement = page.locator('.heatmap-scroll + [aria-live]');
     const before = await announcement.textContent();
+    await page.evaluate(() => {
+      const ipc = window.__TAURI_INTERNALS__;
+      const invoke = ipc.invoke;
+      window.chartShortcutCalls = [];
+      ipc.invoke = (command, ...args) => {
+        if (['timer_restart_round', 'timer_skip', 'settings_set'].includes(command)) {
+          window.chartShortcutCalls.push(command);
+        }
+        return invoke(command, ...args);
+      };
+    });
     await page.keyboard.press('ArrowLeft');
     assert.notEqual(await announcement.textContent(), before);
     assert.equal(await heatmap.locator('[tabindex]').count(), 0);
+    for (const key of ['ArrowUp', 'ArrowDown', 'ArrowRight']) await page.keyboard.press(key);
+    assert.deepEqual(await page.evaluate(() => window.chartShortcutCalls), []);
   } finally {
     await page.close();
   }
+});
+
+test('refreshing annual data preserves the focused date', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await page.goto(serverUrl);
+    await page.getByRole('button', { name: 'Statistics' }).click();
+    await page.getByRole('button', { name: 'All Time', exact: true }).click();
+    const chart = page.locator('.heatmap-scroll');
+    const date = page.locator('.heatmap-scroll + [aria-live]');
+    await chart.press('ArrowLeft');
+    const selected = await date.textContent();
+    await page.evaluate(() => window.__motionTest.emit('sessions:cleared', null));
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await date.textContent(), selected);
+    assert.ok(await chart.evaluate(el => el === document.activeElement));
+  } finally { await page.close(); }
 });
 
 test('statistics show a retry for a load failure and display data after retry', async () => {

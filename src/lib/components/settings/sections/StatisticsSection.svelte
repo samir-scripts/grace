@@ -29,7 +29,7 @@
 
   async function loadDetailed() {
     const request = ++detailedRequest;
-    detailedStatus = 'loading';
+    if (detailedStatus !== 'ready') detailedStatus = 'loading';
     try {
       const result = await statsGetDetailed();
       if (mounted && request === detailedRequest) {
@@ -44,7 +44,7 @@
 
   async function loadHeatmap() {
     const request = ++heatmapRequest;
-    heatmapStatus = 'loading';
+    if (heatmapStatus !== 'ready') heatmapStatus = 'loading';
     try {
       const result = await statsGetHeatmap();
       if (mounted && request === heatmapRequest) {
