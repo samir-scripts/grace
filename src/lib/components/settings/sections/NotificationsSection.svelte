@@ -13,6 +13,7 @@
   import type { CustomAudioInfo } from '$lib/types';
   import * as m from '$paraglide/messages.js';
   import { warn, error as logError } from '@tauri-apps/plugin-log';
+  import { getLocale } from '$paraglide/runtime.js';
 
   type CueKey = keyof CustomAudioInfo;
 
@@ -23,6 +24,7 @@
   ];
 
   let localVolume = $state($settings.volume);
+  const volumeText = $derived(new Intl.NumberFormat(getLocale(), { style: 'percent' }).format(localVolume));
   $effect(() => {
     localVolume = $settings.volume;
   });
@@ -177,24 +179,24 @@
     onclick={() => toggle('tick_sounds_break', $settings.tick_sounds_during_break)}
   />
 
-  <div class="group-heading">{m.notif_group_volume()}</div>
-
   <div class="volume-row">
     <div class="volume-meta">
-      <span class="label">{m.notif_label_volume()}</span>
-      <span class="value">{Math.round(localVolume * 100)}%</span>
+      <label class="label" for="notification-volume">{m.notif_label_volume()}</label>
+      <output class="value" for="notification-volume" aria-hidden="true">{volumeText}</output>
     </div>
     <div class="slider-wrap">
       <input
+        id="notification-volume"
         type="range"
         min="0"
         max="1"
         step="0.01"
         value={localVolume}
+        aria-valuetext={volumeText}
         class="slider"
         oninput={handleVolumeInput}
       />
-      <div class="bar" style="width: {localVolume * 100}%"></div>
+      <div class="bar" style:width={`calc(${localVolume} * (100% - 14px) + 7px)`}></div>
     </div>
   </div>
 </div>
@@ -235,10 +237,7 @@
   .value {
     font: var(--type-code);
     letter-spacing: 0;
-    color: var(--color-foreground-darker, var(--color-foreground));
-    background: var(--color-hover);
-    padding: 2px 8px;
-    border-radius: 3px;
+    color: var(--color-foreground);
   }
 
   .slider-wrap {
@@ -248,6 +247,15 @@
     align-items: center;
   }
 
+  .slider-wrap::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-slider-rail, var(--color-border));
+  }
+
   .slider {
     position: relative;
     z-index: 2;
@@ -255,10 +263,15 @@
     -webkit-appearance: none;
     appearance: none;
     height: 4px;
-    background: var(--color-background-light);
+    background: transparent;
     border-radius: 2px;
     outline: none;
     cursor: pointer;
+  }
+
+  .slider:focus-visible {
+    outline: 2px solid var(--color-border);
+    outline-offset: 5px;
   }
 
   .slider::-webkit-slider-thumb {
@@ -267,6 +280,7 @@
     height: 14px;
     border-radius: 50%;
     background: var(--color-foreground);
+    box-shadow: 0 0 0 1px var(--color-background);
     cursor: pointer;
   }
 
@@ -275,6 +289,7 @@
     height: 14px;
     border-radius: 50%;
     background: var(--color-foreground);
+    box-shadow: 0 0 0 1px var(--color-background);
     cursor: pointer;
     border: none;
   }
@@ -286,7 +301,7 @@
     border-radius: 2px;
     pointer-events: none;
     z-index: 1;
-    background: var(--color-button);
+    background: var(--color-slider-fill, var(--color-button));
     transition: width 0.05s;
   }
 

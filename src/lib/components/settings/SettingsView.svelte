@@ -16,6 +16,20 @@
     { id: 'system', label: m.nav_system },
     { id: 'about', label: m.nav_about },
   ];
+
+  function navigateTabs(event: KeyboardEvent) {
+    const index = SECTIONS.findIndex((section) => section.id === $activeSettingsSection);
+    let next = index;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (index + 1) % SECTIONS.length;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (index - 1 + SECTIONS.length) % SECTIONS.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = SECTIONS.length - 1;
+    else return;
+    event.preventDefault();
+    event.stopPropagation();
+    activeSettingsSection.set(SECTIONS[next].id);
+    document.getElementById(`settings-tab-${SECTIONS[next].id}`)?.focus();
+  }
 </script>
 
 <div class="settings-view">
@@ -26,6 +40,10 @@
         <button
           type="button"
           role="tab"
+          onkeydown={navigateTabs}
+          id={`settings-tab-${section.id}`}
+          aria-controls="settings-panel"
+          tabindex={$activeSettingsSection === section.id ? 0 : -1}
           class="nav-item"
           class:active={$activeSettingsSection === section.id}
           aria-selected={$activeSettingsSection === section.id}
@@ -38,7 +56,7 @@
   </aside>
 
   <!-- Section content -->
-  <main class="content" class:no-scroll={$activeSettingsSection === 'timer'}>
+  <div id="settings-panel" role="tabpanel" tabindex="0" aria-labelledby={`settings-tab-${$activeSettingsSection}`} class="content" class:no-scroll={$activeSettingsSection === 'timer'}>
     {#if $activeSettingsSection === 'timer'}
       <SessionsSection />
     {:else if $activeSettingsSection === 'appearance'}
@@ -52,7 +70,7 @@
     {:else if $activeSettingsSection === 'about'}
       <AboutSection />
     {/if}
-  </main>
+  </div>
 </div>
 
 <style>

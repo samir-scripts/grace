@@ -26,7 +26,7 @@
     "test:motion": "node --test tests/motion.test.mjs",
     "test:stats-layout": "node --test tests/stats-layout.test.mjs",
     "test:browser-setup": "node --test tests/browser-setup.test.mjs",
-    "test:appearance": "node --test tests/appearance.test.mjs tests/themed-select.test.mjs",
+    "test:appearance": "node --test --test-concurrency=1 tests/appearance.test.mjs tests/themed-select.test.mjs tests/escape-dialog.test.mjs",
     "test:native-glass": "node --test tests/native-webkit-glass.test.mjs",
     "test": "npm run test:unit && npm run test:extensions && npm run test:motion && npm run test:stats-layout && npm run test:browser-setup && npm run test:appearance && npm run test:packaging",
     "test:guest-focus": "python3 -m unittest discover -s scripts/guest-focus -p 'test_*.py' && node --test scripts/guest-focus/browser-probe.test.mjs",

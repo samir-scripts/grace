@@ -2,14 +2,19 @@
   // Captures a keyboard combination and formats it as a shortcut string
   // matching Rust's parse_shortcut format (e.g. "Control+F1", "Shift+Alt+A").
 
+  import * as m from '$paraglide/messages.js';
+
   interface Props {
+    label: string;
+    disabled?: boolean;
     value?: string;
     onchange?: (value: string) => void;
   }
 
-  let { value = '', onchange }: Props = $props();
+  let { label, value = '', onchange, disabled = false }: Props = $props();
 
   let listening = $state(false);
+  let recorder: HTMLButtonElement;
 
   function codeToKey(code: string): string | null {
     if (code.startsWith('Key')) return code.slice(3); // "KeyA" → "A"
@@ -26,9 +31,9 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
-    if (!listening) return;
-    e.preventDefault();
     e.stopPropagation();
+    if (!listening || e.key === 'Tab') return;
+    e.preventDefault();
 
     // Ignore bare modifier keys
     if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
@@ -48,30 +53,28 @@
     listening = false;
   }
 
-  function onFocus() {
-    listening = true;
-  }
-
-  function onBlur() {
-    listening = false;
-  }
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<input
-  class="shortcut-input"
-  class:listening
-  readonly
-  {value}
-  placeholder="Click and press keys…"
-  onfocus={onFocus}
-  onblur={onBlur}
-  onkeydown={onKeydown}
-  role="textbox"
-  tabindex="0"
-/>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<span class="shortcut-recorder" onfocusout={(event) => {
+  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) listening = false;
+}}>
+  <button bind:this={recorder} type="button" class="shortcut-input" class:listening {disabled}
+    aria-label={label} aria-pressed={listening}
+    onclick={() => { listening = true; }}
+    onkeydown={onKeydown}>
+    {listening ? m.shortcut_recording() : (value || m.shortcut_record())}
+  </button>
+  {#if listening}
+    <button type="button" class="cancel-recording"
+      onclick={() => { recorder.focus(); listening = false; }}>{m.shortcut_cancel()}</button>
+  {/if}
+</span>
 
 <style>
+  .shortcut-recorder { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px; }
+  .cancel-recording { font: inherit; color: var(--color-foreground); background: var(--color-background); border: 1px solid var(--color-border); border-radius: 4px; cursor: pointer; }
+  .shortcut-input:focus-visible, .cancel-recording:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
   .shortcut-input {
     background: var(--color-background);
     border: 1px solid transparent;
@@ -92,9 +95,4 @@
     cursor: text;
   }
 
-  .shortcut-input::placeholder {
-    color: var(--color-foreground-darker, var(--color-foreground));
-    font: var(--type-support);
-    letter-spacing: 0;
-  }
 </style>

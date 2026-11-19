@@ -58,6 +58,7 @@ const browserSetupCalls: string[] = [];
 const openedUrls: string[] = [];
 let updateCheckCount = 0;
 const browserFixtureEnabled = urlParams.has('browser_fixture');
+let statsFail = urlParams.has('stats_error');
 const storedPref = sessionStorage.getItem('motion-test-animations-enabled');
 let currentAnimationsEnabled = storedPref !== null
   ? storedPref === 'true'
@@ -409,10 +410,12 @@ mockIPC((cmd, args: unknown) => {
   }
 
   if (cmd === 'stats_get_detailed') {
+    if (statsFail) throw new Error('Injected statistics load failure');
     return JSON.parse(JSON.stringify(detailedStats));
   }
 
   if (cmd === 'stats_get_heatmap') {
+    if (statsFail) throw new Error('Injected heatmap load failure');
     return JSON.parse(JSON.stringify(heatmapStats));
   }
 
@@ -499,6 +502,7 @@ internals.invoke = async <T>(...args: Parameters<typeof invoke>): Promise<T> => 
 export interface MotionTestController {
   emit: (event: string, payload: unknown) => Promise<void>;
   hasRegisteredEvent: (event: string) => boolean;
+  setStatsFailure: (fail: boolean) => void;
   releaseSettings: (reject?: boolean) => void;
   holdNextSave: () => void;
   releaseSave: (reject?: boolean) => void;
@@ -529,6 +533,7 @@ export interface MotionTestController {
 }
 
 const controller: MotionTestController = {
+  setStatsFailure: fail => { statsFail = fail; },
   hasRegisteredEvent: event => registeredEvents.has(event),
   getMaterialCalls: () => [...materialCalls],
   getNativeStartupEvents: () => [...nativeStartupEvents],

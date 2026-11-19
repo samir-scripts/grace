@@ -322,21 +322,13 @@ test('motion disabled leaves emergency hold feedback functional', async () => {
   await page.locator('.session-btn.locked').click();
   await page.waitForSelector('.hold-btn', { state: 'visible' });
 
-  // Press down on hold button
-  await page.locator('.hold-btn').dispatchEvent('mousedown');
-  await page.waitForTimeout(1100);
-
-  // Assert progress width increased despite no CSS transitions
-  const progressText = await page.locator('.progress-label').textContent();
-  assert.notEqual(progressText?.trim(), '0%');
-
-  // Release
-  await page.locator('.hold-btn').dispatchEvent('mouseup');
-  await page.waitForTimeout(100);
-
-  // Progress reset to 0%
-  const resetText = await page.locator('.progress-label').textContent();
-  assert.equal(resetText?.trim(), '0%');
+  const button = page.getByRole('button', { name: 'Hold for 60 seconds to unlock' });
+  await button.hover();
+  await page.mouse.down();
+  // Visual feedback still progresses without CSS interpolation.
+  await page.waitForFunction(() => parseInt(document.querySelector('.progress-label')?.textContent ?? '0') > 0);
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('.progress-label')?.textContent === '0%');
 
   await context.close();
 });

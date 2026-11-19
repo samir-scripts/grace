@@ -13,6 +13,7 @@
   let { targets = [], onChange, disabled = false }: Props = $props();
 
   let isOpen = $state(false);
+  let pickerButton: HTMLButtonElement;
   let searchQuery = $state('');
   let isLoading = $state(false);
   let errorMessage = $state<string | null>(null);
@@ -70,6 +71,7 @@
 
   function closePicker() {
     isOpen = false;
+    pickerButton?.focus();
   }
 
   function isSelected(app: InstalledApplication): boolean {
@@ -108,6 +110,8 @@
     }
   });
 
+  $effect(() => { if (disabled) isOpen = false; });
+
   function getTargetIcon(t: AppTarget): string | null {
     if (t.id in iconCache && iconCache[t.id]) return iconCache[t.id];
     const match = catalog.find((c) => c.identifier === t.identifier);
@@ -117,6 +121,7 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape' && isOpen) {
+      e.preventDefault();
       closePicker();
     }
   }
@@ -126,19 +131,20 @@
   });
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:document onkeydown={handleKeydown} />
 
 <div class="app-picker-container">
   <!-- Action toolbar to open dropdown -->
   <div class="picker-toolbar">
     <button
+      bind:this={pickerButton}
       type="button"
       class="btn-select-apps"
       class:active={isOpen}
       {disabled}
       onclick={togglePicker}
       aria-expanded={isOpen}
-      aria-haspopup="dialog"
+      aria-controls={isOpen ? "installed-app-panel" : undefined}
     >
       <span class="btn-icon">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -170,7 +176,7 @@
 
   <!-- Dropdown Panel -->
   {#if isOpen}
-    <div class="picker-panel" role="region" aria-label={m.apps_select()}>
+    <div id="installed-app-panel" class="picker-panel" role="region" aria-label={m.apps_select()}>
       <div class="search-box">
         <svg class="search-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <circle cx="7" cy="7" r="5"></circle>
@@ -184,7 +190,7 @@
           aria-label={m.apps_search()}
         />
         {#if searchQuery}
-          <button class="clear-search" onclick={() => (searchQuery = '')} aria-label="Clear search">×</button>
+          <button class="clear-search" onclick={() => (searchQuery = '')} aria-label={m.apps_clear_search()}>×</button>
         {/if}
       </div>
 
@@ -235,16 +241,11 @@
               type="button"
               class="app-row"
               class:checked
+              aria-pressed={checked}
               onclick={() => toggleApp(app)}
               onmouseenter={() => fetchIcon(app.id)}
             >
-              <input
-                type="checkbox"
-                class="app-checkbox"
-                {checked}
-                tabindex="-1"
-                aria-hidden="true"
-              />
+              <span class="app-checkbox" aria-hidden="true">{checked ? '✓' : ''}</span>
               <div class="app-icon-slot">
                 {#if icon}
                   <img src={icon} alt="" class="app-logo" />
@@ -267,7 +268,7 @@
 
       <div class="picker-footer">
         <span class="selection-count">
-          {targets.length} {targets.length === 1 ? 'app' : 'apps'} selected
+          {m.apps_selected_count({ count: String(targets.length) })}
         </span>
         <button type="button" class="btn-done" onclick={closePicker}>
           {m.apps_close()}
@@ -510,8 +511,12 @@
   .app-checkbox {
     width: 13px;
     height: 13px;
-    accent-color: var(--color-accent);
-    cursor: pointer;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    color: var(--color-accent);
+    font: var(--type-control);
+    line-height: 11px;
+    text-align: center;
   }
 
   .app-icon-slot {

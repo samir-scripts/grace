@@ -76,6 +76,12 @@ test('statistics layouts keep their content readable at desktop sizes', async ()
       for (const tab of ['Today', 'This Week', 'All Time']) {
         await page.getByRole('button', { name: tab, exact: true }).click();
         if (tab === 'All Time') await page.waitForSelector('.totals');
+        const labels = await page.locator('.hour-label, .day-label, .count-label, .month-label, .dow-label')
+          .evaluateAll((elements) => elements.map((el) =>
+            Number.parseFloat(getComputedStyle(el).fontSize) *
+            el.ownerSVGElement.getBoundingClientRect().width / el.ownerSVGElement.viewBox.baseVal.width
+          ));
+        assert.ok(labels.every((size) => size >= 10.9), `${tab} chart labels are smaller than 11px: ${labels}`);
         const issues = await page.locator('.stats-section').evaluate((section) => {
           const problems = [];
           const bounds = (el) => el.getBoundingClientRect();
@@ -92,10 +98,6 @@ test('statistics layouts keep their content readable at desktop sizes', async ()
               const a = bounds(children[i - 1]), b = bounds(children[i]);
               if (a.right > b.left + 1 && a.bottom > b.top + 1 && b.bottom > a.top + 1) problems.push(`${selector} children overlap`);
             }
-          }
-          if (window.innerWidth === 720) {
-            const heatmap = section.querySelector('.heatmap-scroll');
-            if (heatmap && heatmap.scrollWidth > heatmap.clientWidth + 1) problems.push('default heatmap clipped');
           }
           for (const selector of ['.chart-wrap', '.heatmap-scroll']) {
             const chart = section.querySelector(selector);
@@ -145,4 +147,95 @@ test('yearly heatmap labels do not overlap or clip across locales and font packs
       }
     }
   } finally { await context.close(); }
+});
+
+test('statistics expose selected period and keyboard-accessible annual dates', async () => {
+  const page = await browser.newPage({ viewport: { width: 720, height: 480 }, reducedMotion: 'reduce' });
+  try {
+    await page.goto(`${serverUrl}/?animations=false`);
+    await page.getByRole('button', { name: 'Statistics' }).click();
+    const allTime = page.getByRole('button', { name: 'All Time', exact: true });
+    await allTime.click();
+    assert.equal(await allTime.getAttribute('aria-pressed'), 'true');
+    const heatmap = page.locator('.heatmap-scroll');
+    await page.waitForSelector('.totals');
+    await heatmap.focus();
+    await page.waitForFunction(() => {
+      const viewport = document.querySelector('.heatmap-scroll').getBoundingClientRect();
+      const selected = document.querySelector('.cell-selected').getBoundingClientRect();
+      return selected.left >= viewport.left && selected.right <= viewport.right;
+    });
+    const announcement = page.locator('.heatmap-scroll + [aria-live]');
+    const before = await announcement.textContent();
+    await page.evaluate(() => {
+      const ipc = window.__TAURI_INTERNALS__;
+      const invoke = ipc.invoke;
+      window.chartShortcutCalls = [];
+      ipc.invoke = (command, ...args) => {
+        if (['timer_restart_round', 'timer_skip', 'settings_set'].includes(command)) {
+          window.chartShortcutCalls.push(command);
+        }
+        return invoke(command, ...args);
+      };
+    });
+    await page.keyboard.press('ArrowLeft');
+    assert.notEqual(await announcement.textContent(), before);
+    assert.equal(await heatmap.locator('[tabindex]').count(), 0);
+    for (const key of ['ArrowUp', 'ArrowDown', 'ArrowRight']) await page.keyboard.press(key);
+    assert.deepEqual(await page.evaluate(() => window.chartShortcutCalls), []);
+  } finally {
+    await page.close();
+  }
+});
+
+test('refreshing annual data preserves the focused date', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await page.goto(serverUrl);
+    await page.getByRole('button', { name: 'Statistics' }).click();
+    await page.getByRole('button', { name: 'All Time', exact: true }).click();
+    const chart = page.locator('.heatmap-scroll');
+    const date = page.locator('.heatmap-scroll + [aria-live]');
+    await chart.press('ArrowLeft');
+    const selected = await date.textContent();
+    await page.evaluate(() => window.__motionTest.emit('sessions:cleared', null));
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await date.textContent(), selected);
+    assert.ok(await chart.evaluate(el => el === document.activeElement));
+  } finally { await page.close(); }
+});
+
+test('statistics show a retry for a load failure and display data after retry', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await page.goto(`${serverUrl}/?animations=false&stats_error`);
+    await page.getByRole('button', { name: 'Statistics' }).click();
+    const error = page.getByRole('alert').filter({ hasText: 'Could not load statistics.' });
+    await error.waitFor();
+    assert.equal(await page.locator('.card-value').count(), 0);
+    await page.evaluate(() => window.__motionTest.setStatsFailure(false));
+    await error.getByRole('button', { name: 'Retry' }).click();
+    await page.locator('.card-value').first().waitFor();
+    assert.equal(await error.count(), 0);
+  } finally {
+    await page.close();
+  }
+});
+
+test('annual statistics retry independently after a heatmap load failure', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await page.goto(`${serverUrl}/?animations=false&stats_error`);
+    await page.getByRole('button', { name: 'Statistics' }).click();
+    await page.getByRole('button', { name: 'All Time', exact: true }).click();
+    const error = page.getByRole('alert').filter({ hasText: 'Could not load statistics.' });
+    await error.waitFor();
+    assert.equal(await page.locator('.totals').count(), 0);
+    await page.evaluate(() => window.__motionTest.setStatsFailure(false));
+    await error.getByRole('button', { name: 'Retry' }).click();
+    await page.locator('.totals').waitFor();
+    assert.equal(await error.count(), 0);
+  } finally {
+    await page.close();
+  }
 });

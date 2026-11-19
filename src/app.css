@@ -280,6 +280,8 @@ button:is(.btn-danger, .btn-delete, .btn-discard, .btn-remove, .remove-font, .co
   --color-foreground-darker: var(--glass-foreground-darker);
   --color-foreground-darkest: var(--glass-foreground-darker);
   --color-border: var(--glass-border);
+  --color-slider-rail: var(--glass-slider-rail);
+  --color-slider-fill: var(--glass-slider-fill);
   --color-status-error: var(--glass-status-error);
   --color-status-success: var(--glass-status-success);
   --color-status-warning: var(--glass-status-warning);

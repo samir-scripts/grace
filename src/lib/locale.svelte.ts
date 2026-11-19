@@ -22,5 +22,6 @@ overwriteGetLocale(() => currentLocale);
 export function setLocale(language: string): void {
   const resolved = resolveLocale(language) as SupportedLocale;
   currentLocale = resolved;
+  if (typeof document !== 'undefined') document.documentElement.lang = resolved;
   info(`[locale] locale set to ${resolved}`).catch(() => {});
 }

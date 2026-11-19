@@ -28,11 +28,51 @@
   // Year navigation state
   const currentYear = new Date().getFullYear();
   let selectedYear = $state(currentYear);
+  let selectedDate = $state(fmtDate(new Date()));
+
+  function moveDate(event: KeyboardEvent) {
+    const delta: Record<string, number> = {
+      ArrowLeft: -7, ArrowRight: 7, ArrowUp: -1, ArrowDown: 1,
+    };
+    if (!(event.key in delta)) return;
+    event.preventDefault();
+    const date = new Date(`${selectedDate}T00:00:00`);
+    date.setDate(date.getDate() + delta[event.key]);
+    const max = new Date();
+    max.setHours(0, 0, 0, 0);
+    if (date.getFullYear() !== selectedYear || date > max) return;
+    selectedDate = fmtDate(date);
+    revealSelectedDate();
+  }
+
+  function revealSelectedDate() {
+    requestAnimationFrame(() =>
+      document.getElementById(`heat-${selectedDate}`)
+        ?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    );
+  }
+
+  function selectYear(year: number) {
+    selectedYear = year;
+    selectedDate = year === currentYear ? fmtDate(new Date()) : `${year}-12-31`;
+    tooltip = null;
+    revealSelectedDate();
+  }
+
+  function describeCell(cell: GridCell): string {
+    const date = new Intl.DateTimeFormat(getLocale(), { dateStyle: 'long' }).format(
+      new Date(`${cell.date}T00:00:00`)
+    );
+    return m.stats_heatmap_day({
+      date,
+      count: new Intl.NumberFormat(getLocale()).format(cell.count),
+    });
+  }
 
   // Earliest year with recorded sessions (determines how far back the user can navigate)
   const firstYear = $derived.by(() => {
     if (!heatmap || heatmap.entries.length === 0) return currentYear;
-    return Number(heatmap.entries[0].date.slice(0, 4));
+    return Math.min(currentYear, ...heatmap.entries.map((entry) => Number(entry.date.slice(0, 4))));
   });
 
   interface GridCell {
@@ -123,10 +163,7 @@
       return;
     }
     const cellRect = (event.currentTarget as SVGRectElement).getBoundingClientRect();
-    const text =
-      cell.count === 0
-        ? `${cell.date}: ${m.stats_no_sessions_today().toLowerCase()}`
-        : `${cell.date}: ${cell.count} ${cell.count === 1 ? m.stats_rounds().toLowerCase().replace(/s$/, '') : m.stats_rounds().toLowerCase()}`;
+    const text = describeCell(cell);
     tooltip = { x: cellRect.left + CELL / 2, y: cellRect.top - 8, text };
   }
 
@@ -134,9 +171,10 @@
     if (!heatmap) return { grid: [] as GridCell[][], months: [] as MonthLabel[], weekCount: 52 };
     return buildGridForYear(selectedYear, heatmap.entries);
   });
+  const selectedCell = $derived(grid.flat().find((cell) => cell.date === selectedDate));
 
   const GRID_W = $derived(weekCount * STRIDE - GAP);
-  const LEFT_OFFSET = 40;
+  const LEFT_OFFSET = 44;
   const MONTH_LABEL_H = 20;
   const SVG_W = $derived(LEFT_OFFSET + GRID_W);
   const SVG_H = MONTH_LABEL_H + GRID_H;
@@ -168,8 +206,7 @@
           <button
             class="year-btn"
             onclick={() => {
-              selectedYear -= 1;
-              tooltip = null;
+              selectYear(selectedYear - 1);
             }}
             disabled={selectedYear <= firstYear}
             aria-label={m.stats_prev_year()}
@@ -188,8 +225,7 @@
           <button
             class="year-btn"
             onclick={() => {
-              selectedYear += 1;
-              tooltip = null;
+              selectYear(selectedYear + 1);
             }}
             disabled={selectedYear >= currentYear}
             aria-label={m.stats_next_year()}
@@ -207,7 +243,10 @@
         </div>
 
         <!-- Heatmap SVG -->
-        <div class="heatmap-scroll">
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
+        <div class="heatmap-scroll" role="application" tabindex="0"
+          aria-label={m.stats_heatmap_label()} aria-describedby="heatmap-date"
+          onfocus={revealSelectedDate} onkeydown={moveDate}>
         <svg
           width={SVG_W}
           height={SVG_H}
@@ -216,19 +255,18 @@
           onmouseleave={() => {
             tooltip = null;
           }}
-          role="img"
-          aria-label="Annual activity heatmap"
+          aria-hidden="true"
         >
           <!-- Month labels -->
           {#each months as mo}
-            <text x={LEFT_OFFSET + mo.x} y={12} class="month-label">{mo.label}</text>
+            <text x={LEFT_OFFSET + mo.x} y={14} class="month-label">{mo.label}</text>
           {/each}
 
           <!-- Day-of-week labels -->
           {#each Object.entries(ROW_LABELS) as [rowIdx, rowLabel]}
             <text
               x={LEFT_OFFSET - 4}
-              y={MONTH_LABEL_H + Number(rowIdx) * STRIDE + CELL / 2 + 3.5}
+              y={MONTH_LABEL_H + Number(rowIdx) * STRIDE + CELL / 2 + 4}
               text-anchor="end"
               class="dow-label">{rowLabel}</text
             >
@@ -240,6 +278,7 @@
               {@const cx = LEFT_OFFSET + w * STRIDE}
               {@const cy = MONTH_LABEL_H + d * STRIDE}
               <rect
+                id={`heat-${cell.date}`}
                 x={cx}
                 y={cy}
                 width={CELL}
@@ -248,8 +287,8 @@
                 style="fill: {LEVEL_FILL[cell.level]}"
                 class="cell"
                 class:cell-dimmed={cell.dimmed}
-                role="img"
-                aria-label="{cell.date}: {cell.count} {m.stats_rounds().toLowerCase()}"
+                class:cell-selected={cell.date === selectedDate}
+                aria-hidden="true"
                 onmouseenter={(e) => showTooltip(e, cell)}
                 onmouseleave={() => {
                   tooltip = null;
@@ -259,6 +298,9 @@
           {/each}
         </svg>
         </div>
+        <span class="sr-only" id="heatmap-date" aria-live="polite"
+          >{selectedCell ? describeCell(selectedCell) : ''}</span
+        >
 
         <!-- Cell tooltip (HTML so it matches Tooltip.svelte style and escapes SVG clipping) -->
         {#if tooltip}
@@ -412,9 +454,6 @@
     height: auto;
   }
 
-  @media (min-width: 600px) {
-    .heatmap-svg { width: 100%; max-width: 100%; }
-  }
 
   .cell {
     cursor: default;
@@ -425,13 +464,27 @@
     opacity: 0.75;
   }
 
+  .heatmap-scroll:focus-visible .cell-selected {
+    stroke: var(--color-foreground);
+    stroke-width: 2px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .cell-dimmed {
     opacity: 0.3;
   }
 
   .month-label {
     fill: var(--color-foreground-darker);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 400;
     letter-spacing: normal;
     cursor: default;
@@ -439,7 +492,7 @@
 
   .dow-label {
     fill: var(--color-foreground-darker);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 400;
     letter-spacing: normal;
     cursor: default;

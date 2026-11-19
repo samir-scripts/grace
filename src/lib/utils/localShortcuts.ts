@@ -46,6 +46,8 @@ export interface LocalShortcutState {
  */
 export function createLocalShortcutHandler(state: LocalShortcutState): (e: KeyboardEvent) => void {
   return function handleKeydown(e: KeyboardEvent) {
+    if (e.defaultPrevented) return;
+
     // Skip if a text input / shortcut capture field is focused.
     const target = e.target as HTMLElement | null;
     if (target) {

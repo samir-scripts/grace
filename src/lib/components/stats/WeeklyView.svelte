@@ -225,9 +225,8 @@
   }
   .chart {
     display: block;
-    width: 100%;
-    min-width: 350px;
-    max-width: 500px;
+    flex: none;
+    max-width: none;
     height: auto;
   }
 
@@ -261,7 +260,7 @@
 
   .count-label {
     fill: var(--color-foreground-darker);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 500;
     letter-spacing: normal;
     font-variant-numeric: tabular-nums;
@@ -272,7 +271,7 @@
 
   .day-label {
     fill: var(--color-foreground-darker);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: normal;
