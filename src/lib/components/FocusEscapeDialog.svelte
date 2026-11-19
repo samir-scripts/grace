@@ -301,6 +301,8 @@
     border-radius: 12px;
     width: 100%;
     max-width: 380px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
     padding: 20px;
     display: flex;
@@ -317,8 +319,8 @@
   }
 
   .modal-title {
-    font-size: 15px;
-    font-weight: 700;
+    font: var(--type-heading);
+    letter-spacing: 0;
     color: var(--color-foreground);
     margin: 0;
   }
@@ -340,14 +342,15 @@
   }
 
   .modal-desc {
-    font-size: 11px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
-    line-height: 1.4;
     margin: 0;
   }
 
   .mode-tabs {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
     background: var(--color-background-light);
     padding: 3px;
@@ -360,8 +363,9 @@
     border: none;
     border-radius: 4px;
     padding: 6px;
-    font-size: 11px;
+    font: var(--type-control);
     font-weight: 500;
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
     cursor: pointer;
     transition: background var(--transition-snappy), color var(--transition-snappy);
@@ -375,9 +379,9 @@
   }
 
   .instruction {
-    font-size: 11px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
-    line-height: 1.4;
     margin: 0 0 12px 0;
   }
 
@@ -386,8 +390,8 @@
     border: 1px solid var(--color-separator);
     border-radius: 3px;
     padding: 1px 4px;
-    font-family: inherit;
-    font-size: 10px;
+    font: var(--type-code);
+    letter-spacing: 0;
   }
 
   .hold-action-area {
@@ -399,7 +403,7 @@
   .hold-btn {
     position: relative;
     width: 100%;
-    height: 72px;
+    min-height: 72px;
     background: var(--color-background-light);
     border: 2px solid var(--color-focus-round);
     border-radius: 8px;
@@ -437,18 +441,19 @@
 
   .hold-prompt {
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--color-foreground);
   }
 
   .holding-countdown {
-    font-size: 15px;
-    font-weight: 700;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground);
   }
 
   .subtext {
-    font-size: 10px;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 
@@ -473,8 +478,8 @@
   }
 
   .progress-label {
-    font-size: 11px;
-    font-weight: 600;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
     min-width: 32px;
     text-align: right;
@@ -493,7 +498,8 @@
   }
 
   .input-group label {
-    font-size: 11px;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 
@@ -503,8 +509,9 @@
     border-radius: 6px;
     padding: 8px 10px;
     color: var(--color-foreground);
-    font-size: 12px;
-    font-family: inherit;
+    font: var(--type-control);
+    letter-spacing: 0;
+    min-width: 0;
     outline: none;
   }
 
@@ -514,6 +521,7 @@
 
   .form-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 8px;
     margin-top: 6px;
@@ -525,7 +533,8 @@
     color: var(--color-foreground);
     border-radius: 6px;
     padding: 6px 14px;
-    font-size: 12px;
+    font: var(--type-control);
+    letter-spacing: 0;
     cursor: pointer;
   }
 
@@ -535,8 +544,9 @@
     color: var(--color-background);
     border-radius: 6px;
     padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 600;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
   }
 
@@ -551,7 +561,8 @@
     color: var(--color-foreground);
     padding: 8px;
     border-radius: 6px;
-    font-size: 11px;
+    font: var(--type-body);
+    letter-spacing: 0;
   }
 
   @keyframes fadeIn {

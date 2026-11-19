@@ -330,7 +330,8 @@
   .alert.error {
     margin: 8px 20px;
     padding: 8px 12px;
-    font-size: 0.75rem;
+    font: var(--type-support);
+    letter-spacing: 0;
     border-radius: 4px;
     background: var(--color-background-light);
     border: 1px solid var(--color-focus-round);
@@ -341,9 +342,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-foreground-darker, var(--color-foreground));
     margin: 0;
@@ -366,8 +366,8 @@
     background: var(--color-background);
     border: none;
     border-right: 1px solid var(--color-separator);
-    font-size: 0.8rem;
-    letter-spacing: 0.03em;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground-darker, var(--color-foreground));
     cursor: pointer;
     transition:
@@ -386,7 +386,7 @@
   .mode-btn.active {
     background: var(--color-background-light);
     color: var(--color-foreground);
-    font-weight: 600;
+    font-weight: 500;
   }
 
   /* Collapsible picker groups */
@@ -425,9 +425,8 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-foreground-darker, var(--color-foreground));
     flex-shrink: 0;
@@ -451,7 +450,8 @@
   }
 
   .preview-name {
-    font-size: 0.8rem;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker, var(--color-foreground));
     white-space: nowrap;
     overflow: hidden;
@@ -521,8 +521,8 @@
   }
 
   .card-name {
-    font-size: 0.85rem;
-    letter-spacing: 0.03em;
+    font: var(--type-control);
+    letter-spacing: 0;
     flex: 1;
   }
 
@@ -534,8 +534,8 @@
   }
 
   .badge {
-    font-size: 0.65rem;
-    letter-spacing: 0.06em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     opacity: 0.8;
   }

@@ -205,16 +205,17 @@
   }
 
   .notice-text {
-    font-size: 0.75rem;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
-    line-height: 1.5;
     margin: 0;
   }
 
   .notice-btn {
     align-self: flex-start;
     padding: 4px 10px;
-    font-size: 0.75rem;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground);
     background: var(--color-background-light);
     border: 1px solid color-mix(in oklch, var(--color-foreground) 20%, transparent);
@@ -237,7 +238,7 @@
     background: var(--color-button);
     color: var(--color-button-text);
     border-color: var(--color-accent);
-    font-weight: 600;
+    font-weight: 500;
   }
 
   .notice-btn.primary:hover {
@@ -246,24 +247,26 @@
 
 
   .note {
-    font-size: 0.75rem;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker, var(--color-foreground));
     padding: 8px 20px 16px;
-    line-height: 1.5;
   }
 
   .row {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
     padding: 10px 20px;
     border-bottom: 1px solid var(--color-separator);
   }
 
   .label {
-    font-size: 0.85rem;
+    font: var(--type-control);
     color: var(--color-foreground);
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
   }
 
   .shortcut-group {
@@ -277,9 +280,8 @@
   }
 
   .group-heading {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font: var(--type-eyebrow);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-foreground-darker, var(--color-foreground));
     margin: 0;

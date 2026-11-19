@@ -2,6 +2,8 @@
 
 # Implementation plans
 
+[Typography refinement preview](typography-refinement-plan.md) — isolated draft branch with Inter/JetBrains pairing, shared type roles, [before/after evidence](evidence/typography-refinement/README.md) and runnable separate-ID app. Visual acceptance and native interaction checks remain pending; no merge or release.
+
 [Experimental betas and branded pages](experimental-beta-release-plan.md) — desktop 1.7.2-beta.1 and branded website/privacy pages published; Chrome 1.1.2 submitted Public with automatic publication after approval and currently Pending Review. Signed Firefox 1.1.1 remains unlisted/manual. Windows/Ubuntu x64 packaged runtime acceptance is explicitly unverified / deferred to contributors. Stable promotion remains gated by reviewed exact-artifact native evidence; store-installed acceptance follows approval.
 
 [macOS Chrome acceptance through Tart](chrome-tart-acceptance-plan.md) — passed actual packaged Chrome acceptance on macOS, including forced app recovery; evidence collected and clone stopped.

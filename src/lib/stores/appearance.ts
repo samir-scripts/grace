@@ -8,7 +8,7 @@ const sans = "'Mona Sans', system-ui, sans-serif";
 const mono = "'Mona Sans Mono', monospace";
 const builtins: Record<string, [string, string]> = {
   'mona-sans': [sans, mono],
-  inter: ["'Inter', " + sans, mono],
+  inter: ["'Inter', " + sans, "'JetBrains Mono', " + mono],
   roboto: ["'Roboto', " + sans, mono],
   'jetbrains-mono': ["'JetBrains Mono', " + mono, "'JetBrains Mono', " + mono],
 };
@@ -33,7 +33,10 @@ export function getTimerDialDimensions(style: Settings['ui_style']): Readonly<{ 
 export async function loadFontPack(pack: FontPack): Promise<[string, string]> {
   if (builtins[pack]) {
     const pair = builtins[pack];
-    await document.fonts.load(`16px ${pair[0].split(',')[0]}`);
+    const uiFamily = pair[0].split(',')[0];
+    const monoFamily = pair[1].split(',')[0];
+    await document.fonts.load(`400 16px ${uiFamily}`);
+    if (monoFamily !== uiFamily) await document.fonts.load(`400 16px ${monoFamily}`);
     return pair;
   }
   const id = pack.slice('custom:'.length);

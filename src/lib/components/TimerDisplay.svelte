@@ -30,12 +30,10 @@
   }
 
   .time {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-    font-size: 2.8rem;
-    font-weight: 300;
-    font-stretch: 85%;
-    letter-spacing: -0.02em;
+    font: var(--type-timer);
+    font-variant-numeric: lining-nums tabular-nums;
+    font-stretch: normal;
+    letter-spacing: 0;
     color: var(--color-foreground);
   }
 </style>

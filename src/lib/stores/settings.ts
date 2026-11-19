@@ -30,7 +30,7 @@ const defaults: Settings = {
   theme_dark: 'Pomotroid',
   ui_style: 'pomotroid',
   glass_transparency: 100,
-  font_pack: 'mona-sans',
+  font_pack: 'inter',
   dial_countdown: true,
   animations_enabled: true,
   language: 'auto',

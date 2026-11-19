@@ -175,10 +175,9 @@
     border: 1px solid var(--color-separator);
     border-radius: 6px;
     color: var(--color-foreground);
-    font-family: inherit;
-    font-size: 11.5px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     cursor: pointer;
     transition:
       background var(--transition-control),
@@ -268,8 +267,8 @@
     border: none;
     border-radius: 4px;
     color: var(--color-foreground-darker);
-    font-family: inherit;
-    font-size: 11px;
+    font: var(--type-control);
+    letter-spacing: 0;
     cursor: pointer;
     text-align: left;
     width: 100%;
@@ -310,11 +309,10 @@
   .item-cadence {
     flex: 0 0 auto;
     margin-left: auto;
-    font-family: var(--font-mono);
-    font-size: 9.5px;
+    font: var(--type-code);
     font-variant-numeric: tabular-nums;
     color: var(--color-foreground-darker);
-    letter-spacing: 0.01em;
+    letter-spacing: 0;
     white-space: nowrap;
   }
 
@@ -348,7 +346,7 @@
     align-items: center;
     gap: 6px;
     color: var(--color-foreground-darker);
-    font-size: 10px;
+    font: var(--type-control);
   }
 
   .manage-icon {

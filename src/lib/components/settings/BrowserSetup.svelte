@@ -401,16 +401,16 @@
   }
 
   .anti-bypass-note {
-    font-size: 11px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
-    line-height: 1.4;
     margin: 4px 0 0;
   }
 
   .uninstall-help {
-    font-size: 11px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
-    line-height: 1.4;
   }
   .uninstall-help summary {
     color: var(--color-foreground);
@@ -423,23 +423,24 @@
 
 
   .group-title {
-    font-size: 13px;
-    font-weight: 600;
+    font: var(--type-heading);
+    letter-spacing: 0;
     color: var(--color-foreground);
     margin: 0;
   }
 
   .section-desc {
-    font-size: 11px;
+    font: var(--type-body);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
     margin: 0;
-    line-height: 1.4;
   }
 
   .alert {
     padding: 8px 12px;
     border-radius: 6px;
-    font-size: 11px;
+    font: var(--type-support);
+    letter-spacing: 0;
   }
 
   .alert.success {
@@ -476,6 +477,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
   }
 
   .browser-icon-wrapper {
@@ -498,11 +500,13 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-width: 0;
   }
 
   .browser-name {
-    font-size: 12px;
-    font-weight: 600;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     color: var(--color-foreground);
   }
 
@@ -517,11 +521,11 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    white-space: nowrap;
-    font-size: 9px;
+    font: var(--type-support);
+    letter-spacing: 0;
     padding: 2px 6px;
     border-radius: 3px;
-    font-weight: 600;
+    font-weight: 500;
     text-transform: uppercase;
   }
 
@@ -556,15 +560,15 @@
 
   .btn-install {
     padding: 6px 12px;
-    font-size: 11px;
-    font-weight: 600;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     background: var(--color-button);
     color: var(--color-button-text);
     border: none;
     border-radius: 4px;
     cursor: pointer;
     transition: opacity 0.15s ease;
-    white-space: nowrap;
   }
 
   .btn-install:hover:not(:disabled) {
@@ -593,8 +597,9 @@
   }
 
   .sub-label {
-    font-size: 11px;
-    font-weight: 600;
+    font: var(--type-control);
+    font-weight: 500;
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
   }
 
@@ -603,9 +608,9 @@
     background: rgba(0, 0, 0, 0.1);
     border: 1px dashed var(--color-separator);
     border-radius: 6px;
-    font-size: 11px;
+    font: var(--type-support);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
-    line-height: 1.4;
   }
 
   .profiles-list {
@@ -617,12 +622,14 @@
   .browser-profile-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     justify-content: space-between;
     padding: 8px 12px;
     background: var(--color-background-light);
     border: 1px solid var(--color-separator);
     border-radius: 6px;
-    font-size: 11px;
+    font: var(--type-support);
+    letter-spacing: 0;
     gap: 12px;
   }
 
@@ -630,10 +637,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
+    flex-wrap: wrap;
   }
 
   .prof-id {
-    font-family: var(--font-mono);
+    font: var(--type-code);
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
     color: var(--color-foreground);
   }
 
@@ -641,7 +652,8 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 11px;
+    font: var(--type-control);
+    letter-spacing: 0;
     color: var(--color-foreground-darker);
     cursor: pointer;
   }
