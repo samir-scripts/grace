@@ -202,6 +202,8 @@ test('Glass content protects light and dark text across the complete transparenc
       for (const back of ['#000000', '#ffffff', '#385c81']) {
         const canvas = layer(glass['--glass-canvas'], back);
         const content = layer(glass['--glass-content-surface'], canvas);
+        assert.ok(contrastRatio(glass['--glass-slider-rail'], content) >= 3, `${name} ${transparency}%: range rail on ${content}`);
+        assert.ok(contrastRatio(glass['--glass-slider-fill'], content) >= 4.5, `${name} ${transparency}%: volume fill on ${content}`);
         const surfaces = [content, ...['--glass-control-surface', '--glass-selected-surface', '--glass-chrome-surface']
           .map(key => layer(glass[key], content))];
         for (const surface of surfaces) {

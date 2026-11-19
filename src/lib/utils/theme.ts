@@ -175,10 +175,10 @@ export function resolveGlassColors(colors: Record<string, string>, transparency 
   const controls = ['--color-background', '--color-background-light', '--color-hover', '--color-selected']
     .map(key => colors[key]);
   const surfaces = [...controls];
-  const readable = (candidate: string, minimum: number) => {
+  const readable = (candidate: string, minimum: number, backgrounds = surfaces) => {
     for (let step = 0; step <= 100; step++) {
       const color = mix(candidate, ink, step / 100);
-      if (surfaces.every(surface => contrastRatio(color, surface) >= minimum)) return color;
+      if (backgrounds.every(surface => contrastRatio(color, surface) >= minimum)) return color;
     }
     return ink;
   };
@@ -216,6 +216,8 @@ export function resolveGlassColors(colors: Record<string, string>, transparency 
     '--glass-foreground': readable(colors['--color-foreground'], 4.5),
     '--glass-foreground-darker': readable(colors['--color-foreground-darker'], 4.5),
     '--glass-border': readable(colors['--color-border'], 3),
+    '--glass-slider-rail': readable(mix(bg, ink, .25), 3, content.backgrounds),
+    '--glass-slider-fill': readable(colors['--color-button'], 4.5, content.backgrounds),
     '--glass-status-error': error,
     '--glass-status-success': readable(colors['--color-status-success'], 4.5),
     '--glass-status-warning': readable(colors['--color-status-warning'], 4.5),

@@ -58,25 +58,33 @@
     };
   });
 
-  // Mode selector: save + immediately apply the resolved theme.
-  async function setMode(mode: string) {
-    const resolved = resolveThemeName({ ...$settings, theme_mode: mode }, osDark);
-    const t = themes.find((th) => th.name === resolved);
-    if (t) applyTheme(t);
-    await setSetting('theme_mode', mode);
+  type PaletteKey = 'theme_mode' | 'theme_light' | 'theme_dark';
+  let savingPalette = $state(false);
+  let paletteError = $state<PaletteKey | null>(null);
+
+  function applyPalette(preferences: typeof $settings) {
+    const name = resolveThemeName(preferences, osDark);
+    const theme = themes.find((candidate) => candidate.name === name);
+    if (theme) applyTheme(theme);
   }
 
-  // Light picker: save + apply only if light picker is currently active.
-  async function selectLight(theme: Theme) {
-    if (lightIsActive) applyTheme(theme);
-    await setSetting('theme_light', theme.name);
+  async function savePalette(key: PaletteKey, value: string) {
+    if (savingPalette || value === $settings[key]) return;
+    savingPalette = true;
+    paletteError = null;
+    applyPalette({ ...$settings, [key]: value });
+    try {
+      const updated = await setSetting(key, value);
+      settings.set(updated);
+      applyPalette(updated);
+    } catch {
+      applyPalette($settings);
+      paletteError = key;
+    } finally {
+      savingPalette = false;
+    }
   }
 
-  // Dark picker: save + apply only if dark picker is currently active.
-  async function selectDark(theme: Theme) {
-    if (darkIsActive) applyTheme(theme);
-    await setSetting('theme_dark', theme.name);
-  }
   let savingAnimations = $state(false);
   let animationsSaveError = $state<string | null>(null);
 
@@ -104,9 +112,10 @@
     <button
       type="button"
       class="mode-btn"
+      aria-disabled={savingPalette}
       class:active={$settings.theme_mode === 'auto'}
       aria-pressed={$settings.theme_mode === 'auto'}
-      onclick={() => setMode('auto')}
+      onclick={() => savePalette('theme_mode', 'auto')}
       aria-label={m.appearance_mode_auto()}
       title={m.appearance_mode_auto()}
     >
@@ -118,9 +127,10 @@
     <button
       type="button"
       class="mode-btn"
+      aria-disabled={savingPalette}
       class:active={$settings.theme_mode === 'light'}
       aria-pressed={$settings.theme_mode === 'light'}
-      onclick={() => setMode('light')}
+      onclick={() => savePalette('theme_mode', 'light')}
       aria-label={m.appearance_mode_light()}
       title={m.appearance_mode_light()}
     >
@@ -139,9 +149,10 @@
     <button
       type="button"
       class="mode-btn"
+      aria-disabled={savingPalette}
       class:active={$settings.theme_mode === 'dark'}
       aria-pressed={$settings.theme_mode === 'dark'}
-      onclick={() => setMode('dark')}
+      onclick={() => savePalette('theme_mode', 'dark')}
       aria-label={m.appearance_mode_dark()}
       title={m.appearance_mode_dark()}
     >
@@ -151,11 +162,17 @@
     </button>
   </div>
 
+  {#if paletteError === 'theme_mode'}
+    <p class="palette-error" role="alert">{m.appearance_customization_error()}</p>
+  {/if}
+
   <!-- Light theme picker -->
   <div class="picker-group">
     <button
       class="picker-trigger"
       class:open={openPicker === 'light'}
+      aria-expanded={openPicker === 'light'}
+      aria-controls="light-theme-choices"
       onclick={() => togglePicker('light')}
     >
       <span class="trigger-label">
@@ -186,8 +203,10 @@
         <path d="M7 10l5 5 5-5z" />
       </svg>
     </button>
-    {#if openPicker === 'light'}
-      <div class="theme-list">
+    {#if paletteError === 'theme_light'}
+      <p class="palette-error" role="alert">{m.appearance_customization_error()}</p>
+    {/if}
+    <div id="light-theme-choices" class="theme-list" hidden={openPicker !== 'light'}>
         {#each lightThemes as theme (theme.name)}
           {@const bg = theme.colors['--color-background'] ?? '#2f384b'}
           {@const fg = theme.colors['--color-foreground'] ?? '#d7e1f4'}
@@ -201,7 +220,9 @@
             class:selected={isSelected}
             class:highlighted={isSelected && lightIsActive}
             style="--card-bg:{bg}; --card-fg:{fg}; --card-accent:{accent};"
-            onclick={() => selectLight(theme)}
+            aria-pressed={isSelected}
+            aria-disabled={savingPalette}
+            onclick={() => savePalette('theme_light', theme.name)}
           >
             <span class="swatches">
               <span class="swatch" style="background:{focusRound}"></span>
@@ -226,8 +247,7 @@
             </span>
           </button>
         {/each}
-      </div>
-    {/if}
+    </div>
   </div>
 
   <!-- Dark theme picker -->
@@ -235,6 +255,8 @@
     <button
       class="picker-trigger"
       class:open={openPicker === 'dark'}
+      aria-expanded={openPicker === 'dark'}
+      aria-controls="dark-theme-choices"
       onclick={() => togglePicker('dark')}
     >
       <span class="trigger-label">
@@ -265,8 +287,10 @@
         <path d="M7 10l5 5 5-5z" />
       </svg>
     </button>
-    {#if openPicker === 'dark'}
-      <div class="theme-list">
+    {#if paletteError === 'theme_dark'}
+      <p class="palette-error" role="alert">{m.appearance_customization_error()}</p>
+    {/if}
+    <div id="dark-theme-choices" class="theme-list" hidden={openPicker !== 'dark'}>
         {#each darkThemes as theme (theme.name)}
           {@const bg = theme.colors['--color-background'] ?? '#2f384b'}
           {@const fg = theme.colors['--color-foreground'] ?? '#d7e1f4'}
@@ -280,7 +304,9 @@
             class:selected={isSelected}
             class:highlighted={isSelected && darkIsActive}
             style="--card-bg:{bg}; --card-fg:{fg}; --card-accent:{accent};"
-            onclick={() => selectDark(theme)}
+            aria-pressed={isSelected}
+            aria-disabled={savingPalette}
+            onclick={() => savePalette('theme_dark', theme.name)}
           >
             <span class="swatches">
               <span class="swatch" style="background:{focusRound}"></span>
@@ -305,8 +331,7 @@
             </span>
           </button>
         {/each}
-      </div>
-    {/if}
+    </div>
   </div>
 
   <SettingsToggle
@@ -322,6 +347,9 @@
 </div>
 
 <style>
+  .theme-list[hidden] { display: none; }
+  .palette-error { margin: 4px 12px; font: var(--type-support); color: var(--color-status-error); }
+
   .section {
     display: flex;
     flex-direction: column;

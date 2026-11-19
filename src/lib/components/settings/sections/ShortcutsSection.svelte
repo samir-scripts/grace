@@ -61,6 +61,7 @@
     <div class="row">
       <span class="label">{m.shortcuts_local_toggle_timer()}</span>
       <LocalShortcutInput
+        label={m.shortcuts_local_toggle_timer()}
         value={$settings.local_shortcut_toggle}
         onchange={(v) => setLocalShortcut('local_shortcut_toggle', v)}
       />
@@ -69,6 +70,7 @@
     <div class="row">
       <span class="label">{m.shortcuts_local_reset_round()}</span>
       <LocalShortcutInput
+        label={m.shortcuts_local_reset_round()}
         value={$settings.local_shortcut_reset}
         onchange={(v) => setLocalShortcut('local_shortcut_reset', v)}
       />
@@ -77,6 +79,7 @@
     <div class="row">
       <span class="label">{m.shortcuts_local_skip_round()}</span>
       <LocalShortcutInput
+        label={m.shortcuts_local_skip_round()}
         value={$settings.local_shortcut_skip}
         onchange={(v) => setLocalShortcut('local_shortcut_skip', v)}
       />
@@ -85,6 +88,7 @@
     <div class="row">
       <span class="label">{m.shortcuts_local_volume_down()}</span>
       <LocalShortcutInput
+        label={m.shortcuts_local_volume_down()}
         value={$settings.local_shortcut_volume_down}
         onchange={(v) => setLocalShortcut('local_shortcut_volume_down', v)}
       />
@@ -93,6 +97,7 @@
     <div class="row">
       <span class="label">{m.shortcuts_local_volume_up()}</span>
       <LocalShortcutInput
+        label={m.shortcuts_local_volume_up()}
         value={$settings.local_shortcut_volume_up}
         onchange={(v) => setLocalShortcut('local_shortcut_volume_up', v)}
       />
@@ -101,6 +106,7 @@
     <div class="row">
       <span class="label">{m.shortcuts_local_mute()}</span>
       <LocalShortcutInput
+        label={m.shortcuts_local_mute()}
         value={$settings.local_shortcut_mute}
         onchange={(v) => setLocalShortcut('local_shortcut_mute', v)}
       />
@@ -109,6 +115,7 @@
     <div class="row">
       <span class="label">{m.shortcuts_local_fullscreen()}</span>
       <LocalShortcutInput
+        label={m.shortcuts_local_fullscreen()}
         value={$settings.local_shortcut_fullscreen}
         onchange={(v) => setLocalShortcut('local_shortcut_fullscreen', v)}
       />
@@ -145,6 +152,8 @@
       <div class="row">
         <span class="label">{m.shortcuts_toggle_timer()}</span>
         <ShortcutInput
+          disabled={!$settings.global_shortcuts_enabled}
+          label={m.shortcuts_toggle_timer()}
           value={$settings.shortcut_toggle}
           onchange={(v) => setShortcut('shortcut_toggle', v)}
         />
@@ -153,6 +162,8 @@
       <div class="row">
         <span class="label">{m.shortcuts_reset_timer()}</span>
         <ShortcutInput
+          disabled={!$settings.global_shortcuts_enabled}
+          label={m.shortcuts_reset_timer()}
           value={$settings.shortcut_reset}
           onchange={(v) => setShortcut('shortcut_reset', v)}
         />
@@ -161,6 +172,8 @@
       <div class="row">
         <span class="label">{m.shortcuts_skip_round()}</span>
         <ShortcutInput
+          disabled={!$settings.global_shortcuts_enabled}
+          label={m.shortcuts_skip_round()}
           value={$settings.shortcut_skip}
           onchange={(v) => setShortcut('shortcut_skip', v)}
         />
@@ -169,6 +182,8 @@
       <div class="row">
         <span class="label">{m.shortcuts_restart_round()}</span>
         <ShortcutInput
+          disabled={!$settings.global_shortcuts_enabled}
+          label={m.shortcuts_restart_round()}
           value={$settings.shortcut_restart}
           onchange={(v) => setShortcut('shortcut_restart', v)}
         />
