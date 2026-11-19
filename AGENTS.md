@@ -35,7 +35,7 @@ Build/development entry points:
 - `svelte.config.js`: static adapter, `index.html` fallback and `$paraglide` alias.
 - `src-tauri/tauri.conf.json`: native window, build hooks, bundle, CSP and updater configuration.
 - `src-tauri/build.rs`: build version/SHA metadata and `tauri_build::build()`.
-- `.github/workflows/build.yml`, `.github/workflows/nightly.yml`, `.github/workflows/release.yml`, `.github/workflows/codeql-analysis.yml`: CI, nightly drafts, release and security analysis.
+- `.github/workflows/build.yml`, `.github/workflows/release.yml`, `.github/workflows/codeql-analysis.yml`: quality checks, tag-triggered installer builds, and security analysis.
 
 ## Core modules
 
@@ -164,4 +164,4 @@ cargo test --manifest-path src-tauri/Cargo.toml -- --skip test_accessibility_com
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 ```
 
-PRs merge to `dev`, then promote to `stage` for cross-platform artifact testing and to `release` for stable tags. The nightly workflow builds a reviewed `dev` commit separately. See [release process](CONTRIBUTING.md#release-process) and [verification commands](#commands-and-verification).
+PRs merge to `dev` and promote through `stage` to `release`. A dated nightly tag builds a beta from reviewed `dev` source. A stable tag builds the accepted release candidate. See [release process](CONTRIBUTING.md#release-process) and [verification commands](#commands-and-verification).

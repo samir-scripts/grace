@@ -74,78 +74,42 @@ test('chooses the next unused stable core and retains an existing nightly tag ac
   assert.equal(f.run('tag', '20261119'), tag);
 });
 
-test('scheduler requires exact green push checks and never dispatches a duplicate or replaces a daily tag', t => {
+test('nightly release requires the exact pushed tag and the parent’s green dev checks', t => {
   const f = fixture(t);
-  f.git('init', '--bare', 'remote.git');
-  f.git('remote', 'add', 'origin', join(f.cwd, 'remote.git'));
-  f.git('push', 'origin', 'dev:dev', `refs/tags/${beta}`);
-  const invoke = (date, overrides = {}) => execFileSync(process.execPath, ['--input-type=module', '-e', `
-    import { schedule } from ${JSON.stringify(script.href)};
-    import { createHash } from 'node:crypto';
+  f.install();
+  const invoke = (overrides = {}) => execFileSync(process.execPath, ['--input-type=module', '-e', `
+    import { verifyNightlyRelease } from ${JSON.stringify(script.href)};
     const input = JSON.parse(process.env.TEST_INPUT);
-    const version = ${JSON.stringify(tag.slice(1))};
-    const digest = text => createHash('sha256').update(text).digest('hex');
-    const files = { 'grace-updater.pub': 'key', 'sample.rpm': 'artifact', 'sample.rpm.sig': 'signature' };
-    const platforms = {};
-    for (const [platform, file] of [
-      ['windows-x64', 'grace-windows-x64-' + version + '-setup.exe'],
-      ['ubuntu-x64', 'grace-ubuntu-x64-' + version + '.deb'],
-      ['macos-universal', 'grace-macos-universal-' + version + '.dmg']
-    ]) {
-      if (platform === input.missingPlatform) continue;
-      files[file] = platform;
-      files[file + '.sig'] = 'signature';
-      if (platform !== 'macos-universal') platforms[platform] = { file, sha256: digest(platform) };
-    }
-    const artifacts = Object.entries(files).map(([file, text]) => ({ file, sha256: digest(text) }));
-    files['provenance.json'] = JSON.stringify({ version, prerelease: 'true', source_revision: input.completed, artifacts, platforms });
-    files.SHA256SUMS = Object.entries(files).map(([name, text]) => digest(text) + '  ' + name).join('\\n') + '\\n';
-    const assets = Object.entries(files).map(([name, text], i) => ({ id: i + 1, name, digest: 'sha256:' + digest(text), size: Buffer.byteLength(text), state: 'uploaded' }));
-    const run = (extra = {}) => ({ id: 42, run_attempt: 1, head_sha: input.source, head_branch: 'dev', event: 'push',
-      status: 'completed', conclusion: 'success', ...extra });
-    const gh = (command, ...args) => {
-      if (command === 'workflow') { console.log('DISPATCH', args[3]); return ''; }
+    const gh = (_command, ...args) => {
       const endpoint = args.at(-1);
-      if (endpoint.includes('/commits/') && endpoint.endsWith('/pulls')) return JSON.stringify([input.directPush ? [] : [{
+      if (endpoint.endsWith('/pulls')) return JSON.stringify([input.directPush ? [] : [{
         merged_at: '2026-11-18T12:00:00Z', merge_commit_sha: input.source,
         base: { ref: 'dev', repo: { full_name: 'samir-scripts/grace' } }
       }]]);
-      if (endpoint.includes('/build.yml/')) return JSON.stringify([{ workflow_runs: [run(input.gate)] }]);
-      if (endpoint.includes('/codeql-analysis.yml/')) return JSON.stringify([{ workflow_runs: [run()] }]);
-      if (endpoint.includes('/actions/runs/42/')) return JSON.stringify([{ jobs: ['Linux x64', 'macOS (universal)', 'Windows x64'].map((name, id) => ({ id: 2 + id, name, conclusion: 'success' })).concat({ id: 1, name: 'Windows x64', conclusion: 'failure' }) }]);
-      if (endpoint.includes('/release.yml/')) return JSON.stringify([{ workflow_runs: input.active || input.completed ? [run({
-        event: 'workflow_dispatch', head_sha: input.active || input.completed, status: input.active ? 'in_progress' : 'completed'
-      }), ...(input.rejectedDuplicate ? [run({ id: 43, event: 'workflow_dispatch', head_sha: input.completed, conclusion: 'failure' })] : [])] : [] }]);
-      if (args.includes('--jq')) return input.completed ? JSON.stringify({ prerelease: true, assets: assets.filter(asset => asset.name !== input.omit) }) : '';
-      if (endpoint.includes('/releases/assets/')) return files[assets[Number(endpoint.split('/').at(-1)) - 1].name];
-      throw new Error('Unexpected API call');
+      if (endpoint.includes('/build.yml/') || endpoint.includes('/codeql-analysis.yml/')) {
+        const run = { id: 42, head_sha: input.source, head_branch: 'dev', event: 'push',
+          status: 'completed', conclusion: 'success' };
+        return JSON.stringify([{ workflow_runs: [{ ...run, ...(endpoint.includes('/build.yml/') ? input.gate : {}) }] }]);
+      }
+      throw new Error('Unexpected GitHub endpoint');
     };
     try {
-      schedule({ gh, now: new Date(input.date), env: { GITHUB_SHA: input.source, GITHUB_REPOSITORY: 'samir-scripts/grace',
-        GITHUB_REF: 'refs/heads/dev', GITHUB_EVENT_NAME: 'workflow_dispatch' } });
+      verifyNightlyRelease(input.tag, { gh, env: {
+        GITHUB_SHA: input.revision, GITHUB_REPOSITORY: 'samir-scripts/grace',
+        GITHUB_REF: 'refs/tags/' + input.tag, GITHUB_EVENT_NAME: input.event
+      }});
     } catch (error) { console.error(error.message); process.exitCode = 1; }
-  `], { cwd: f.cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, TEST_INPUT: JSON.stringify({ source: f.source, date, ...overrides }) }
+  `], {
+    cwd: f.cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, TEST_INPUT: JSON.stringify({
+      source: f.source, tag, revision: f.git('rev-parse', 'HEAD'), event: 'push', ...overrides
+    }) }
   });
-  assert.throws(() => invoke('2026-11-18', { gate: { conclusion: 'failure' } }), /build.yml must pass/);
-  assert.throws(() => invoke('2026-11-18', { gate: { head_sha: '0'.repeat(40) } }), /no push run/);
-  assert.equal(f.git('ls-remote', '--tags', 'origin', `refs/tags/${tag}`), '');
-  assert.throws(() => invoke('2026-11-18', { directPush: true }), /merged pull request/);
-  assert.match(invoke('2026-11-18'), new RegExp(`DISPATCH ${tag}`));
-  const nightlySource = f.git('rev-parse', `${tag}^{commit}`);
-  f.git('checkout', '--detach', f.source);
-  assert.doesNotMatch(invoke('2026-11-19', { active: nightlySource }), /DISPATCH/);
-  assert.match(invoke('2026-11-19', { completed: nightlySource }), /ready; no new dispatch/);
-  assert.throws(() => invoke('2026-11-19', { completed: nightlySource, omit: 'sample.rpm' }), /needs asset\/run verification/);
-  assert.throws(() => invoke('2026-11-19', { completed: nightlySource, missingPlatform: 'macos-universal' }), /needs asset\/run verification/);
-  assert.match(invoke('2026-11-19', { completed: nightlySource, rejectedDuplicate: true }), /ready; no new dispatch/);
-  assert.match(invoke('2026-11-19'), new RegExp(`DISPATCH ${tag}`), 'retry reuses the prior tag');
-  assert.equal(f.git('rev-parse', 'HEAD'), f.source);
-  f.write('app.txt', 'a second reviewed change\n');
-  f.git('add', 'app.txt'); f.git('commit', '-qm', 'next');
-  const nextSource = f.git('rev-parse', 'HEAD');
-  f.git('update-ref', 'refs/remotes/origin/dev', nextSource);
-  assert.match(invoke('2026-11-18', { source: nextSource }), /another source/);
-  assert.equal(f.git('rev-parse', `${tag}^{commit}`), nightlySource);
-  assert.equal(f.git('ls-remote', '--tags', 'origin', 'refs/tags/*nightly*').split('\n').length, 2);
+  assert.doesNotThrow(() => invoke());
+  assert.doesNotThrow(() => invoke({ revision: f.git('rev-parse', tag) }));
+  assert.throws(() => invoke({ event: 'workflow_dispatch' }), /exact tag push/);
+  assert.throws(() => invoke({ revision: f.source }), /exact tag push/);
+  assert.throws(() => invoke({ gate: { conclusion: 'failure' } }), /build.yml must pass/);
+  assert.throws(() => invoke({ gate: { head_sha: '0'.repeat(40) } }), /no push run/);
+  assert.throws(() => invoke({ directPush: true }), /merged pull request/);
 });

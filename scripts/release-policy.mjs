@@ -21,6 +21,17 @@ export function classifyTag(tag, { allowNightly = false } = {}) {
   return { version: tag.slice(1), prerelease: String(Boolean(beta || nightly)) };
 }
 
+export function validateReleaseTrigger({ tag, ref, event, candidateRunId, acceptanceRef }) {
+  const result = classifyTag(tag, { allowNightly: true });
+  if (ref !== `refs/tags/${tag}` || result.version.includes('-beta.')) {
+    throw new Error('Release requires its own stable or dated nightly tag');
+  }
+  if (event === 'push' && !candidateRunId && !acceptanceRef) return result;
+  if (event === 'workflow_dispatch' && result.prerelease === 'false' &&
+      /^[1-9]\d*$/.test(candidateRunId ?? '') && hex40.test(acceptanceRef ?? '')) return result;
+  throw new Error('Only tag pushes can build installers; manual dispatch requires a stable candidate and reviewed evidence');
+}
+
 export function validateVersions(version, versions) {
   for (const key of ['package', 'lock', 'lockRoot', 'tauri', 'cargo', 'cargoLock']) {
     if (versions?.[key] !== version) throw new Error(`Version mismatch: ${key}`);

@@ -15,15 +15,15 @@ feature / bugfix branches
         dev  (Active development & continuous integration)
          │ (Promotion & staging verification)
          ▼
-       stage (Pre-release testing & cross-platform artifact build)
+       stage (Pre-release verification)
          │ (Stabilization & version bump)
          ▼
       release (Production releases tagged with vX.Y.Z)
 ```
 
 1. **`dev`** — Active integration branch. All feature (`feat/*`) and bugfix (`fix/*`) pull requests target `dev`. CI runs the full quality gate (`npm run check`, `npm test`, `cargo clippy`, `cargo test`).
-2. **`stage`** — Pre-release staging branch. Promoted from `dev`. CI builds installable Linux, macOS, and Windows desktop packages as workflow artifacts for manual and staging verification.
-3. **`release`** — Production release branch. Merged from `stage`. Tagging `release` with `vX.Y.Z` triggers the release workflow, which runs tests, builds signed desktop packages, and drafts a GitHub Release.
+2. **`stage`** — Pre-release staging branch. Promoted from `dev`. CI runs the quality gates as changes advance toward release.
+3. **`release`** — Production release branch. Merged from `stage`. Pushing a `vX.Y.Z` tag on approved release source builds installer candidates for native acceptance.
 
 ---
 
@@ -112,22 +112,51 @@ To protect signature validity, any modification to `extensions/focus/` or `exten
 
 ## Release Process
 
-### Nightly (opt-in manual downloads)
+PRs targeting the pipeline branches and pushes to `dev`, `stage`, or `release` run the quality gates and CodeQL. Installer builds start when a maintainer pushes a stable or dated nightly release tag.
 
-The merge commit of a pull request into `dev` with green Build / Test and CodeQL push runs is eligible for a signed nightly draft. The Nightly workflow checks daily at 03:17 UTC and skips already-built sources. A maintainer can request the same checks on demand with `gh workflow run nightly.yml --ref dev`.
+### Beta (dated nightly tags)
 
-The workflow creates an annotated `vX.Y.Z-nightly.YYYYMMDD` tag on a metadata-only child of the tested `dev` commit. Review the exact draft: match the tag and packaged revision to `provenance.json`, verify `SHA256SUMS` and detached signatures against the trusted Grace key, and test the macOS package before publishing as a GitHub prerelease, not latest. Use a disposable environment; nightly uses the same app identity as stable and is not safe to install side by side over a production profile. Windows x64 and Ubuntu x64 runtime acceptance is unverified unless explicitly recorded. Nightly does not publish `latest.json` or advance the stable updater.
+Choose the merged `dev` commit with passing Build / Test and CodeQL push runs. In a clean, detached checkout of that source, fetch the existing tags, then prepare and push the beta tag.
+
+```bash
+(
+  set -e
+  test -z "$(git status --porcelain)"
+  git fetch origin --tags
+  tag=$(node scripts/prepare-nightly.mjs tag "$(date -u +%Y%m%d)")
+  test -n "$tag"
+  if git show-ref --verify --quiet "refs/tags/$tag"; then
+    printf 'Beta tag already exists: %s\n' "$tag" >&2
+    exit 1
+  fi
+  node scripts/prepare-nightly.mjs prepare "$tag"
+  git add -- package.json package-lock.json src-tauri/{Cargo.toml,Cargo.lock,tauri.conf.json} CHANGELOG.md
+  git commit -m "chore: prepare $tag"
+  git tag -a "$tag" -m "Grace Beta $tag"
+  node scripts/prepare-nightly.mjs verify "$tag"
+  git push origin "refs/tags/$tag"
+)
+```
+
+A `vX.Y.Z-nightly.YYYYMMDD` tag builds signed beta installers and creates a draft prerelease for manual downloads. If the tag run fails before creating a draft, inspect the failure and rerun the existing GitHub Actions run. Review the tagged commit and package revision against `provenance.json`, verify `SHA256SUMS` and the detached signatures against the trusted Grace key, and smoke-test the macOS installer in a disposable environment before publishing. Beta shares the stable app identity and uses manual updates. The stable updater feed is reserved for stable releases.
 
 ### Stable
 
-Releases are initiated on the `release` branch:
+1. Lead developers review the beta, fix or remove features through the usual PR process, and approve the exact source that will ship. Promote the reviewed commits through `stage` to `release`.
+2. Prepare stable release notes in `CHANGELOG.md` and align the versions in `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, and `src-tauri/tauri.conf.json`. Commit the changes on the release branch and push the reviewed commit to `origin/release`.
+3. Tag the approved stable commit and push that tag. Replace `vX.Y.Z` with the actual version, for example `v1.7.2`.
 
-1. Merge validated changes from `stage` into `release`.
-2. Update `CHANGELOG.md` with version notes.
-3. Update version strings across `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
-4. Create an annotated git tag:
    ```bash
    git tag -a v1.7.2 -m "Release v1.7.2"
-   git push origin release --tags
+   git push origin refs/tags/v1.7.2
    ```
-5. GitHub Actions builds the release bundles and creates a draft GitHub Release. Review the draft and publish.
+
+4. Test the macOS, Windows, and Linux installers from the stable tag run. Follow the [native acceptance checklist](plans/contributor-native-acceptance.md#stable-promotion) for reviewed Windows and Ubuntu x64 reports bound to the exact packages.
+5. Dispatch the Release workflow on the stable tag with the tag run ID and the reviewed evidence commit. The promotion step uses those accepted files and creates the stable draft.
+
+   ```bash
+   gh workflow run release.yml --ref "$tag" -f tag="$tag" \
+     -f candidate_run_id="$candidate_run_id" -f acceptance_ref="$acceptance_ref"
+   ```
+
+6. Review and publish the signed stable draft. After verifying the public downloads, submit its `latest.json` for the stable updater feed at `main:latest.json`.
