@@ -2,13 +2,25 @@
 
 # Implementation plans
 
-[Typography refinement preview](typography-refinement-plan.md) — isolated draft branch with Inter/JetBrains pairing, shared type roles, [before/after evidence](evidence/typography-refinement/README.md) and runnable separate-ID app. Visual acceptance and native interaction checks remain pending; no merge or release.
+[Typography refinement](typography-refinement-plan.md) — owner accepted the isolated Inter/JetBrains preview. [PR #10](https://github.com/samir-scripts/grace/pull/10) merged to `dev` after its CI gates passed; this is not a release. The [before/after evidence](evidence/typography-refinement/README.md) belongs to the preview.
 
-[Experimental betas and branded pages](experimental-beta-release-plan.md) — desktop 1.7.2-beta.1 and branded website/privacy pages published; Chrome 1.1.2 submitted Public with automatic publication after approval and currently Pending Review. Signed Firefox 1.1.1 remains unlisted/manual. Windows/Ubuntu x64 packaged runtime acceptance is explicitly unverified / deferred to contributors. Stable promotion remains gated by reviewed exact-artifact native evidence; store-installed acceptance follows approval.
+[Experimental betas and branded pages](experimental-beta-release-plan.md) — desktop 1.7.2-beta.1 and branded website/privacy pages published. The beta bundles signed Firefox 1.1.1. Windows/Ubuntu x64 runtime remains unverified for the beta; stable promotion still requires reviewed acceptance against the exact packages.
 
 [macOS Chrome acceptance through Tart](chrome-tart-acceptance-plan.md) — passed actual packaged Chrome acceptance on macOS, including forced app recovery; evidence collected and clone stopped.
 
-[Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — macOS and Linux ARM64 packaged Chrome matrices passed on disposable guests; Linux x64 and Windows have not been tested. A custom Chrome data directory cannot discover the default native-host registration. The historical Private/unsubmitted status is superseded by the current experimental release plan: Chrome 1.1.2 is Public / Pending Review, with automatic publication after approval.
+[Documentation and native demos](grace-documentation-refresh.md) — reviewed desktop guide and historical local recordings.
+
+Chrome 1.1.2 became publicly available. Chrome 1.1.4 was submitted for review on November 17, 2026, with automatic publication after approval. [Submission and native verification](evidence/chrome-store-1.1.4/README.md).
+
+The first nightly candidate includes the AMO-signed Firefox 1.1.5 payload, SHA-256 `43b0d9ab3e9d8f597297c058ad0e6316e3fa6898a0f49f39dae41e4ec41a20f5`. Strict signed packaging and Chrome integration passed. The Chrome 1.1.4 release ZIP matched all 23 entries in the submitted archive. [Companion integration](https://github.com/samir-scripts/grace/pull/12)
+
+The dedicated macOS preview at `a79270b` retained Glass transparency at 0%, 50% and 100% across relaunches. Compact controls, draft retention, keyboard dismissal and date navigation were exercised. The follow-up at `ed98c5b` verified picker focus restoration and chart navigation in the packaged app. The Linux opaque fallback was checked on ARM64 at `a79270b`. Windows and Ubuntu x64 runtime acceptance remains open. [Packaged desktop checks](https://github.com/samir-scripts/grace/pull/14)
+
+[Desktop UI repair evidence](evidence/ui-repair-2026-11-17/README.md) records local macOS and Linux ARM64 checks; it does not certify the public beta or a nightly.
+
+[macOS companion pairing](evidence/macos-pairing-2026-11-17/README.md) records Grace 1.7.1 with Chrome Web Store 1.1.2 and signed Firefox and Zen 1.1.4.
+
+[Chrome extension release readiness](chrome-extension-release-readiness-plan.md) — macOS and Linux ARM64 packaged Chrome matrices passed on disposable guests; Linux x64 and Windows have not been tested. A custom Chrome data directory cannot discover the default native-host registration. Historical submission status is superseded by the dated records above.
 
 [grace. UI consistency and accessibility](grace-ui-consistency-plan.md) — implementation and verification ledger. [Batch 5 native/signing report](grace-ui-batch5-report.md): native development checks, Clippy and production build pass; signed 1.1.0 is approved and a packaged Zen update/reconnect passed; Firefox 115 support is retained with its consent fallback; pre-consent appearance and remaining browser acceptance are open.
 
