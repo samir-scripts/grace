@@ -926,3 +926,19 @@ test('a failed palette save restores the active palette and leaves a retryable c
     assert.notEqual(await palette(), before);
   } finally { await page.close(); }
 });
+
+test('Escape closes the installed-app picker before leaving settings', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await page.goto(url);
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    const picker = page.getByRole('button', { name: /Select applications/i });
+    await picker.click();
+    await page.getByRole('textbox', { name: 'Search applications' }).press('Escape');
+    assert.equal(await picker.isVisible(), true);
+    assert.equal(await picker.getAttribute('aria-expanded'), 'false');
+    assert.ok(await picker.evaluate(el => el === document.activeElement));
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Play', exact: true }).waitFor();
+  } finally { await page.close(); }
+});

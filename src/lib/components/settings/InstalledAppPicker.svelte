@@ -131,7 +131,7 @@
   });
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:document onkeydown={handleKeydown} />
 
 <div class="app-picker-container">
   <!-- Action toolbar to open dropdown -->
