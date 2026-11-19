@@ -191,15 +191,6 @@ let resizeResolve: (() => void) | null = null;
 
 mockWindows('main');
 mockIPC((cmd, args: unknown) => {
-  if (cmd === 'app_version') {
-    return urlParams.get('version') ?? '1.7.2+fixture';
-  }
-
-  if (cmd === 'plugin:opener|open_url') {
-    openedUrls.push(String(readField(args, 'url')));
-    return;
-  }
-
   if (cmd === 'settings_get') {
     if (holdSettings) {
       const { promise, resolve, reject } = Promise.withResolvers<Settings>();
@@ -379,6 +370,15 @@ mockIPC((cmd, args: unknown) => {
     return null;
   }
 
+  if (cmd === 'app_version') {
+    return urlParams.get('version') ?? '1.7.2+fixture';
+  }
+
+  if (cmd === 'plugin:opener|open_url') {
+    openedUrls.push(String(readField(args, 'url')));
+    return;
+  }
+
   console.warn('[motion-fixture] unhandled IPC command:', cmd, args);
   throw new Error(`Unhandled mock IPC command: ${cmd}`);
 }, { shouldMockEvents: true });
@@ -389,6 +389,8 @@ export interface MotionTestController {
   holdNextSave: () => void;
   releaseSave: (reject?: boolean) => void;
   setNextSaveError: (msg: string) => void;
+  getUpdateCheckCount: () => number;
+  getOpenedUrls: () => string[];
   getSaveCount: () => number;
   getWindowResizeCalls: () => Array<{ view: string; animate?: boolean; renderedBeforeResize?: boolean }>;
   clearResizeCalls: () => void;
@@ -399,8 +401,6 @@ export interface MotionTestController {
   getBrowserSetupCalls: () => string[];
   getStartDraggingCount: () => number;
   clearStartDraggingCount: () => void;
-  getUpdateCheckCount: () => number;
-  getOpenedUrls: () => string[];
 }
 
 const controller: MotionTestController = {
