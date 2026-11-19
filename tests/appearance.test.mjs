@@ -805,6 +805,7 @@ test('notification volume has a visible rail, aligned fill, and keyboard focus',
   const page = await browser.newPage({ viewport: { width: 840, height: 600 }, reducedMotion: 'reduce' });
   try {
     await startGlass(page);
+    await page.waitForFunction(() => window.__motionTest.hasRegisteredEvent('settings:changed'));
     await page.evaluate(() => window.__motionTest.emit('settings:changed', { volume: .9 }));
     await page.getByRole('button', { name: 'Settings' }).click();
     await page.getByRole('tab', { name: 'Notifications' }).click();
