@@ -8,9 +8,17 @@ const hex40 = /^[a-f0-9]{40}$/;
 const hex64 = /^[a-f0-9]{64}$/;
 const nonempty = (value) => typeof value === 'string' && value.trim().length > 0;
 
-export function classifyTag(tag) {
-  if (typeof tag !== 'string' || !/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-beta\.(0|[1-9]\d*))?$/.test(tag)) throw new Error('Invalid release tag');
-  return { version: tag.slice(1), prerelease: String(tag.includes('-beta.')) };
+export function classifyTag(tag, { allowNightly = false } = {}) {
+  const match = typeof tag === 'string' && /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:(-beta\.(?:0|[1-9]\d*))|(-nightly\.([1-9]\d{3})(\d{2})(\d{2})))?$/.exec(tag);
+  if (!match || match[0] !== tag) throw new Error('Invalid release tag');
+  const [, , , , beta, nightly, year, month, day] = match;
+  if (nightly) {
+    if (!allowNightly) throw new Error('Invalid release tag');
+    const iso = `${year}-${month}-${day}T00:00:00.000Z`;
+    const date = new Date(iso);
+    if (!Number.isFinite(date.getTime()) || date.toISOString() !== iso) throw new Error('Invalid release tag');
+  }
+  return { version: tag.slice(1), prerelease: String(Boolean(beta || nightly)) };
 }
 
 export function validateVersions(version, versions) {
@@ -37,13 +45,13 @@ function sectionValues(text, header) {
   return text.split(/^\s*\[\[?[^\]\n]+\]\]?\s*$/m).slice(1).map((body, index) => ({ body, header: [...text.matchAll(/^\s*(\[\[?[^\]\n]+\]\]?)\s*$/gm)][index][1] })).filter((section) => section.header === header).map(({ body }) => Object.fromEntries([...body.matchAll(/^\s*(name|version)\s*=\s*"([^"\n]*)"\s*(?:#.*)?$/gm)].map((match) => [match[1], match[2]])));
 }
 
-export function readVersions() {
-  const json = (path) => JSON.parse(readFileSync(path, 'utf8'));
+export function readVersions(read = path => readFileSync(path, 'utf8')) {
+  const json = path => JSON.parse(read(path));
   const pkg = json('package.json');
   const lock = json('package-lock.json');
   const tauri = json('src-tauri/tauri.conf.json');
-  const cargo = sectionValues(readFileSync('src-tauri/Cargo.toml', 'utf8'), '[package]').filter((item) => item.name === 'pomotroid');
-  const cargoLock = sectionValues(readFileSync('src-tauri/Cargo.lock', 'utf8'), '[[package]]').filter((item) => item.name === 'pomotroid');
+  const cargo = sectionValues(read('src-tauri/Cargo.toml'), '[package]').filter((item) => item.name === 'pomotroid');
+  const cargoLock = sectionValues(read('src-tauri/Cargo.lock'), '[[package]]').filter((item) => item.name === 'pomotroid');
   if (cargo.length !== 1 || cargoLock.length !== 1) throw new Error('Expected one pomotroid package in each Cargo manifest');
   return { package: pkg.version, lock: lock.version, lockRoot: lock.packages?.['']?.version, tauri: tauri.version, cargo: cargo[0].version, cargoLock: cargoLock[0].version };
 }

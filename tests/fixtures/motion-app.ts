@@ -51,6 +51,8 @@ const defaultSettings: Settings = {
 // Check query param or sessionStorage override
 const urlParams = new URLSearchParams(window.location.search);
 const browserSetupCalls: string[] = [];
+const openedUrls: string[] = [];
+let updateCheckCount = 0;
 const browserFixtureEnabled = urlParams.has('browser_fixture');
 const storedPref = sessionStorage.getItem('motion-test-animations-enabled');
 let currentAnimationsEnabled = storedPref !== null
@@ -59,6 +61,7 @@ let currentAnimationsEnabled = storedPref !== null
 
 let currentSettings: Settings = {
   ...defaultSettings,
+  check_for_updates: urlParams.get('check_updates') !== 'false',
   animations_enabled: currentAnimationsEnabled,
 };
 
@@ -188,6 +191,15 @@ let resizeResolve: (() => void) | null = null;
 
 mockWindows('main');
 mockIPC((cmd, args: unknown) => {
+  if (cmd === 'app_version') {
+    return urlParams.get('version') ?? '1.7.2+fixture';
+  }
+
+  if (cmd === 'plugin:opener|open_url') {
+    openedUrls.push(String(readField(args, 'url')));
+    return;
+  }
+
   if (cmd === 'settings_get') {
     if (holdSettings) {
       const { promise, resolve, reject } = Promise.withResolvers<Settings>();
@@ -363,6 +375,7 @@ mockIPC((cmd, args: unknown) => {
   }
 
   if (cmd === 'check_update') {
+    updateCheckCount++;
     return null;
   }
 
@@ -386,6 +399,8 @@ export interface MotionTestController {
   getBrowserSetupCalls: () => string[];
   getStartDraggingCount: () => number;
   clearStartDraggingCount: () => void;
+  getUpdateCheckCount: () => number;
+  getOpenedUrls: () => string[];
 }
 
 const controller: MotionTestController = {
@@ -441,6 +456,8 @@ const controller: MotionTestController = {
     await emit('focus:changed', currentFocus);
   },
   getStartDraggingCount: () => startDraggingCount,
+  getUpdateCheckCount: () => updateCheckCount,
+  getOpenedUrls: () => [...openedUrls],
   clearStartDraggingCount: () => { startDraggingCount = 0; },
 };
 

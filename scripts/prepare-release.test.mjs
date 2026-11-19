@@ -44,6 +44,22 @@ test('beta packages actual bytes and excludes updater feed without consulting re
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
+test('nightly artifacts cannot add a stable updater feed', async () => {
+  const root = fixture();
+  try {
+    const tag = 'v1.7.2-nightly.20261118';
+    const output = join(root, 'release-assets');
+    await prepareRelease({ root, tag, sourceRevision: source });
+    assert.equal(existsSync(join(output, 'latest.json')), false);
+    assert.equal(readFileSync(join(output, `grace-macos-universal-${tag.slice(1)}.dmg`), 'utf8'), 'mac');
+    assert.equal(readFileSync(join(output, `grace-macos-universal-${tag.slice(1)}.dmg.sig`), 'utf8'), 'signature');
+    const provenance = JSON.parse(readFileSync(join(output, 'provenance.json')));
+    assert.equal(provenance.source_revision, source);
+    assert.equal(provenance.prerelease, 'true');
+    assert.equal(provenance.platforms['windows-x64'].status, 'unverified / deferred to contributors');
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test('stable packages require reviewed reports for the exact package hashes', async () => {
   const root = fixture();
   try {

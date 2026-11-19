@@ -108,6 +108,7 @@
   "about_update_up_to_date": "最新版です",
   "about_update_install": "v{version} をインストール — アプリが再起動します",
   "about_update_error": "アップデートを確認できませんでした",
+  "about_update_nightly_manual": "Nightly の更新は手動でダウンロードする必要があります。",
   "stats_title": "統計",
   "stats_tab_today": "今日",
   "stats_tab_week": "今週",

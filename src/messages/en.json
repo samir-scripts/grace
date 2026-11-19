@@ -111,6 +111,7 @@
   "about_update_up_to_date": "Up to date",
   "about_update_install": "Install v{version} — app will restart",
   "about_update_error": "Could not check for updates",
+  "about_update_nightly_manual": "Nightly updates require a manual download.",
   "stats_title": "Statistics",
   "stats_tab_today": "Today",
   "stats_tab_week": "This Week",

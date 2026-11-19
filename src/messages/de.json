@@ -111,6 +111,7 @@
   "about_update_up_to_date": "Aktuell",
   "about_update_install": "v{version} installieren — App wird neu gestartet",
   "about_update_error": "Updates konnten nicht geprüft werden",
+  "about_update_nightly_manual": "Nightly-Updates müssen manuell heruntergeladen werden.",
   "stats_title": "Statistiken",
   "stats_tab_today": "Heute",
   "stats_tab_week": "Diese Woche",

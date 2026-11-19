@@ -108,6 +108,7 @@
   "about_update_up_to_date": "Al día",
   "about_update_install": "Instalar v{version} — la app se reiniciará",
   "about_update_error": "No se pudieron comprobar las actualizaciones",
+  "about_update_nightly_manual": "Las actualizaciones nightly requieren una descarga manual.",
   "stats_title": "Estadísticas",
   "stats_tab_today": "Hoy",
   "stats_tab_week": "Esta semana",

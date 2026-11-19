@@ -108,6 +108,7 @@
   "about_update_up_to_date": "Güncel",
   "about_update_install": "v{version} sürümünü kur — Uygulama yeniden başlayacaktır.",
   "about_update_error": "Güncellemeler kontrol edilemedi.",
+  "about_update_nightly_manual": "Nightly güncellemeleri elle indirilmelidir.",
   "stats_title": "İstatistikler",
   "stats_tab_today": "Bugün",
   "stats_tab_week": "Bu Hafta",

@@ -24,7 +24,7 @@ function collect(dir) {
 }
 
 export async function prepareRelease({ root = process.cwd(), tag, artifactDir = 'dist', outputDir = 'release-assets', sourceRevision, reportsPath, reviewLookup = githubReviewLookup }) {
-  const { version, prerelease } = classifyTag(tag);
+  const { version, prerelease } = classifyTag(tag, { allowNightly: true });
   if (typeof sourceRevision !== 'string' || !/^[a-f0-9]{40}$/.test(sourceRevision)) throw new Error('Invalid source revision');
   const destination = resolve(root, outputDir);
   if (existsSync(destination)) throw new Error('Output directory already exists');

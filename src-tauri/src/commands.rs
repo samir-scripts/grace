@@ -716,6 +716,9 @@ pub struct UpdateInfo {
 #[tauri::command]
 pub async fn check_update(app: AppHandle) -> Result<Option<UpdateInfo>, String> {
     use tauri_plugin_updater::UpdaterExt;
+    if app.package_info().version.pre.as_str().starts_with("nightly.") {
+        return Ok(None);
+    }
     log::info!("[updater] checking for updates");
     let updater = app.updater().map_err(|e| {
         log::error!("[updater] failed to build updater: {e}");
@@ -746,6 +749,9 @@ pub async fn check_update(app: AppHandle) -> Result<Option<UpdateInfo>, String> 
 #[tauri::command]
 pub async fn install_update(app: AppHandle) -> Result<(), String> {
     use tauri_plugin_updater::UpdaterExt;
+    if app.package_info().version.pre.as_str().starts_with("nightly.") {
+        return Err("Nightly updates require a manual download".into());
+    }
     log::info!("[updater] install requested — checking for update");
     let updater = app.updater().map_err(|e| {
         log::error!("[updater] failed to build updater: {e}");
