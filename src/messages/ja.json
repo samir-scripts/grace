@@ -108,6 +108,7 @@
   "about_update_up_to_date": "最新版です",
   "about_update_install": "v{version} をインストール — アプリが再起動します",
   "about_update_error": "アップデートを確認できませんでした",
+  "about_update_nightly_manual": "Nightly の更新は手動でダウンロードする必要があります。",
   "stats_load_error": "統計を読み込めませんでした。",
   "stats_retry": "再試行",
   "stats_heatmap_label": "年間の記録です。矢印キーで日付を選べます。",

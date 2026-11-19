@@ -108,6 +108,7 @@
   "about_update_up_to_date": "Güncel",
   "about_update_install": "v{version} sürümünü kur — Uygulama yeniden başlayacaktır.",
   "about_update_error": "Güncellemeler kontrol edilemedi.",
+  "about_update_nightly_manual": "Nightly güncellemeleri elle indirilmelidir.",
   "stats_load_error": "İstatistikler yüklenemedi.",
   "stats_retry": "Yeniden dene",
   "stats_heatmap_label": "Yıllık etkinlik. Tarihler arasında ok tuşlarıyla gezin.",

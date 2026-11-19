@@ -108,6 +108,7 @@
   "about_update_up_to_date": "已是最新版本",
   "about_update_install": "安装 v{version} — 应用将重启",
   "about_update_error": "无法检查更新",
+  "about_update_nightly_manual": "Nightly 更新需要手动下载。",
   "stats_load_error": "无法加载统计数据。",
   "stats_retry": "重试",
   "stats_heatmap_label": "年度活动。使用方向键浏览日期。",

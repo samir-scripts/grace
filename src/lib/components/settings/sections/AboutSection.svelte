@@ -24,8 +24,14 @@
     return v.split('-')[0].split('+')[0];
   }
 
+  let nightlyVersion = $derived(
+    /^\d+\.\d+\.\d+-nightly\.\d{8}$/.test(version.split('+')[0])
+      ? version.split('+')[0]
+      : null
+  );
+
   let releaseUrl = $derived(
-    `${REPO}/releases/tag/v${baseOnly(version === '...' ? BASE_VERSION : version)}`
+    `${REPO}/releases/tag/v${nightlyVersion ?? baseOnly(version === '...' ? BASE_VERSION : version)}`
   );
 
   onMount(async () => {
@@ -35,7 +41,7 @@
       version = BASE_VERSION;
     }
 
-    if ($settings.check_for_updates) {
+    if (!nightlyVersion && $settings.check_for_updates) {
       updateState = 'checking';
       await info('[about] checking for updates');
       try {
@@ -135,9 +141,13 @@
     </button>
   </div>
 
-  {#if $settings.check_for_updates || updateState !== 'idle'}
+  {#if nightlyVersion || $settings.check_for_updates || updateState !== 'idle'}
     <div class="update-group">
-      {#if updateState === 'idle' || updateState === 'checking'}
+      {#if nightlyVersion}
+        <div class="update-row update-row--muted">
+          <span>{m.about_update_nightly_manual()}</span>
+        </div>
+      {:else if updateState === 'idle' || updateState === 'checking'}
         <div class="update-row update-row--muted">
           <span>{m.about_update_checking()}</span>
         </div>

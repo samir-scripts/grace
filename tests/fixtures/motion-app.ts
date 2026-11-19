@@ -55,6 +55,8 @@ const defaultSettings: Settings = {
 // Check query param or sessionStorage override
 const urlParams = new URLSearchParams(window.location.search);
 const browserSetupCalls: string[] = [];
+const openedUrls: string[] = [];
+let updateCheckCount = 0;
 const browserFixtureEnabled = urlParams.has('browser_fixture');
 let statsFail = urlParams.has('stats_error');
 const storedPref = sessionStorage.getItem('motion-test-animations-enabled');
@@ -64,6 +66,7 @@ let currentAnimationsEnabled = storedPref !== null
 
 let currentSettings: Settings = {
   ...defaultSettings,
+  check_for_updates: urlParams.get('check_updates') !== 'false',
   animations_enabled: currentAnimationsEnabled,
   glass_transparency: Number(sessionStorage.getItem('glass-transparency') ?? 100),
   ui_style: (sessionStorage.getItem('appearance-style') ?? 'pomotroid') as Settings['ui_style'],
@@ -465,7 +468,17 @@ mockIPC((cmd, args: unknown) => {
   }
 
   if (cmd === 'check_update') {
+    updateCheckCount++;
     return null;
+  }
+
+  if (cmd === 'app_version') {
+    return urlParams.get('version') ?? '1.7.2+fixture';
+  }
+
+  if (cmd === 'plugin:opener|open_url') {
+    openedUrls.push(String(readField(args, 'url')));
+    return;
   }
 
   console.warn('[motion-fixture] unhandled IPC command:', cmd, args);
@@ -494,6 +507,8 @@ export interface MotionTestController {
   holdNextSave: () => void;
   releaseSave: (reject?: boolean) => void;
   setNextSaveError: (msg: string) => void;
+  getUpdateCheckCount: () => number;
+  getOpenedUrls: () => string[];
   getSaveCount: () => number;
   getWindowResizeCalls: () => Array<{ view: string; animate?: boolean; renderedBeforeResize?: boolean }>;
   clearResizeCalls: () => void;
@@ -600,6 +615,8 @@ const controller: MotionTestController = {
     await emit('focus:changed', currentFocus);
   },
   getStartDraggingCount: () => startDraggingCount,
+  getUpdateCheckCount: () => updateCheckCount,
+  getOpenedUrls: () => [...openedUrls],
   clearStartDraggingCount: () => { startDraggingCount = 0; },
 };
 

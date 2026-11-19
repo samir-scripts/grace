@@ -23,17 +23,21 @@ function collect(dir) {
   });
 }
 
-export async function prepareRelease({ root = process.cwd(), tag, artifactDir = 'dist', outputDir = 'release-assets', sourceRevision, reportsPath, reviewLookup = githubReviewLookup }) {
-  const { version, prerelease } = classifyTag(tag);
-  if (typeof sourceRevision !== 'string' || !/^[a-f0-9]{40}$/.test(sourceRevision)) throw new Error('Invalid source revision');
-  const destination = resolve(root, outputDir);
-  if (existsSync(destination)) throw new Error('Output directory already exists');
-  const files = collect(resolve(root, artifactDir));
-  const required = [
+export function requiredPackages(version) {
+  return [
     ['windows-x64', (name) => name.endsWith('-setup.exe'), `grace-windows-x64-${version}-setup.exe`],
     ['ubuntu-x64', (name) => name.endsWith('.deb'), `grace-ubuntu-x64-${version}.deb`],
     ['macos-universal', (name) => name.endsWith('.dmg'), `grace-macos-universal-${version}.dmg`],
   ];
+}
+
+export async function prepareRelease({ root = process.cwd(), tag, artifactDir = 'dist', outputDir = 'release-assets', sourceRevision, reportsPath, reviewLookup = githubReviewLookup }) {
+  const { version, prerelease } = classifyTag(tag, { allowNightly: true });
+  if (typeof sourceRevision !== 'string' || !/^[a-f0-9]{40}$/.test(sourceRevision)) throw new Error('Invalid source revision');
+  const destination = resolve(root, outputDir);
+  if (existsSync(destination)) throw new Error('Output directory already exists');
+  const files = collect(resolve(root, artifactDir));
+  const required = requiredPackages(version);
   const keys = files.filter((file) => basename(file) === 'grace-updater.pub');
   if (keys.length !== 1) throw new Error('Expected exactly one public verification key');
   const selected = new Map([[keys[0], 'grace-updater.pub']]);

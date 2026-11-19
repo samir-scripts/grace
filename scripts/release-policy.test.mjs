@@ -12,9 +12,15 @@ const cases = Object.fromEntries(['installation', 'automatic_pairing', 'profile_
 const reports = () => Object.keys(hashes).map((platform) => ({ platform, source_revision: sha, package_sha256: hashes[platform], os_version: 'test', chrome_version: 'test', architecture: 'x86_64', review: { pr_url: 'https://github.com/samir-scripts/grace/pull/42', reviewer: 'reviewer', approved: true }, cases: { ...cases } }));
 const versions = () => ({ package: '1.7.2-beta.1', lock: '1.7.2-beta.1', lockRoot: '1.7.2-beta.1', tauri: '1.7.2-beta.1', cargo: '1.7.2-beta.1', cargoLock: '1.7.2-beta.1' });
 
-test('classifies only stable and beta semver tags', () => {
+test('classifies stable, beta, and calendar-dated nightly semver tags', () => {
   assert.deepEqual(classifyTag('v1.7.2-beta.1'), { version: '1.7.2-beta.1', prerelease: 'true' });
   assert.deepEqual(classifyTag('v1.7.2'), { version: '1.7.2', prerelease: 'false' });
+  const allowNightly = { allowNightly: true };
+  assert.throws(() => classifyTag('v1.7.2-nightly.20280229'), /Invalid release tag/);
+  assert.deepEqual(classifyTag('v1.7.2-nightly.20280229', allowNightly), { version: '1.7.2-nightly.20280229', prerelease: 'true' });
+  for (const date of ['20270229', '20280431', '20280001', '20280100', '020280229', '2028-02-29']) {
+    assert.throws(() => classifyTag(`v1.7.2-nightly.${date}`, allowNightly), /Invalid release tag/);
+  }
   for (const tag of ['1.7.2', 'refs/tags/v1.7.2', 'v1.7', 'v01.7.2', 'v1.7.2-beta.01', 'v1.7.2-rc.1', 'v1.7.2+build', '']) assert.throws(() => classifyTag(tag));
 });
 

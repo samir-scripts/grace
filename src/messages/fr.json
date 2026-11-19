@@ -108,6 +108,7 @@
   "about_update_up_to_date": "À jour",
   "about_update_install": "Installer v{version} — l'app redémarrera",
   "about_update_error": "Impossible de vérifier les mises à jour",
+  "about_update_nightly_manual": "Les mises à jour nightly doivent être téléchargées manuellement.",
   "stats_load_error": "Impossible de charger les statistiques.",
   "stats_retry": "Réessayer",
   "stats_heatmap_label": "Activité annuelle. Parcourez les dates avec les flèches.",

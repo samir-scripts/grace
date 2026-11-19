@@ -108,6 +108,7 @@
   "about_update_up_to_date": "Atualizado",
   "about_update_install": "Instalar v{version} — o app será reiniciado",
   "about_update_error": "Não foi possível verificar atualizações",
+  "about_update_nightly_manual": "As atualizações nightly exigem download manual.",
   "stats_load_error": "Não foi possível carregar as estatísticas.",
   "stats_retry": "Tentar novamente",
   "stats_heatmap_label": "Atividade anual. Use as setas para explorar as datas.",
