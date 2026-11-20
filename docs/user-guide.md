@@ -37,7 +37,9 @@ In **Timer & Sessions → Session Preferences**, enable **Temporarily unblock du
 
 ## Exit a protected session early
 
-Open **Emergency Exit** from the locked timer. Use **60-Second Hold** and keep pressing the control for the full count. With keyboard focus on the hold control, hold Space. Releasing early restarts the hold. To use a passphrase, set one before starting a protected round under **Timer & Sessions → Emergency Exit Passphrase (Optional)**. Enter at least 30 characters and choose **Save Passphrase**. When you need to exit, choose **Enter Passphrase** and confirm it twice.
+Open **Emergency Exit** from the locked timer. In **Hold**, press the button continuously for 60 seconds, or focus it and hold Space. Releasing early resets the countdown.
+
+To use **Passphrase**, first save a passphrase of at least 30 characters under **Timer & Sessions → Emergency Exit Passphrase (Optional)**. During a locked session, choose **Passphrase** in the exit dialog, enter it in both fields, and select **End session**.
 
 ## Change the timer’s appearance
 

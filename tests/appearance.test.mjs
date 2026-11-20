@@ -459,6 +459,61 @@ test('Blocky switches have square thumbs in both states and other styles restore
   } finally { await page.close(); }
 });
 
+for (const style of ['pomotroid', 'glass', 'blocky']) {
+  test(`${style}: hovering Desktop Notifications preserves both text colors while highlighting the row`, async () => {
+    const page = await browser.newPage({ viewport: { width: 840, height: 600 }, reducedMotion: 'no-preference' });
+    try {
+      await page.addInitScript(value => sessionStorage.setItem('appearance-style', value), style);
+      await page.goto(`${url}/?animations=true`);
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await page.getByRole('tab', { name: 'Notifications', exact: true }).click();
+      await page.waitForFunction(value => document.documentElement.dataset.uiStyle === value, style);
+      const sw = page.getByRole('switch', { name: 'Desktop Notifications', exact: true });
+      await sw.scrollIntoViewIfNeeded();
+      await page.mouse.move(0, 0);
+      const sample = (event) => sw.evaluate((el, event) => {
+        const label = el.querySelector('.label');
+        const description = el.querySelector('.desc');
+        const row = el.parentElement;
+        const read = () => ({
+          label: getComputedStyle(label).color,
+          description: getComputedStyle(description).color,
+          checked: el.getAttribute('aria-checked'),
+          background: getComputedStyle(row).backgroundColor,
+        });
+        if (!event) return { ...read(), duration: getComputedStyle(row).transitionDuration };
+        // Start on the pointer event itself, then sample again while CSS is moving.
+        const samples = window.switchHoverSamples = [];
+        el.addEventListener(event, () => {
+          samples.push(read());
+          requestAnimationFrame(() => requestAnimationFrame(() => samples.push(read())));
+        }, { once: true });
+      }, event);
+      const recorded = async () => {
+        await page.waitForFunction(() => window.switchHoverSamples?.length === 2);
+        return page.evaluate(() => window.switchHoverSamples);
+      };
+      const { background, duration, ...textAndState } = await sample();
+      assert.ok(parseFloat(duration) > 0, 'row motion is enabled');
+      assert.notEqual(textAndState.label, textAndState.description, 'description starts muted');
+      await sample('pointerenter');
+      await sw.hover();
+      const entering = await recorded();
+      await sw.evaluate(el => Promise.all(el.parentElement.getAnimations().map(animation => animation.finished)));
+      const { background: highlighted, duration: _, ...hovered } = await sample();
+      assert.notEqual(highlighted, background, 'row still highlights');
+      await sample('pointerleave');
+      await page.mouse.move(0, 0);
+      const exiting = await recorded();
+      for (const [index, { background: _, ...current }] of [...entering, hovered, ...exiting].entries()) {
+        assert.deepEqual(current, textAndState, `label, description and checked state at hover sample ${index + 1}`);
+      }
+      await sw.evaluate(el => Promise.all(el.parentElement.getAnimations().map(animation => animation.finished)));
+      assert.equal((await sample()).background, background, 'row highlight clears on exit');
+    } finally { await page.close(); }
+  });
+}
+
 async function startGlass(page, query = '') {
   await page.addInitScript(() => sessionStorage.setItem('appearance-style', 'glass'));
   await page.goto(`${url}/?animations=false${query}`);
@@ -1016,3 +1071,64 @@ test('Escape closes the installed-app picker before leaving settings', async () 
     await page.getByRole('button', { name: 'Play', exact: true }).waitFor();
   } finally { await page.close(); }
 });
+
+async function checkCompactMacEmergencyExit(height) {
+  const page = await browser.newPage({
+    viewport: { width: 240, height },
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15',
+    reducedMotion: 'reduce',
+  });
+  try {
+    await page.goto(`${url}/?animations=false`);
+    await page.waitForFunction(() => ['settings:changed', 'focus:changed']
+      .every(event => window.__motionTest?.hasRegisteredEvent(event)));
+    await page.evaluate(async () => {
+      await window.__motionTest.emit('settings:changed', { language: 'de' });
+      await window.__motionTest.setFocusSnapshot({
+        status: 'active',
+        current_phase: 'work',
+        active_profile: null,
+        current_work_round: 1,
+        total_work_rounds: 4,
+        is_locked: true,
+        blocking_active: true,
+        unblock_during_breaks: false,
+        enforcement: { state: 'active', applications_active: true, websites_active: true, error_code: null },
+      });
+    });
+    await page.waitForFunction(() => document.documentElement.lang === 'de');
+
+    const opener = page.locator('.session-btn.locked');
+    await opener.click();
+    const dialog = page.getByRole('dialog', { name: 'Notausstieg' });
+    await dialog.getByRole('button', { name: 'Passphrase', exact: true }).click();
+    await dialog.getByLabel('Passphrase', { exact: true }).fill('synthetic sample phrase for titlebar testing');
+    await dialog.getByLabel('Passphrase bestätigen').fill('different synthetic phrase for titlebar testing');
+    const submit = dialog.getByRole('button', { name: 'Sitzung beenden' });
+    await submit.click();
+    await dialog.getByRole('alert').filter({ hasText: 'Die Passphrasen stimmen nicht überein.' }).waitFor();
+
+    const close = dialog.getByRole('button', { name: 'Dialog schließen' });
+    const assertInset = async () => {
+      const panel = await dialog.boundingBox();
+      assert.ok(panel.y >= 32, `dialog starts at ${panel.y}px, inside the native titlebar`);
+      assert.ok(panel.y + panel.height <= height, 'dialog fits below the native titlebar');
+    };
+    await close.focus();
+    await assertInset();
+    await page.keyboard.press('Shift+Tab');
+    assert.ok(await submit.evaluate(el => el === document.activeElement), 'last action is keyboard reachable');
+    assert.ok(await dialog.evaluate(el => el.scrollTop > 0), 'the dialog scrolled to reveal the action');
+    const action = await submit.boundingBox();
+    const panel = await dialog.boundingBox();
+    assert.ok(action.y >= panel.y && action.y + action.height <= panel.y + panel.height);
+    await assertInset();
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'detached' });
+    assert.ok(await opener.evaluate(el => el === document.activeElement), 'closing restores focus');
+  } finally { await page.close(); }
+}
+
+for (const height of [240, 320]) {
+  test(`compact macOS emergency exit clears the native titlebar at 240×${height}`, () => checkCompactMacEmergencyExit(height));
+}

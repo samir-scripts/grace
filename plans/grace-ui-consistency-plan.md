@@ -114,3 +114,7 @@ Both PR quality gates advanced beyond frontend tests after Chromium provisioning
 - At `a79270b`, the two focused regressions passed: keyboard language selection updates the document language, and a failed palette save restores the active palette and allows retry. The typecheck passed with zero errors and warnings.
 - The isolated macOS bundle launched and exposed the named duration and Glass transparency sliders through Accessibility. The native transparency save/relaunch, compact timer, statistics and keyboard dialog matrix is not accepted on this integrated revision.
 - The ARM64 Linux `.deb` for `a79270b` (SHA-256 `3e0550a1f0cd6e3a5cf3770cd57c157f9f586461240c9386bbf33db5f7dc08fb`) launched with a fresh profile. Selecting Glass exposed the transparency control, saved `ui_style=glass`, and logged `policy_allowed=false installed=false active=false`, confirming the opaque fallback. This is ARM64 evidence only, not an x64 or signed-release acceptance.
+
+## Settings switch hover follow-up
+
+- Desktop Notifications browser regressions reproduced black label and description text on hover entry in Pomotroid, Glass, and Blocky. Excluding switches from the generic descendant color rule preserves both text colors through entry and exit, with row highlight and checked state intact. The appearance suite passes, including the independent keyboard help and switch thumb coverage.

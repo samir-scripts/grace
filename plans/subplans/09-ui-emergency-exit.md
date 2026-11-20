@@ -3,6 +3,9 @@ Status: completed
 Verification Evidence:
 - `npm run check` completed with 0 errors and 0 warnings (911 files checked).
 - `FocusEscapeDialog.svelte` implemented with continuous 60s hold pulse, passphrase validation, and shortcut isolation in `localShortcuts.ts`.
+- Locked-session dialog refinement: Chromium fixtures verified default Hold selection, in-button countdown, keyboard focus, passphrase mismatch and backend rejection/success, and clearing on close. Inspected 360×478 English and 240×240 French, including validation and scroll to the actions.
+- In a disposable macOS ARM64 Tauri app, a continuous hold released the protected session after 60 seconds. In a second session, mismatched entries kept it locked and a matching configured passphrase released it. The German validation form scrolled to the submit button at 240×240 and 240×320, with 32 CSS pixels reserved above the dialog for native controls. Both English modes fit at 360×478.
+- Initial refinement checks: `npm run check` reported 0 errors and 0 warnings; `npm run test:appearance` passed 62 tests; `npm test` passed 274 tests with 2 skips.
 
 Context: Implement named finite Pomodoro sessions in Tauri 2/Rust and Svelte 5. Read [master plan](../focus-sessions-master-plan.md) for global constraints and shared contracts. Durations use seconds; Rust owns enforcement and session locks.
 
@@ -15,7 +18,7 @@ Context: Implement named finite Pomodoro sessions in Tauri 2/Rust and Svelte 5. 
 
 **Interfaces:**
 - Opened when user clicks lock icon or chooses "End Session..." during active run.
-- Supports continuous 60-second hold (Spacebar or Hold Button) with visual progress ring/bar.
+- Supports continuous 60-second hold (Spacebar or Hold Button) with an in-button countdown and fill.
 - Supports passphrase entry (if configured) requiring typing passphrase twice.
 
 - [ ] **Step 1: Create `src/lib/components/FocusEscapeDialog.svelte`**
