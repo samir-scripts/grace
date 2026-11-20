@@ -235,7 +235,7 @@ button:is(.btn-danger, .btn-delete, .btn-discard, .btn-remove, .remove-font, .co
   background-color: var(--button-hover-bg) !important;
   color: var(--button-hover-text) !important;
 }
-:root button:hover:not(:disabled):not(.suppress-hover *) :where(span, small, code, svg) {
+:root button:hover:not(:disabled):not([role="switch"]):not(.suppress-hover *) :where(span, small, code, svg) {
   color: inherit !important;
 }
 :root button[role="switch"]:hover:not(:disabled) {

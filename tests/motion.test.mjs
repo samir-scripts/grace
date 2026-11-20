@@ -325,15 +325,18 @@ test('motion disabled leaves emergency hold feedback functional', async () => {
 
   // Open emergency dialog
   await page.locator('.session-btn.locked').click();
-  await page.waitForSelector('.hold-btn', { state: 'visible' });
 
-  const button = page.getByRole('button', { name: 'Hold for 60 seconds to unlock' });
+  const dialog = page.getByRole('dialog', { name: 'Emergency Exit' });
+  const button = dialog.getByRole('button', { name: 'Hold for 60 seconds to end session', exact: true });
   await button.hover();
   await page.mouse.down();
   // Visual feedback still progresses without CSS interpolation.
-  await page.waitForFunction(() => parseInt(document.querySelector('.progress-label')?.textContent ?? '0') > 0);
+  const fill = dialog.locator('.hold-progress-fill');
+  await fill.waitFor({ state: 'visible' });
+  await page.waitForFunction(() => document.querySelector('.hold-progress-fill').getBoundingClientRect().width > 0);
   await page.mouse.up();
-  await page.waitForFunction(() => document.querySelector('.progress-label')?.textContent === '0%');
+  await button.waitFor();
+  assert.equal(await fill.evaluate(el => el.getBoundingClientRect().width), 0);
 
   await context.close();
 });

@@ -193,78 +193,47 @@
         <button class="btn-close" onclick={closeDialog} aria-label={m.escape_close()}>×</button>
       </div>
 
-      <p class="modal-desc">
-        {m.escape_description()}
-      </p>
-
       <div class="mode-tabs">
         <button
+          type="button"
           class="mode-tab"
-          class:active={mode === 'hold'}
+          aria-pressed={mode === 'hold'}
           disabled={isHolding}
           onclick={() => { mode = 'hold'; resetHold(); }}
         >
-          {m.escape_hold_tab()}
+          {m.escape_hold()}
         </button>
         <button
+          type="button"
           class="mode-tab"
-          class:active={mode === 'passphrase'}
+          aria-pressed={mode === 'passphrase'}
           disabled={isHolding}
           onclick={() => { mode = 'passphrase'; resetHold(); }}
         >
-          {m.escape_passphrase_tab()}
+          {m.escape_passphrase()}
         </button>
       </div>
 
       {#if mode === 'hold'}
-        <div class="hold-section">
-          <p class="instruction">
-            {m.escape_hold_instruction()}
-          </p>
-
-          <div class="hold-action-area">
-            <button
-              class="hold-btn"
-              class:holding={isHolding}
-              onpointerdown={(e) => { if (e.isPrimary && e.button === 0) beginHold(); }}
-              onpointerup={endHold}
-              onpointerleave={endHold}
-              onpointercancel={endHold}
-              onblur={endHold}
-              onkeydown={holdKeydown}
-              onkeyup={holdKeyup}
-              aria-label={m.escape_hold_label()}
-            >
-              <div class="hold-progress-fill" style="width: {holdProgress}%;"></div>
-              <div class="hold-btn-text">
-                {#if isHolding}
-                  <span class="holding-countdown">{m.escape_remaining({ seconds: String(holdSecondsLeft) })}</span>
-                  <span class="subtext">{m.escape_do_not_release()}</span>
-                {:else}
-                  <span class="hold-prompt">{m.escape_hold_prompt()}</span>
-                  <span class="subtext">{m.escape_hold_subtext()}</span>
-                {/if}
-              </div>
-            </button>
-          </div>
-
-          <div class="progress-bar-container">
-            <div class="progress-track">
-              <div class="progress-indicator" style="width: {holdProgress}%;"></div>
-            </div>
-            <span class="progress-label">{Math.round(holdProgress)}%</span>
-          </div>
-        </div>
+        <button
+          type="button"
+          class="hold-btn"
+          class:holding={isHolding}
+          onpointerdown={(e) => { if (e.isPrimary && e.button === 0) beginHold(); }}
+          onpointerup={endHold}
+          onpointerleave={endHold}
+          onpointercancel={endHold}
+          onblur={endHold}
+          onkeydown={holdKeydown}
+          onkeyup={holdKeyup}
+        >
+          <span class="hold-progress-fill" style="width: {holdProgress}%;" aria-hidden="true"></span>
+          <span class="hold-btn-text">
+            {isHolding ? m.escape_remaining({ seconds: String(holdSecondsLeft) }) : m.escape_hold_action()}
+          </span>
+        </button>
       {:else}
         <form class="passphrase-section" onsubmit={handlePassphraseSubmit}>
-          <p class="instruction">
-            {m.escape_passphrase_instruction()}
-          </p>
-
-          {#if passphraseError}
-            <div class="alert error">{passphraseError}</div>
-          {/if}
-
           <div class="input-group">
             <label for="pass-first">{m.escape_passphrase()}</label>
             <input
@@ -272,29 +241,35 @@
               type="password"
               class="text-input"
               bind:value={passphraseFirst}
-              placeholder={m.escape_passphrase_placeholder()}
+              aria-describedby="escape-passphrase-hint"
               required
             />
+            <small id="escape-passphrase-hint" class="input-hint">{m.escape_passphrase_hint()}</small>
           </div>
 
           <div class="input-group">
-            <label for="pass-second">{m.escape_confirm_passphrase()}</label>
+            <label for="pass-second">{m.escape_confirm_label()}</label>
             <input
               id="pass-second"
               type="password"
               class="text-input"
               bind:value={passphraseSecond}
-              placeholder={m.escape_confirm_placeholder()}
+              aria-describedby="escape-passphrase-hint"
               required
             />
           </div>
 
+          {#if passphraseError}
+            <div class="alert error" role="alert">{passphraseError}</div>
+          {/if}
+
           <div class="form-actions">
             <button type="button" class="btn-secondary" onclick={closeDialog}>{m.escape_cancel()}</button>
             <button type="submit" class="btn-danger" disabled={isSubmitting}>
-              {isSubmitting ? m.escape_verifying() : m.escape_unlock()}
+              {isSubmitting ? m.escape_verifying() : m.escape_end_session()}
             </button>
           </div>
+          <span class="sr-only" role="status">{isSubmitting ? m.escape_verifying() : ''}</span>
         </form>
       {/if}
     </div>
@@ -351,6 +326,8 @@
     color: var(--color-foreground-darker);
     font-size: 18px;
     cursor: pointer;
+    min-width: 28px;
+    min-height: 28px;
     line-height: 1;
     padding: 2px 6px;
     border-radius: 4px;
@@ -359,13 +336,6 @@
   .btn-close:hover {
     background: var(--color-hover);
     color: var(--color-foreground);
-  }
-
-  .modal-desc {
-    font: var(--type-body);
-    letter-spacing: 0;
-    color: var(--color-foreground-darker);
-    margin: 0;
   }
 
   .mode-tabs {
@@ -391,32 +361,22 @@
     transition: background var(--transition-snappy), color var(--transition-snappy);
   }
 
-  .mode-tab.active {
-    background: var(--color-background);
+  .mode-tab[aria-pressed='true'] {
+    background: var(--color-selected);
     color: var(--color-foreground);
     font-weight: 600;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   }
 
-  .instruction {
-    font: var(--type-body);
-    letter-spacing: 0;
-    color: var(--color-foreground-darker);
-    margin: 0 0 12px 0;
-  }
-
-
-  .hold-action-area {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 12px;
-  }
-
   .hold-btn {
+    --button-hover-bg: var(--color-hover);
+    --button-hover-text: var(--color-foreground);
     position: relative;
     width: 100%;
-    min-height: 72px;
+    min-height: 60px;
+    padding: 8px;
     background: var(--color-background-light);
+    color: var(--color-foreground);
     border: 2px solid var(--color-focus-round);
     border-radius: 8px;
     overflow: hidden;
@@ -445,62 +405,14 @@
   .hold-btn-text {
     position: relative;
     z-index: 2;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-  }
-
-  .hold-prompt {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--color-foreground);
-  }
-
-  .holding-countdown {
-    font: var(--type-support);
-    letter-spacing: 0;
-    color: var(--color-foreground);
-  }
-
-  .subtext {
-    font: var(--type-support);
-    letter-spacing: 0;
-    color: var(--color-foreground-darker);
-  }
-
-  .progress-bar-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .progress-track {
-    flex: 1;
-    height: 6px;
-    background: var(--color-background-light);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-  .progress-indicator {
-    height: 100%;
-    background: var(--color-focus-round);
-    transition: width 0.2s linear;
-  }
-
-  .progress-label {
-    font: var(--type-support);
-    letter-spacing: 0;
-    color: var(--color-foreground-darker);
-    min-width: 32px;
-    text-align: right;
+    font: var(--type-heading);
+    font-variant-numeric: tabular-nums;
   }
 
   .passphrase-section {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
   }
 
   .input-group {
@@ -512,6 +424,11 @@
   .input-group label {
     font: var(--type-control);
     letter-spacing: 0;
+    color: var(--color-foreground-darker);
+  }
+
+  .input-hint {
+    font: var(--type-support);
     color: var(--color-foreground-darker);
   }
 
@@ -536,7 +453,7 @@
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: 8px;
-    margin-top: 6px;
+    margin-top: 2px;
   }
 
   .btn-secondary {
@@ -575,6 +492,24 @@
     border-radius: 6px;
     font: var(--type-body);
     letter-spacing: 0;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @media (max-height: 300px) {
+    .escape-modal-backdrop { padding: 8px; }
+    .escape-modal { max-height: calc(100vh - 16px); padding: 10px; gap: 8px; }
+    .mode-tab { flex-basis: auto; }
+    .passphrase-section { gap: 6px; }
+    .text-input { padding-block: 5px; }
+    .form-actions { margin-top: 0; }
   }
 
   @keyframes fadeIn {

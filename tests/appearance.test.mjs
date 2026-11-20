@@ -459,6 +459,61 @@ test('Blocky switches have square thumbs in both states and other styles restore
   } finally { await page.close(); }
 });
 
+for (const style of ['pomotroid', 'glass', 'blocky']) {
+  test(`${style}: hovering Desktop Notifications preserves both text colors while highlighting the row`, async () => {
+    const page = await browser.newPage({ viewport: { width: 840, height: 600 }, reducedMotion: 'no-preference' });
+    try {
+      await page.addInitScript(value => sessionStorage.setItem('appearance-style', value), style);
+      await page.goto(`${url}/?animations=true`);
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await page.getByRole('tab', { name: 'Notifications', exact: true }).click();
+      await page.waitForFunction(value => document.documentElement.dataset.uiStyle === value, style);
+      const sw = page.getByRole('switch', { name: 'Desktop Notifications', exact: true });
+      await sw.scrollIntoViewIfNeeded();
+      await page.mouse.move(0, 0);
+      const sample = (event) => sw.evaluate((el, event) => {
+        const label = el.querySelector('.label');
+        const description = el.querySelector('.desc');
+        const row = el.parentElement;
+        const read = () => ({
+          label: getComputedStyle(label).color,
+          description: getComputedStyle(description).color,
+          checked: el.getAttribute('aria-checked'),
+          background: getComputedStyle(row).backgroundColor,
+        });
+        if (!event) return { ...read(), duration: getComputedStyle(row).transitionDuration };
+        // Start on the pointer event itself, then sample again while CSS is moving.
+        const samples = window.switchHoverSamples = [];
+        el.addEventListener(event, () => {
+          samples.push(read());
+          requestAnimationFrame(() => requestAnimationFrame(() => samples.push(read())));
+        }, { once: true });
+      }, event);
+      const recorded = async () => {
+        await page.waitForFunction(() => window.switchHoverSamples?.length === 2);
+        return page.evaluate(() => window.switchHoverSamples);
+      };
+      const { background, duration, ...textAndState } = await sample();
+      assert.ok(parseFloat(duration) > 0, 'row motion is enabled');
+      assert.notEqual(textAndState.label, textAndState.description, 'description starts muted');
+      await sample('pointerenter');
+      await sw.hover();
+      const entering = await recorded();
+      await sw.evaluate(el => Promise.all(el.parentElement.getAnimations().map(animation => animation.finished)));
+      const { background: highlighted, duration: _, ...hovered } = await sample();
+      assert.notEqual(highlighted, background, 'row still highlights');
+      await sample('pointerleave');
+      await page.mouse.move(0, 0);
+      const exiting = await recorded();
+      for (const [index, { background: _, ...current }] of [...entering, hovered, ...exiting].entries()) {
+        assert.deepEqual(current, textAndState, `label, description and checked state at hover sample ${index + 1}`);
+      }
+      await sw.evaluate(el => Promise.all(el.parentElement.getAnimations().map(animation => animation.finished)));
+      assert.equal((await sample()).background, background, 'row highlight clears on exit');
+    } finally { await page.close(); }
+  });
+}
+
 async function startGlass(page, query = '') {
   await page.addInitScript(() => sessionStorage.setItem('appearance-style', 'glass'));
   await page.goto(`${url}/?animations=false${query}`);
