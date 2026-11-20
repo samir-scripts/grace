@@ -1071,3 +1071,64 @@ test('Escape closes the installed-app picker before leaving settings', async () 
     await page.getByRole('button', { name: 'Play', exact: true }).waitFor();
   } finally { await page.close(); }
 });
+
+async function checkCompactMacEmergencyExit(height) {
+  const page = await browser.newPage({
+    viewport: { width: 240, height },
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15',
+    reducedMotion: 'reduce',
+  });
+  try {
+    await page.goto(`${url}/?animations=false`);
+    await page.waitForFunction(() => ['settings:changed', 'focus:changed']
+      .every(event => window.__motionTest?.hasRegisteredEvent(event)));
+    await page.evaluate(async () => {
+      await window.__motionTest.emit('settings:changed', { language: 'de' });
+      await window.__motionTest.setFocusSnapshot({
+        status: 'active',
+        current_phase: 'work',
+        active_profile: null,
+        current_work_round: 1,
+        total_work_rounds: 4,
+        is_locked: true,
+        blocking_active: true,
+        unblock_during_breaks: false,
+        enforcement: { state: 'active', applications_active: true, websites_active: true, error_code: null },
+      });
+    });
+    await page.waitForFunction(() => document.documentElement.lang === 'de');
+
+    const opener = page.locator('.session-btn.locked');
+    await opener.click();
+    const dialog = page.getByRole('dialog', { name: 'Notausstieg' });
+    await dialog.getByRole('button', { name: 'Passphrase', exact: true }).click();
+    await dialog.getByLabel('Passphrase', { exact: true }).fill('synthetic sample phrase for titlebar testing');
+    await dialog.getByLabel('Passphrase bestätigen').fill('different synthetic phrase for titlebar testing');
+    const submit = dialog.getByRole('button', { name: 'Sitzung beenden' });
+    await submit.click();
+    await dialog.getByRole('alert').filter({ hasText: 'Die Passphrasen stimmen nicht überein.' }).waitFor();
+
+    const close = dialog.getByRole('button', { name: 'Dialog schließen' });
+    const assertInset = async () => {
+      const panel = await dialog.boundingBox();
+      assert.ok(panel.y >= 32, `dialog starts at ${panel.y}px, inside the native titlebar`);
+      assert.ok(panel.y + panel.height <= height, 'dialog fits below the native titlebar');
+    };
+    await close.focus();
+    await assertInset();
+    await page.keyboard.press('Shift+Tab');
+    assert.ok(await submit.evaluate(el => el === document.activeElement), 'last action is keyboard reachable');
+    assert.ok(await dialog.evaluate(el => el.scrollTop > 0), 'the dialog scrolled to reveal the action');
+    const action = await submit.boundingBox();
+    const panel = await dialog.boundingBox();
+    assert.ok(action.y >= panel.y && action.y + action.height <= panel.y + panel.height);
+    await assertInset();
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'detached' });
+    assert.ok(await opener.evaluate(el => el === document.activeElement), 'closing restores focus');
+  } finally { await page.close(); }
+}
+
+for (const height of [240, 320]) {
+  test(`compact macOS emergency exit clears the native titlebar at 240×${height}`, () => checkCompactMacEmergencyExit(height));
+}

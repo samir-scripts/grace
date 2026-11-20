@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { modalFocus } from '$lib/utils/modalFocus';
+  import { isMac } from '$lib/utils/platform';
   import {
     startEmergencyHold,
     pulseEmergencyHold,
@@ -168,7 +169,7 @@
 </script>
 
 {#if open}
-  <div class="escape-modal-backdrop" onclick={(e) => e.target === e.currentTarget && closeDialog()} role="presentation">
+  <div class="escape-modal-backdrop" class:macos={isMac} onclick={(e) => e.target === e.currentTarget && closeDialog()} role="presentation">
     <div class="escape-modal" role="dialog" aria-modal="true" aria-labelledby="escape-title" tabindex="-1" use:modalFocus={{ onEscape: closeDialog }}>
       <div class="modal-header">
         <h2 id="escape-title" class="modal-title">
@@ -286,7 +287,9 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding: 16px;
+    --escape-gutter: 16px;
+    --escape-top-inset: var(--escape-gutter);
+    padding: var(--escape-top-inset) var(--escape-gutter) var(--escape-gutter);
     animation: fadeIn 0.15s ease both;
   }
 
@@ -296,7 +299,7 @@
     border-radius: 12px;
     width: 100%;
     max-width: 380px;
-    max-height: calc(100vh - 32px);
+    max-height: calc(100vh - var(--escape-top-inset) - var(--escape-gutter));
     overflow-y: auto;
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
     padding: 20px;
@@ -504,12 +507,17 @@
   }
 
   @media (max-height: 300px) {
-    .escape-modal-backdrop { padding: 8px; }
-    .escape-modal { max-height: calc(100vh - 16px); padding: 10px; gap: 8px; }
+    .escape-modal-backdrop { --escape-gutter: 8px; }
+    .escape-modal { padding: 10px; gap: 8px; }
     .mode-tab { flex-basis: auto; }
     .passphrase-section { gap: 6px; }
     .text-input { padding-block: 5px; }
     .form-actions { margin-top: 0; }
+  }
+
+  /* Keep the scroll viewport below the native overlay titlebar. */
+  @media (width < 300px), (height < 300px) {
+    .escape-modal-backdrop.macos { --escape-top-inset: 32px; }
   }
 
   @keyframes fadeIn {
